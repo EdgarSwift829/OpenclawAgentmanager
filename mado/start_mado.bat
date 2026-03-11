@@ -8,7 +8,7 @@ echo ============================================
 echo.
 
 :: ── Step 1: Environment Auto-Setup ───────────────
-echo [1/4] 環境チェック＋自動セットアップ中...
+echo [1/3] 環境チェック＋自動セットアップ中...
 python "%~dp0check_env.py"
 if %ERRORLEVEL% neq 0 (
     echo.

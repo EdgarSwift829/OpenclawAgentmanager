@@ -1,9 +1,13 @@
 """MADO Desktop Window Launcher using pywebview.
 
-Waits for the Next.js dev server, then opens a native OS window.
+Starts the Next.js dev server, waits for it, then opens a native OS window.
 No browser, no Electron — just Python + pywebview.
 """
 
+import atexit
+import os
+import signal
+import subprocess
 import sys
 import time
 import urllib.request
@@ -13,10 +17,45 @@ NEXT_URL = "http://localhost:3000"
 MAX_RETRIES = 30
 RETRY_INTERVAL = 1  # seconds
 
+MADO_ROOT = os.path.dirname(os.path.abspath(__file__))
+FRONTEND_DIR = os.path.join(MADO_ROOT, "frontend")
+
+_nextjs_proc = None
+
+
+def start_nextjs():
+    """Start the Next.js dev server as a subprocess."""
+    global _nextjs_proc
+    print("[MADO] Next.js dev server を起動中...")
+    use_shell = sys.platform.startswith("win")
+    _nextjs_proc = subprocess.Popen(
+        ["npm", "run", "dev"],
+        cwd=FRONTEND_DIR,
+        shell=use_shell,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+
+
+def stop_nextjs():
+    """Terminate the Next.js dev server on exit."""
+    global _nextjs_proc
+    if _nextjs_proc and _nextjs_proc.poll() is None:
+        print("[MADO] Next.js dev server を停止中...")
+        if sys.platform.startswith("win"):
+            _nextjs_proc.terminate()
+        else:
+            os.killpg(os.getpgid(_nextjs_proc.pid), signal.SIGTERM)
+        _nextjs_proc.wait(timeout=5)
+
 
 def wait_for_nextjs() -> bool:
     """Wait until the Next.js dev server responds."""
-    for i in range(MAX_RETRIES):
+    for _ in range(MAX_RETRIES):
+        # Check if process died
+        if _nextjs_proc and _nextjs_proc.poll() is not None:
+            print("[MADO] Next.js プロセスが異常終了しました。", file=sys.stderr)
+            return False
         try:
             req = urllib.request.Request(NEXT_URL)
             with urllib.request.urlopen(req, timeout=3) as resp:
@@ -29,6 +68,9 @@ def wait_for_nextjs() -> bool:
 
 
 def main() -> int:
+    start_nextjs()
+    atexit.register(stop_nextjs)
+
     print("[MADO] Next.js サーバーの起動を待機中...")
     if not wait_for_nextjs():
         print("[MADO] Next.js が起動しませんでした。中止します。", file=sys.stderr)
