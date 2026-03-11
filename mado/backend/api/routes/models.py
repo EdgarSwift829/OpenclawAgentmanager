@@ -22,6 +22,10 @@ class ModelRegister(BaseModel):
     capabilities: list = []
 
 
+class RoleOrder(BaseModel):
+    roles: list[str]
+
+
 @router.get("/")
 async def list_models():
     """List all registered models."""
@@ -53,6 +57,24 @@ async def register_model(data: ModelRegister):
         "capabilities": data.capabilities,
     })
     return {"status": "registered", "model": data.name}
+
+
+@router.put("/reorder")
+async def reorder_roles(data: RoleOrder):
+    """Reorder agent roles (affects execution priority)."""
+    current = model_manager.agent_assignments
+    # Validate all roles exist
+    for role in data.roles:
+        if role not in current:
+            raise HTTPException(status_code=400, detail=f"Unknown role: {role}")
+    # Rebuild assignments dict in new order
+    reordered = {role: current[role] for role in data.roles}
+    # Keep any roles not in the list at the end
+    for role in current:
+        if role not in reordered:
+            reordered[role] = current[role]
+    model_manager.agent_assignments = reordered
+    return {"status": "reordered", "roles": list(reordered.keys())}
 
 
 @router.post("/reload")

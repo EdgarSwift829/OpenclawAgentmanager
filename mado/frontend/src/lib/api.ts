@@ -30,6 +30,8 @@ export const listModels = () => fetchJSON("/models/");
 export const getAssignments = () => fetchJSON("/models/assignments");
 export const switchModel = (role: string, new_model: string) =>
   fetchJSON("/models/switch", { method: "PUT", body: JSON.stringify({ role, new_model }) });
+export const reorderRoles = (roles: string[]) =>
+  fetchJSON("/models/reorder", { method: "PUT", body: JSON.stringify({ roles }) });
 export const reloadModels = () => fetchJSON("/models/reload", { method: "POST" });
 
 // Orchestrator
