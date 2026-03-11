@@ -75,8 +75,19 @@ export function ProjectTree({
         setOpenclawStatus(data.installed ? "installed" : "not_installed");
         setOpenclawVersion(data.version || null);
       })
-      .catch(() => setOpenclawStatus("error"));
+      .catch(() => setOpenclawStatus("not_installed"));
   }, []);
+
+  const recheckOpenClaw = async () => {
+    try {
+      const data = await api.checkOpenClaw();
+      setOpenclawStatus(data.installed ? "installed" : "not_installed");
+      setOpenclawVersion(data.version || null);
+      return data.installed;
+    } catch {
+      return false;
+    }
+  };
 
   const handleInstallOpenClaw = async () => {
     setOpenclawStatus("installing");
@@ -86,10 +97,19 @@ export function ProjectTree({
         setOpenclawStatus("installed");
         setOpenclawVersion(result.version || null);
       } else {
-        setOpenclawStatus("error");
+        // Install failed - re-check status in case it's actually installed
+        // (e.g. PATH issue during install but openclaw is now available)
+        const isInstalled = await recheckOpenClaw();
+        if (!isInstalled) {
+          setOpenclawStatus("error");
+        }
       }
     } catch {
-      setOpenclawStatus("error");
+      // Network/API error - try re-checking status
+      const isInstalled = await recheckOpenClaw();
+      if (!isInstalled) {
+        setOpenclawStatus("error");
+      }
     }
   };
 
@@ -120,6 +140,14 @@ export function ProjectTree({
   const handleCreate = async (parentId?: string) => {
     const id = parentId ? childNewId.trim() : newId.trim();
     if (!id) return;
+
+    // Basic client-side validation
+    const unsafeChars = /[/\\:*?"<>|]/;
+    if (unsafeChars.test(id)) {
+      alert("Project ID contains invalid characters");
+      return;
+    }
+
     setCreating(true);
     try {
       await api.createProject(id, "", parentId || undefined);
@@ -133,7 +161,8 @@ export function ProjectTree({
       onRefresh();
       onSelect(id);
     } catch (e: any) {
-      alert(e.message);
+      const msg = e?.message || "Unknown error";
+      alert(msg);
     } finally {
       setCreating(false);
     }
@@ -183,7 +212,7 @@ export function ProjectTree({
           setOpenclawStatus(d.installed ? "installed" : "not_installed");
           setOpenclawVersion(d.version || null);
         })
-        .catch(() => setOpenclawStatus("error"));
+        .catch(() => setOpenclawStatus("not_installed"));
     } catch (e: any) {
       alert(e.message);
     } finally {
@@ -445,7 +474,20 @@ export function ProjectTree({
                   <span className="tree-openclaw-installing">{t("openclawInstalling")}</span>
                 )}
                 {openclawStatus === "error" && (
-                  <span className="tree-openclaw-error">{t("openclawCheckFailed")}</span>
+                  <span className="tree-openclaw-error">
+                    {t("openclawCheckFailed")}
+                    <button
+                      className="tree-openclaw-retry-btn"
+                      onClick={() => {
+                        setOpenclawStatus("checking");
+                        recheckOpenClaw().then((ok) => {
+                          if (!ok) setOpenclawStatus("not_installed");
+                        });
+                      }}
+                    >
+                      {t("refresh")}
+                    </button>
+                  </span>
                 )}
               </div>
             </div>

@@ -3,6 +3,7 @@
 import subprocess
 import json
 import asyncio
+import shutil
 from typing import Optional
 
 
@@ -16,18 +17,44 @@ class OpenClawIntegration:
         self.ws_url = ws_url
 
     def is_installed(self) -> bool:
-        """Check if OpenClaw is installed globally."""
+        """Check if OpenClaw is installed globally.
+
+        Tries multiple detection methods:
+        1. Direct 'openclaw --version' command
+        2. 'npm list -g openclaw' to check npm global packages
+        3. shutil.which() to find openclaw in PATH
+        """
+        # Method 1: Direct command
         try:
             result = subprocess.run(
                 ["openclaw", "--version"],
                 capture_output=True, text=True, timeout=10,
             )
-            return result.returncode == 0
-        except (FileNotFoundError, subprocess.TimeoutExpired):
-            return False
+            if result.returncode == 0:
+                return True
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+            pass
+
+        # Method 2: Check PATH via shutil.which
+        if shutil.which("openclaw") is not None:
+            return True
+
+        # Method 3: Check npm global packages
+        try:
+            result = subprocess.run(
+                ["npm", "list", "-g", "openclaw", "--depth=0"],
+                capture_output=True, text=True, timeout=15,
+            )
+            if result.returncode == 0 and "openclaw" in result.stdout:
+                return True
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+            pass
+
+        return False
 
     def get_version(self) -> Optional[str]:
         """Get installed OpenClaw version."""
+        # Try direct command first
         try:
             result = subprocess.run(
                 ["openclaw", "--version"],
@@ -35,12 +62,37 @@ class OpenClawIntegration:
             )
             if result.returncode == 0:
                 return result.stdout.strip()
-        except (FileNotFoundError, subprocess.TimeoutExpired):
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
             pass
+
+        # Fallback: parse from npm list
+        try:
+            result = subprocess.run(
+                ["npm", "list", "-g", "openclaw", "--depth=0"],
+                capture_output=True, text=True, timeout=15,
+            )
+            if result.returncode == 0 and "openclaw@" in result.stdout:
+                for line in result.stdout.splitlines():
+                    if "openclaw@" in line:
+                        # Extract version from "openclaw@x.y.z"
+                        idx = line.index("openclaw@")
+                        ver = line[idx:].split()[0]
+                        return ver
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+            pass
+
         return None
 
     def install(self) -> dict:
         """Install OpenClaw via npm."""
+        # Check if npm is available first
+        if shutil.which("npm") is None:
+            return {
+                "success": False,
+                "error": "npm is not installed or not in PATH. Please install Node.js/npm first.",
+                "error_code": "npm_not_found",
+            }
+
         try:
             result = subprocess.run(
                 ["npm", "install", "-g", "openclaw@latest"],
@@ -51,17 +103,30 @@ class OpenClawIntegration:
                 "stdout": result.stdout,
                 "stderr": result.stderr,
             }
+        except subprocess.TimeoutExpired:
+            return {"success": False, "error": "Install timed out (300s)", "error_code": "timeout"}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": str(e), "error_code": "unknown"}
 
     def ensure_installed(self) -> dict:
         """Check if installed, install if missing."""
         if self.is_installed():
             return {"status": "already_installed", "version": self.get_version()}
+
         result = self.install()
         if result.get("success"):
-            return {"status": "installed", "version": self.get_version()}
-        return {"status": "install_failed", **result}
+            # Re-verify after install
+            version = self.get_version()
+            if self.is_installed():
+                return {"status": "installed", "version": version}
+            # Install reported success but verification failed
+            return {"status": "installed", "version": version, "note": "install_ok_but_verify_uncertain"}
+
+        return {
+            "status": "install_failed",
+            "error": result.get("error", result.get("stderr", "Unknown error")),
+            "error_code": result.get("error_code", "install_error"),
+        }
 
     def start_gateway(self) -> dict:
         """Start OpenClaw gateway server."""

@@ -64,13 +64,30 @@ async def create_project(data: ProjectCreate):
     """Create a new project workspace (optionally as a child of parent_id)."""
     from pathlib import Path
 
+    # Validate project_id
+    pid = data.project_id.strip()
+    if not pid:
+        raise HTTPException(status_code=400, detail="Project ID cannot be empty")
+
+    # Reject IDs with path-unsafe characters
+    unsafe_chars = set('/\\:*?"<>|')
+    if any(c in unsafe_chars for c in pid):
+        raise HTTPException(status_code=400, detail=f"Project ID contains invalid characters: {pid}")
+
+    # Ensure projects root exists and is writable
+    projects_root = Path(workspace_manager.projects_root)
+    try:
+        projects_root.mkdir(parents=True, exist_ok=True)
+    except PermissionError:
+        raise HTTPException(status_code=500, detail=f"Cannot write to projects folder: {projects_root}")
+
     # Check for duplicate
-    project_path = Path(workspace_manager.projects_root) / data.project_id
+    project_path = projects_root / pid
     if project_path.exists():
-        raise HTTPException(status_code=409, detail=f"Project already exists: {data.project_id}")
+        raise HTTPException(status_code=409, detail=f"Project already exists: {pid}")
 
     if data.parent_id:
-        parent_path = Path(workspace_manager.projects_root) / data.parent_id
+        parent_path = projects_root / data.parent_id
         if not parent_path.exists():
             raise HTTPException(status_code=404, detail=f"Parent project not found: {data.parent_id}")
         parent_config = parent_path / "config.json"
@@ -78,12 +95,14 @@ async def create_project(data: ProjectCreate):
             raise HTTPException(status_code=404, detail=f"Parent project config missing: {data.parent_id}")
 
     try:
-        workspace_path = workspace_manager.create_workspace(data.project_id, parent_id=data.parent_id)
+        workspace_path = workspace_manager.create_workspace(pid, parent_id=data.parent_id)
+    except PermissionError:
+        raise HTTPException(status_code=500, detail=f"Permission denied creating project workspace")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create project: {e}")
 
     return ProjectResponse(
-        project_id=data.project_id,
+        project_id=pid,
         status="initialized",
         workspace_path=workspace_path,
     )

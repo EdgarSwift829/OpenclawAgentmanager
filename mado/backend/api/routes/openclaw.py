@@ -10,9 +10,12 @@ openclaw = OpenClawIntegration()
 @router.get("/status")
 async def openclaw_status():
     """Check if OpenClaw is installed and get version."""
-    installed = openclaw.is_installed()
-    version = openclaw.get_version() if installed else None
-    return {"installed": installed, "version": version}
+    try:
+        installed = openclaw.is_installed()
+        version = openclaw.get_version() if installed else None
+        return {"installed": installed, "version": version}
+    except Exception as e:
+        return {"installed": False, "version": None, "check_error": str(e)}
 
 
 @router.post("/install")
