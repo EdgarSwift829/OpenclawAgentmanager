@@ -2,20 +2,95 @@
 
 import { useState, useEffect, useCallback } from "react";
 import * as api from "@/lib/api";
-import { TaskGraph } from "@/components/TaskGraph";
-import { AgentActivity } from "@/components/AgentActivity";
-import { Timeline } from "@/components/Timeline";
-import { ProjectPanel } from "@/components/ProjectPanel";
-import { ModelPanel } from "@/components/ModelPanel";
+import { ProjectTree } from "@/components/ProjectTree";
+import { AgentGrid } from "@/components/AgentGrid";
 import { RunControl } from "@/components/RunControl";
+import { Timeline } from "@/components/Timeline";
+import { ModelPanel } from "@/components/ModelPanel";
+import { TaskGraph } from "@/components/TaskGraph";
 
+// ---------------------------------------------------------------------------
+// localStorage persistence for per-project state
+// ---------------------------------------------------------------------------
+const STORAGE_KEY = "mado_project_states";
+
+interface ProjectState {
+  goal: string;
+  maxIter: number;
+  events: any[];
+}
+
+function loadAllStates(): Record<string, ProjectState> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveAllStates(states: Record<string, ProjectState>) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(states));
+  } catch { /* quota exceeded - ignore */ }
+}
+
+function loadProjectState(id: string): ProjectState {
+  const all = loadAllStates();
+  return all[id] || { goal: "", maxIter: 10, events: [] };
+}
+
+function saveProjectState(id: string, state: ProjectState) {
+  const all = loadAllStates();
+  all[id] = state;
+  saveAllStates(all);
+}
+
+// ---------------------------------------------------------------------------
+// Dashboard
+// ---------------------------------------------------------------------------
 export default function Dashboard() {
   const [projects, setProjects] = useState<string[]>([]);
   const [activeProject, setActiveProject] = useState<string | null>(null);
   const [runStatus, setRunStatus] = useState<any>(null);
   const [agents, setAgents] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
+  const [goal, setGoal] = useState("");
+  const [maxIter, setMaxIter] = useState(10);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [rightTab, setRightTab] = useState<"timeline" | "models" | "tasks">("timeline");
 
+  // --- load / save per-project state on switch ---
+  const switchProject = useCallback(
+    (id: string) => {
+      // Save current project state before switching
+      if (activeProject) {
+        saveProjectState(activeProject, { goal, maxIter, events });
+      }
+      // Load new project state
+      const saved = loadProjectState(id);
+      setGoal(saved.goal);
+      setMaxIter(saved.maxIter);
+      setEvents(saved.events);
+      setActiveProject(id);
+    },
+    [activeProject, goal, maxIter, events],
+  );
+
+  // Persist on unmount / tab close
+  useEffect(() => {
+    const handleUnload = () => {
+      if (activeProject) {
+        saveProjectState(activeProject, { goal, maxIter, events });
+      }
+    };
+    window.addEventListener("beforeunload", handleUnload);
+    return () => window.removeEventListener("beforeunload", handleUnload);
+  }, [activeProject, goal, maxIter, events]);
+
+  // --- data fetching ---
   const loadProjects = useCallback(async () => {
     try {
       const data = await api.listProjects();
@@ -73,34 +148,73 @@ export default function Dashboard() {
   }, [activeProject]);
 
   return (
-    <div className="container">
-      <div className="header">
-        <h1>MADO - Multi-Agent Dev Orchestrator</h1>
-        <span className="badge badge-idle">v0.1.0</span>
-      </div>
-
-      <div className="grid grid-3" style={{ marginBottom: "1rem" }}>
-        <ProjectPanel
-          projects={projects}
-          activeProject={activeProject}
-          onSelect={setActiveProject}
-          onRefresh={loadProjects}
-        />
-        <RunControl
-          activeProject={activeProject}
-          runStatus={runStatus}
-          onRefresh={loadRunStatus}
-        />
-        <ModelPanel />
-      </div>
-
-      {activeProject && (
-        <div className="grid grid-3">
-          <TaskGraph runStatus={runStatus} />
-          <AgentActivity agents={agents} />
-          <Timeline events={events} />
+    <div className="app-layout">
+      {/* ---- Left sidebar: Project Tree ---- */}
+      <aside className={`sidebar ${sidebarOpen ? "" : "sidebar-collapsed"}`}>
+        <div className="sidebar-header">
+          <span className="sidebar-logo">MADO</span>
+          <button
+            className="sidebar-toggle"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            title={sidebarOpen ? "Collapse" : "Expand"}
+          >
+            {sidebarOpen ? "\u25C0" : "\u25B6"}
+          </button>
         </div>
-      )}
+        {sidebarOpen && (
+          <ProjectTree
+            projects={projects}
+            activeProject={activeProject}
+            onSelect={switchProject}
+            onRefresh={loadProjects}
+          />
+        )}
+      </aside>
+
+      {/* ---- Main area: Agent Grid (web conference style) ---- */}
+      <main className="main-area">
+        <div className="main-topbar">
+          <RunControl
+            activeProject={activeProject}
+            runStatus={runStatus}
+            onRefresh={loadRunStatus}
+            goal={goal}
+            onGoalChange={setGoal}
+            maxIter={maxIter}
+            onMaxIterChange={setMaxIter}
+          />
+        </div>
+        <AgentGrid agents={agents} events={events} />
+      </main>
+
+      {/* ---- Right panel: Tabs (Timeline / Models / Tasks) ---- */}
+      <aside className="right-panel">
+        <div className="right-tabs">
+          <button
+            className={`right-tab ${rightTab === "timeline" ? "right-tab-active" : ""}`}
+            onClick={() => setRightTab("timeline")}
+          >
+            Timeline
+          </button>
+          <button
+            className={`right-tab ${rightTab === "models" ? "right-tab-active" : ""}`}
+            onClick={() => setRightTab("models")}
+          >
+            Models
+          </button>
+          <button
+            className={`right-tab ${rightTab === "tasks" ? "right-tab-active" : ""}`}
+            onClick={() => setRightTab("tasks")}
+          >
+            Tasks
+          </button>
+        </div>
+        <div className="right-content">
+          {rightTab === "timeline" && <Timeline events={events} />}
+          {rightTab === "models" && <ModelPanel />}
+          {rightTab === "tasks" && <TaskGraph runStatus={runStatus} />}
+        </div>
+      </aside>
     </div>
   );
 }

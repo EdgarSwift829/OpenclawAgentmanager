@@ -11,6 +11,8 @@
   --warning: #eab308;
   --error: #ef4444;
   --running: #8b5cf6;
+  --sidebar-width: 240px;
+  --right-panel-width: 300px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -20,8 +22,404 @@ body {
   background: var(--bg-primary);
   color: var(--text-primary);
   min-height: 100vh;
+  overflow: hidden;
 }
 
+/* =========================================================================
+   App Layout - 3-panel (sidebar | main | right-panel)
+   ========================================================================= */
+.app-layout {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr var(--right-panel-width);
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ---- Sidebar ---- */
+.sidebar {
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  transition: width 0.2s;
+}
+.sidebar-collapsed {
+  width: 48px;
+  min-width: 48px;
+  overflow: hidden;
+}
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-logo {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+}
+.sidebar-toggle {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0.25rem;
+}
+.sidebar-toggle:hover { color: var(--text-primary); }
+
+/* ---- Project Tree ---- */
+.project-tree {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem 0;
+}
+.tree-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 1rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  user-select: none;
+}
+.tree-header:hover { color: var(--text-primary); }
+.tree-chevron { font-size: 0.5rem; }
+.tree-count {
+  margin-left: auto;
+  background: var(--border);
+  border-radius: 9999px;
+  padding: 0 0.375rem;
+  font-size: 0.625rem;
+}
+.tree-create {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.25rem 0.75rem;
+}
+.tree-input {
+  flex: 1;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  width: auto;
+}
+.tree-add-btn {
+  background: var(--accent);
+  border: none;
+  color: white;
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tree-add-btn:hover { background: var(--accent-hover); }
+.tree-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.25rem 0;
+}
+.tree-empty {
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+.tree-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.375rem 1rem;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  text-align: left;
+}
+.tree-item:hover { background: var(--bg-card); }
+.tree-item-active {
+  background: var(--accent);
+  color: white;
+}
+.tree-item-active:hover { background: var(--accent-hover); }
+.tree-icon { font-size: 0.625rem; flex-shrink: 0; }
+.tree-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-status {
+  font-size: 0.625rem;
+  padding: 0 0.25rem;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+.tree-status-running { color: var(--running); }
+.tree-status-completed { color: var(--success); }
+.tree-status-error { color: var(--error); }
+.tree-refresh {
+  margin: 0.5rem 0.75rem;
+  padding: 0.25rem;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 0.6875rem;
+  cursor: pointer;
+}
+.tree-refresh:hover { color: var(--text-primary); border-color: var(--text-secondary); }
+
+/* ---- Main Area ---- */
+.main-area {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.main-topbar {
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem 1rem;
+  flex-shrink: 0;
+}
+
+/* ---- Run Control (topbar) ---- */
+.run-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.run-control-hint {
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+}
+.run-goal-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+}
+.run-goal-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.run-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.run-iter-label {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+.run-iter-input {
+  width: 3.5rem;
+  padding: 0.25rem 0.375rem;
+  font-size: 0.75rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+}
+.run-status-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+.run-iter-count {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* =========================================================================
+   Agent Grid - Web Conference (Zoom/Teams) Style
+   ========================================================================= */
+.agent-grid-container {
+  flex: 1;
+  padding: 1rem;
+  overflow-y: auto;
+}
+.agent-grid-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 300px;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+.agent-grid-empty-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.4; }
+.agent-grid-empty-sub { font-size: 0.75rem; margin-top: 0.25rem; opacity: 0.6; }
+
+.conf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.75rem;
+  height: 100%;
+}
+
+/* Individual agent tile (like a Zoom participant) */
+.conf-tile {
+  position: relative;
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+  overflow: hidden;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.conf-tile:hover {
+  border-color: var(--tile-color, var(--border));
+}
+.conf-tile.tile-active {
+  border-color: var(--tile-color, var(--accent));
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.2);
+}
+.conf-tile.tile-error {
+  border-color: var(--error);
+}
+
+/* Status dot (top-right, like Zoom's mic/cam indicators) */
+.tile-status-dot {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  z-index: 2;
+}
+.tile-dot-active { background: var(--success); box-shadow: 0 0 6px var(--success); }
+.tile-dot-idle { background: var(--text-secondary); }
+.tile-dot-error { background: var(--error); box-shadow: 0 0 6px var(--error); }
+
+/* Avatar area (center icon like profile picture) */
+.tile-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem 1rem 0.5rem;
+  flex-shrink: 0;
+}
+.tile-icon {
+  font-size: 2rem;
+  opacity: 0.7;
+}
+
+/* Output area (like the video feed) */
+.tile-output {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: flex-start;
+  overflow-y: auto;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+.tile-output-text { color: var(--text-primary); }
+.tile-output-placeholder { color: var(--text-secondary); font-style: italic; }
+.tile-error-text { color: var(--error); }
+
+/* Name bar (bottom, like Zoom participant name) */
+.tile-namebar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(0, 0, 0, 0.4);
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.tile-role {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--tile-color, var(--text-primary));
+  letter-spacing: 0.05em;
+}
+.tile-model {
+  font-size: 0.625rem;
+  color: var(--text-secondary);
+}
+.tile-tasks {
+  margin-left: auto;
+  font-size: 0.625rem;
+  color: var(--text-secondary);
+}
+
+/* Speaking ring animation (like Zoom's green border when speaking) */
+.tile-speaking-ring {
+  position: absolute;
+  inset: -2px;
+  border-radius: 12px;
+  border: 2px solid var(--tile-color, var(--accent));
+  animation: pulse-ring 1.5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes pulse-ring {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.005); }
+}
+
+/* ---- Right Panel ---- */
+.right-panel {
+  background: var(--bg-secondary);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.right-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.right-tab {
+  flex: 1;
+  padding: 0.5rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.right-tab:hover { color: var(--text-primary); }
+.right-tab-active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.right-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+/* =========================================================================
+   Shared Components (preserved from original)
+   ========================================================================= */
 .container {
   max-width: 1400px;
   margin: 0 auto;
@@ -36,7 +434,6 @@ body {
   border-bottom: 1px solid var(--border);
   margin-bottom: 1.5rem;
 }
-
 .header h1 { font-size: 1.25rem; font-weight: 600; }
 
 .grid { display: grid; gap: 1rem; }
@@ -49,8 +446,13 @@ body {
   border-radius: 8px;
   padding: 1rem;
 }
-
-.card h2 { font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.card h2 {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
 
 .btn {
   padding: 0.5rem 1rem;
@@ -86,9 +488,9 @@ input, select {
   background: var(--bg-secondary);
   color: var(--text-primary);
   font-size: 0.875rem;
-  width: 100%;
 }
 
+/* Task Graph */
 .task-graph { padding: 0.5rem 0; }
 .task-node {
   display: flex;
@@ -109,23 +511,26 @@ input, select {
 .task-node.completed::before { background: var(--success); }
 .task-node.error::before { background: var(--error); }
 
+/* Timeline */
 .timeline {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  max-height: 400px;
+  max-height: 100%;
   overflow-y: auto;
 }
 .timeline-entry {
   display: flex;
-  gap: 0.75rem;
-  font-size: 0.8125rem;
+  gap: 0.5rem;
+  font-size: 0.75rem;
   padding: 0.375rem 0;
   border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
 }
-.timeline-time { color: var(--text-secondary); white-space: nowrap; min-width: 5rem; }
-.timeline-role { color: var(--accent); font-weight: 500; min-width: 5rem; }
+.timeline-time { color: var(--text-secondary); white-space: nowrap; min-width: 4.5rem; }
+.timeline-role { color: var(--accent); font-weight: 500; min-width: 4rem; }
 
+/* Agent grid (legacy small cards) */
 .agent-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -142,6 +547,7 @@ input, select {
 .agent-card .role { font-weight: 600; margin-bottom: 0.25rem; }
 .agent-card .model { color: var(--text-secondary); font-size: 0.75rem; }
 
+/* Log panel */
 .log-panel {
   max-height: 300px;
   overflow-y: auto;
