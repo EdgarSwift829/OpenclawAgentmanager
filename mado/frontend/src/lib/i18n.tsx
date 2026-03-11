@@ -109,6 +109,8 @@ const dict = {
   openclawInstalling: { en: "Installing...", ja: "インストール中..." },
   openclawInstallBtn: { en: "Install OpenClaw", ja: "OpenClawをインストール" },
   openclawCheckFailed: { en: "Check failed", ja: "確認失敗" },
+  deleteProject: { en: "Delete", ja: "削除" },
+  confirmDelete: { en: "Are you sure you want to delete", ja: "を削除してよろしいですか？" },
 
   // TaskGraph
   taskGraph: { en: "Task Graph", ja: "タスクグラフ" },

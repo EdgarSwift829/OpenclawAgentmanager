@@ -201,6 +201,19 @@ body {
   text-align: left;
 }
 .tree-folder-btn:hover { color: var(--text-primary); border-color: var(--text-secondary); }
+.tree-folder-display {
+  margin: 0 0.75rem;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.625rem;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  direction: rtl;
+  text-align: left;
+}
+.tree-action-delete { opacity: 0.4; }
+.tree-action-delete:hover { opacity: 1; color: #e55; }
 .tree-folder-settings {
   display: flex;
   flex-direction: column;

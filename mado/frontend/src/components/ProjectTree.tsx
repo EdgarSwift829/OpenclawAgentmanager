@@ -196,6 +196,18 @@ export function ProjectTree({
     }
   };
 
+  const handleDelete = async (projectId: string) => {
+    const ok = window.confirm(`「${projectId}」${t("confirmDelete")}`);
+    if (!ok) return;
+    try {
+      await api.deleteProject(projectId);
+      onRefresh();
+      if (activeProject === projectId) onSelect("");
+    } catch (e: any) {
+      alert(e.message || "Delete failed");
+    }
+  };
+
   const handleFolderSave = async () => {
     if (!folderPath.trim()) return;
     setSaving(true);
@@ -365,6 +377,16 @@ export function ProjectTree({
               >
                 {isArchived ? "\u21A9" : "\u{1F4E6}"}
               </button>
+              <button
+                className="tree-action-btn tree-action-delete"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(p);
+                }}
+                title={t("deleteProject")}
+              >
+                {"\u{1F5D1}"}
+              </button>
             </span>
           )}
 
@@ -424,6 +446,11 @@ export function ProjectTree({
           >
             {showFolderSettings ? "\u25B2" : "\u{1F4C1}"} {t("projectsFolder")}
           </button>
+          {savedPath && !showFolderSettings && (
+            <div className="tree-folder-display" title={savedPath}>
+              {savedPath}
+            </div>
+          )}
 
           {showFolderSettings && (
             <div className="tree-folder-settings">
