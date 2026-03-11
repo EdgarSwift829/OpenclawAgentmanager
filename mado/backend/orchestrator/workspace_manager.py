@@ -98,12 +98,23 @@ class WorkspaceManager:
         """Register a child project in the parent's config.json."""
         config_path = self.projects_root / parent_id / "config.json"
         if not config_path.exists():
+            # Auto-create minimal config for parent
+            config = {
+                "project_id": parent_id,
+                "status": "initialized",
+                "parent_id": None,
+                "children": [child_id],
+                "goal": "",
+            }
+            config_path.parent.mkdir(parents=True, exist_ok=True)
+            config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False))
             return
         config = json.loads(config_path.read_text(encoding="utf-8"))
-        children = config.get("children", [])
-        if child_id not in children:
-            children.append(child_id)
-            config["children"] = children
+        # Ensure children field exists
+        if "children" not in config:
+            config["children"] = []
+        if child_id not in config["children"]:
+            config["children"].append(child_id)
             config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False))
 
     def _remove_child_from_parent(self, parent_id: str, child_id: str):
@@ -119,11 +130,24 @@ class WorkspaceManager:
             config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False))
 
     def get_project_config(self, project_id: str) -> dict:
-        """Read a project's config.json."""
+        """Read a project's config.json, migrating old configs if needed."""
         config_path = self.projects_root / project_id / "config.json"
         if not config_path.exists():
             return {}
-        return json.loads(config_path.read_text(encoding="utf-8"))
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        # Migrate old configs missing required fields
+        migrated = False
+        for key, default in [
+            ("parent_id", None),
+            ("children", []),
+            ("goal", ""),
+        ]:
+            if key not in config:
+                config[key] = default
+                migrated = True
+        if migrated:
+            config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False))
+        return config
 
     def update_project_config(self, project_id: str, updates: dict):
         """Merge updates into a project's config.json."""
@@ -269,7 +293,11 @@ class WorkspaceManager:
         return True
 
     def list_projects(self) -> list:
-        """List all existing projects."""
+        """List all existing projects (only directories with config.json)."""
         if not self.projects_root.exists():
             return []
-        return [d.name for d in self.projects_root.iterdir() if d.is_dir()]
+        return [
+            d.name
+            for d in self.projects_root.iterdir()
+            if d.is_dir() and (d / "config.json").exists()
+        ]

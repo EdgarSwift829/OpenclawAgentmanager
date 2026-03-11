@@ -62,12 +62,26 @@ async def set_projects_root(data: ProjectsRootUpdate):
 @router.post("/", response_model=ProjectResponse)
 async def create_project(data: ProjectCreate):
     """Create a new project workspace (optionally as a child of parent_id)."""
+    from pathlib import Path
+
+    # Check for duplicate
+    project_path = Path(workspace_manager.projects_root) / data.project_id
+    if project_path.exists():
+        raise HTTPException(status_code=409, detail=f"Project already exists: {data.project_id}")
+
     if data.parent_id:
-        from pathlib import Path
         parent_path = Path(workspace_manager.projects_root) / data.parent_id
         if not parent_path.exists():
             raise HTTPException(status_code=404, detail=f"Parent project not found: {data.parent_id}")
-    workspace_path = workspace_manager.create_workspace(data.project_id, parent_id=data.parent_id)
+        parent_config = parent_path / "config.json"
+        if not parent_config.exists():
+            raise HTTPException(status_code=404, detail=f"Parent project config missing: {data.parent_id}")
+
+    try:
+        workspace_path = workspace_manager.create_workspace(data.project_id, parent_id=data.parent_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create project: {e}")
+
     return ProjectResponse(
         project_id=data.project_id,
         status="initialized",
