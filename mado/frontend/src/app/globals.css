@@ -896,3 +896,201 @@ input, select {
 .lang-btn + .lang-btn {
   border-left: 1px solid var(--border);
 }
+
+/* =========================================================================
+   Project Detail - Editor panel
+   ========================================================================= */
+.project-detail-empty {
+  padding: 1rem;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+.project-detail {
+  border-bottom: 1px solid var(--border);
+  padding: 0.75rem 1rem;
+  max-height: 50vh;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.detail-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.detail-save-area {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.detail-saved {
+  font-size: 0.6875rem;
+  color: var(--success);
+}
+.detail-save-btn {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+}
+.detail-field {
+  margin-bottom: 0.5rem;
+}
+.detail-label {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.detail-textarea {
+  width: 100%;
+  padding: 0.375rem 0.5rem;
+  font-size: 0.8125rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.4;
+}
+.detail-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.detail-input {
+  padding: 0.375rem 0.5rem;
+  font-size: 0.8125rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+}
+.detail-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Task list */
+.detail-task-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.detail-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.detail-task-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.375rem 0.5rem;
+}
+.detail-task-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+.detail-task-status {
+  font-size: 0.6875rem;
+  padding: 0.125rem 0.25rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+.detail-task-priority {
+  font-size: 0.6875rem;
+  padding: 0.125rem 0.25rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+.detail-task-title {
+  flex: 1;
+  min-width: 80px;
+  padding: 0.125rem 0.375rem;
+  font-size: 0.8125rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-primary);
+}
+.detail-task-title:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.detail-task-deadline {
+  font-size: 0.6875rem;
+  padding: 0.125rem 0.25rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+.detail-task-remove {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0 0.25rem;
+  flex-shrink: 0;
+}
+.detail-task-remove:hover {
+  color: var(--error);
+}
+.detail-task-desc {
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.25rem 0.375rem;
+  font-size: 0.75rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-primary);
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.3;
+}
+.detail-task-desc:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* =========================================================================
+   Run Control - Iteration exhaustion banner
+   ========================================================================= */
+.run-exhausted-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(234, 179, 8, 0.1);
+  border: 1px solid var(--warning);
+  border-radius: 6px;
+}
+.run-exhausted-text {
+  flex: 1;
+  font-size: 0.8125rem;
+  color: var(--warning);
+}
+.run-extend-btn {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+}

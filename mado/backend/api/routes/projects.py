@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 
 from mado.backend.orchestrator.workspace_manager import WorkspaceManager
 
@@ -89,25 +89,45 @@ async def get_project(project_id: str):
     return config
 
 
+class TaskItem(BaseModel):
+    id: str
+    title: str
+    description: Optional[str] = ""
+    status: Optional[str] = "pending"  # pending | in_progress | done
+    deadline: Optional[str] = None  # ISO date string
+    priority: Optional[str] = "medium"  # low | medium | high
+
+
 class ProjectConfigUpdate(BaseModel):
     status: Optional[str] = None
     goal: Optional[str] = None
+    # Parent project fields
+    overview: Optional[str] = None
+    policy: Optional[str] = None
+    roadmap: Optional[str] = None
+    # Child project fields
+    description: Optional[str] = None
+    deadline: Optional[str] = None
+    tasks: Optional[List[TaskItem]] = None
 
 
 @router.put("/{project_id}/config")
 async def update_project_config(project_id: str, data: ProjectConfigUpdate):
-    """Update project config fields (status, goal, etc.)."""
+    """Update project config fields."""
     from pathlib import Path
 
     project_path = Path(workspace_manager.projects_root) / project_id
     if not project_path.exists():
         raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
 
-    updates = {k: v for k, v in data.model_dump().items() if v is not None}
-    if not updates:
+    raw = data.model_dump(exclude_none=True)
+    # Convert tasks (list of TaskItem) to plain dicts for JSON
+    if "tasks" in raw:
+        raw["tasks"] = [t if isinstance(t, dict) else t for t in raw["tasks"]]
+    if not raw:
         raise HTTPException(status_code=400, detail="No fields to update")
 
-    workspace_manager.update_project_config(project_id, updates)
+    workspace_manager.update_project_config(project_id, raw)
     return workspace_manager.get_project_config(project_id)
 
 

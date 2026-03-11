@@ -140,7 +140,7 @@ class WorkspaceManager:
         return config.get("children", [])
 
     def get_project_tree(self) -> list:
-        """Return hierarchical project list. Top-level = projects with no parent."""
+        """Return hierarchical project list with full config data."""
         all_projects = self.list_projects()
         tree = []
         for pid in all_projects:
@@ -150,6 +150,13 @@ class WorkspaceManager:
                 "parent_id": config.get("parent_id"),
                 "children": config.get("children", []),
                 "status": config.get("status", "initialized"),
+                "goal": config.get("goal", ""),
+                "overview": config.get("overview", ""),
+                "policy": config.get("policy", ""),
+                "roadmap": config.get("roadmap", ""),
+                "description": config.get("description", ""),
+                "deadline": config.get("deadline"),
+                "tasks": config.get("tasks", []),
             })
         return tree
 

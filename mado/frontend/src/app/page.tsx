@@ -9,6 +9,7 @@ import { RunControl } from "@/components/RunControl";
 import { Timeline } from "@/components/Timeline";
 import { ModelPanel } from "@/components/ModelPanel";
 import { TaskGraph } from "@/components/TaskGraph";
+import { ProjectDetail } from "@/components/ProjectDetail";
 import { LangSwitcher } from "@/components/LangSwitcher";
 
 // ---------------------------------------------------------------------------
@@ -41,7 +42,7 @@ function saveAllStates(states: Record<string, ProjectState>) {
 
 function loadProjectState(id: string): ProjectState {
   const all = loadAllStates();
-  return all[id] || { goal: "", maxIter: 10, events: [] };
+  return all[id] || { goal: "", maxIter: 30, events: [] };
 }
 
 function saveProjectState(id: string, state: ProjectState) {
@@ -62,7 +63,7 @@ export default function Dashboard() {
   const [agents, setAgents] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [goal, setGoal] = useState("");
-  const [maxIter, setMaxIter] = useState(10);
+  const [maxIter, setMaxIter] = useState(30);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [rightTab, setRightTab] = useState<"timeline" | "models" | "tasks">("timeline");
 
@@ -187,8 +188,17 @@ export default function Dashboard() {
             onGoalChange={setGoal}
             maxIter={maxIter}
             onMaxIterChange={setMaxIter}
+            onExtendIterations={(extra) => {
+              if (!activeProject) return;
+              api.startRun(activeProject, goal.trim(), extra).then(loadRunStatus).catch(() => {});
+            }}
           />
         </div>
+        <ProjectDetail
+          activeProject={activeProject}
+          projectTree={projectTree}
+          onRefresh={loadProjects}
+        />
         <AgentGrid agents={agents} events={events} />
       </main>
 

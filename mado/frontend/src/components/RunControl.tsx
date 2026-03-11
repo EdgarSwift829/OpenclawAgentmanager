@@ -11,6 +11,7 @@ interface Props {
   onGoalChange: (goal: string) => void;
   maxIter: number;
   onMaxIterChange: (n: number) => void;
+  onExtendIterations?: (extra: number) => void;
 }
 
 export function RunControl({
@@ -21,6 +22,7 @@ export function RunControl({
   onGoalChange,
   maxIter,
   onMaxIterChange,
+  onExtendIterations,
 }: Props) {
   const { t } = useI18n();
 
@@ -44,7 +46,18 @@ export function RunControl({
     }
   };
 
+  const handleExtend = () => {
+    if (onExtendIterations) {
+      onExtendIterations(maxIter);
+    }
+  };
+
   const isRunning = runStatus?.status === "running";
+  const isExhausted =
+    runStatus &&
+    runStatus.status !== "running" &&
+    runStatus.iteration > 0 &&
+    runStatus.iteration >= runStatus.max_iterations;
 
   if (!activeProject) {
     return (
@@ -70,7 +83,7 @@ export function RunControl({
           <input
             type="number"
             min={1}
-            max={50}
+            max={200}
             value={maxIter}
             onChange={(e) => onMaxIterChange(Number(e.target.value))}
             className="run-iter-input"
@@ -97,6 +110,14 @@ export function RunControl({
           </span>
         )}
       </div>
+      {isExhausted && (
+        <div className="run-exhausted-banner">
+          <span className="run-exhausted-text">{t("iterExhausted")}</span>
+          <button className="btn btn-primary run-extend-btn" onClick={handleExtend}>
+            {t("extendIterations")} (+{maxIter})
+          </button>
+        </div>
+      )}
     </div>
   );
 }
