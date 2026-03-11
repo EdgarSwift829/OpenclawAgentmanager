@@ -8,7 +8,7 @@ echo ============================================
 echo.
 
 :: ── Step 1: Environment Auto-Setup ───────────────
-echo [1/3] 環境チェック＋自動セットアップ中...
+echo [1/4] 環境チェック＋自動セットアップ中...
 python "%~dp0check_env.py"
 if %ERRORLEVEL% neq 0 (
     echo.
@@ -36,15 +36,20 @@ if exist "%VENV_PYTHON%" (
 echo.
 
 :: ── Step 2: Start Backend ────────────────────────
-echo [2/3] バックエンド起動中 (http://localhost:8000) ...
+echo [2/4] バックエンド起動中 (http://localhost:8000) ...
 start "MADO Backend" cmd /k ""%~dp0backend\run_backend.bat""
 timeout /t 3 /nobreak >nul
 
-:: ── Step 3: Start Frontend + Desktop Window ────────
-echo [3/3] フロントエンド＋デスクトップUI起動中...
+:: ── Step 3: Start Frontend (Next.js dev server) ────
+echo [3/4] フロントエンド起動中...
 pushd "%~dp0frontend"
-start "MADO Frontend" cmd /k "npm run dev:desktop"
+start "MADO Frontend" cmd /k "npm run dev"
 popd
+timeout /t 2 /nobreak >nul
+
+:: ── Step 4: Open Desktop Window (pywebview) ────────
+echo [4/4] デスクトップウィンドウ起動中...
+start "MADO Desktop" cmd /k ""%PYTHON_CMD%" "%~dp0desktop_window.py""
 
 echo.
 echo ============================================
@@ -55,6 +60,6 @@ echo   Health:   http://localhost:8000/api/health
 echo   venv:     %VENV_DIR%
 echo ============================================
 echo.
-echo Electron ウィンドウが自動的に開きます。
+echo ネイティブウィンドウが自動的に開きます。
 echo このウィンドウは閉じて構いません。
 pause
