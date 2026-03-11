@@ -1,6 +1,7 @@
 "use client";
 
 import * as api from "@/lib/api";
+import { useI18n } from "@/lib/i18n";
 
 interface Props {
   activeProject: string | null;
@@ -21,6 +22,8 @@ export function RunControl({
   maxIter,
   onMaxIterChange,
 }: Props) {
+  const { t } = useI18n();
+
   const handleStart = async () => {
     if (!activeProject || !goal.trim()) return;
     try {
@@ -46,7 +49,7 @@ export function RunControl({
   if (!activeProject) {
     return (
       <div className="run-control">
-        <span className="run-control-hint">Select a project to start</span>
+        <span className="run-control-hint">{t("selectProject")}</span>
       </div>
     );
   }
@@ -55,7 +58,7 @@ export function RunControl({
     <div className="run-control">
       <input
         className="run-goal-input"
-        placeholder="Describe the project goal..."
+        placeholder={t("goalPlaceholder")}
         value={goal}
         onChange={(e) => onGoalChange(e.target.value)}
         disabled={isRunning}
@@ -63,7 +66,7 @@ export function RunControl({
       />
       <div className="run-controls-row">
         <label className="run-iter-label">
-          Iterations:
+          {t("iterations")}
           <input
             type="number"
             min={1}
@@ -76,11 +79,11 @@ export function RunControl({
         </label>
         {!isRunning ? (
           <button className="btn btn-primary" onClick={handleStart}>
-            Start
+            {t("start")}
           </button>
         ) : (
           <button className="btn btn-danger" onClick={handleStop}>
-            Stop
+            {t("stop")}
           </button>
         )}
         {runStatus && (

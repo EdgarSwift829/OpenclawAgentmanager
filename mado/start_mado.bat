@@ -12,7 +12,7 @@ echo [1/3] 環境チェック＋自動セットアップ中...
 python "%~dp0check_env.py"
 if %ERRORLEVEL% neq 0 (
     echo.
-    echo 環境セットアップに失敗しました。上記のエラーを確認してください。
+    echo [ERROR] 環境セットアップに失敗しました。上記のエラーを確認してください。
     pause
     exit /b 1
 )
@@ -36,13 +36,13 @@ if exist "%VENV_PYTHON%" (
 echo.
 
 :: ── Step 2: Start Backend ────────────────────────
-echo [2/4] バックエンド起動中 (http://localhost:8000) ...
-start "MADO Backend" cmd /k ""%~dp0backend\run_backend.bat""
+echo [2/3] バックエンド起動中 (http://localhost:8000) ...
+start "MADO Backend" cmd /c ""%~dp0backend\run_backend.bat" || (echo. & echo [ERROR] バックエンドの起動に失敗しました & pause)"
 timeout /t 3 /nobreak >nul
 
 :: ── Step 3: Start Frontend + Desktop Window ─────────
 echo [3/3] フロントエンド＋デスクトップウィンドウ起動中...
-start "MADO Desktop" cmd /k ""%PYTHON_CMD%" "%~dp0desktop_window.py""
+start "MADO Desktop" cmd /c ""%PYTHON_CMD%" "%~dp0desktop_window.py"" || (echo. & echo [ERROR] デスクトップウィンドウの起動に失敗しました & pause)
 
 echo.
 echo ============================================
@@ -50,9 +50,9 @@ echo   MADO 起動完了（デスクトップモード）
 echo   Backend:  http://localhost:8000
 echo   Frontend: http://localhost:3001
 echo   Health:   http://localhost:8000/api/health
-echo   venv:     %VENV_DIR%
 echo ============================================
 echo.
-echo ネイティブウィンドウが自動的に開きます。
-echo このウィンドウは閉じて構いません。
-pause
+:: 成功時は自動で閉じる（3秒後）
+echo 3秒後にこのウィンドウは自動で閉じます...
+timeout /t 3 /nobreak >nul
+exit /b 0

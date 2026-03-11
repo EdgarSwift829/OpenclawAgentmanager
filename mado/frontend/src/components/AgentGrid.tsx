@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/lib/i18n";
+
 interface AgentInfo {
   role: string;
   model?: string;
@@ -67,14 +69,16 @@ function getLatestOutput(role: string, events: any[]): string {
 }
 
 export function AgentGrid({ agents, events }: Props) {
+  const { t } = useI18n();
+
   if (agents.length === 0) {
     return (
       <div className="agent-grid-container">
         <div className="agent-grid-empty">
           <div className="agent-grid-empty-icon">{"\uD83D\uDC65"}</div>
-          <div>Waiting for agents...</div>
+          <div>{t("waitingForAgents")}</div>
           <div className="agent-grid-empty-sub">
-            Start a run to spawn agents
+            {t("startRunToSpawn")}
           </div>
         </div>
       </div>
@@ -112,7 +116,7 @@ export function AgentGrid({ agents, events }: Props) {
                   <span className="tile-output-text">{latestOutput}</span>
                 ) : (
                   <span className="tile-output-placeholder">
-                    {agent.status === "active" ? "Processing..." : "Standby"}
+                    {agent.status === "active" ? t("processing") : t("standby")}
                   </span>
                 )}
               </div>
@@ -125,9 +129,9 @@ export function AgentGrid({ agents, events }: Props) {
                 )}
                 {(agent.tasks_completed ?? 0) > 0 && (
                   <span className="tile-tasks">
-                    {agent.tasks_completed} done
+                    {agent.tasks_completed} {t("done")}
                     {(agent.tasks_failed ?? 0) > 0 &&
-                      ` / ${agent.tasks_failed} fail`}
+                      ` / ${agent.tasks_failed} ${t("fail")}`}
                   </span>
                 )}
               </div>

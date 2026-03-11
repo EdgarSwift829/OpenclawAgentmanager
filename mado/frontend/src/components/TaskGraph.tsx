@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n, TKey } from "@/lib/i18n";
+
 interface Props {
   runStatus: any;
 }
@@ -9,16 +11,26 @@ interface TaskNode {
   status: "pending" | "running" | "completed" | "error";
 }
 
+const PHASE_KEYS: TKey[] = [
+  "ctoPlanning",
+  "taskDecomposition",
+  "research",
+  "implementation",
+  "codeReview",
+  "testing",
+];
+
 export function TaskGraph({ runStatus }: Props) {
-  const tasks: TaskNode[] = buildTasks(runStatus);
+  const { t } = useI18n();
+  const tasks: TaskNode[] = buildTasks(runStatus, t);
 
   return (
     <div className="card">
-      <h2>Task Graph</h2>
+      <h2>{t("taskGraph")}</h2>
       <div className="task-graph">
         {tasks.length === 0 ? (
           <span style={{ color: "var(--text-secondary)", fontSize: "0.8125rem" }}>
-            No active tasks
+            {t("noActiveTasks")}
           </span>
         ) : (
           tasks.map((task, i) => (
@@ -32,21 +44,17 @@ export function TaskGraph({ runStatus }: Props) {
   );
 }
 
-function buildTasks(runStatus: any): TaskNode[] {
+function buildTasks(runStatus: any, t: (key: TKey) => string): TaskNode[] {
   if (!runStatus) return [];
 
   const iteration = runStatus.iteration || 0;
   const maxIter = runStatus.max_iterations || 10;
   const status = runStatus.status || "idle";
 
-  const phases = [
-    { name: "CTO Planning", step: 1 },
-    { name: "Task Decomposition", step: 2 },
-    { name: "Research", step: 3 },
-    { name: "Implementation", step: 4 },
-    { name: "Code Review", step: 5 },
-    { name: "Testing", step: 6 },
-  ];
+  const phases = PHASE_KEYS.map((key, i) => ({
+    name: t(key),
+    step: i + 1,
+  }));
 
   if (status === "completed") {
     return phases.map((p) => ({ name: p.name, status: "completed" as const }));

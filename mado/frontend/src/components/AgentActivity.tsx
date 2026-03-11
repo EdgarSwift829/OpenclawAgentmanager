@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/lib/i18n";
+
 interface Agent {
   role: string;
   model: string;
@@ -22,12 +24,14 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 export function AgentActivity({ agents }: Props) {
+  const { t } = useI18n();
+
   return (
     <div className="card">
-      <h2>Agent Activity</h2>
+      <h2>{t("agentActivity")}</h2>
       {agents.length === 0 ? (
         <span style={{ color: "var(--text-secondary)", fontSize: "0.8125rem" }}>
-          No active agents
+          {t("noActiveAgents")}
         </span>
       ) : (
         <div className="agent-grid">

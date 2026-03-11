@@ -2,12 +2,14 @@
 
 import { useState, useEffect, useCallback } from "react";
 import * as api from "@/lib/api";
+import { useI18n } from "@/lib/i18n";
 import { ProjectTree } from "@/components/ProjectTree";
 import { AgentGrid } from "@/components/AgentGrid";
 import { RunControl } from "@/components/RunControl";
 import { Timeline } from "@/components/Timeline";
 import { ModelPanel } from "@/components/ModelPanel";
 import { TaskGraph } from "@/components/TaskGraph";
+import { LangSwitcher } from "@/components/LangSwitcher";
 
 // ---------------------------------------------------------------------------
 // localStorage persistence for per-project state
@@ -52,6 +54,7 @@ function saveProjectState(id: string, state: ProjectState) {
 // Dashboard
 // ---------------------------------------------------------------------------
 export default function Dashboard() {
+  const { t } = useI18n();
   const [projects, setProjects] = useState<string[]>([]);
   const [activeProject, setActiveProject] = useState<string | null>(null);
   const [runStatus, setRunStatus] = useState<any>(null);
@@ -148,7 +151,7 @@ export default function Dashboard() {
   }, [activeProject]);
 
   return (
-    <div className="app-layout">
+    <div className={`app-layout ${sidebarOpen ? "" : "sidebar-is-collapsed"}`}>
       {/* ---- Left sidebar: Project Tree ---- */}
       <aside className={`sidebar ${sidebarOpen ? "" : "sidebar-collapsed"}`}>
         <div className="sidebar-header">
@@ -156,7 +159,7 @@ export default function Dashboard() {
           <button
             className="sidebar-toggle"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            title={sidebarOpen ? "Collapse" : "Expand"}
+            title={sidebarOpen ? t("collapse") : t("expand")}
           >
             {sidebarOpen ? "\u25C0" : "\u25B6"}
           </button>
@@ -194,20 +197,21 @@ export default function Dashboard() {
             className={`right-tab ${rightTab === "timeline" ? "right-tab-active" : ""}`}
             onClick={() => setRightTab("timeline")}
           >
-            Timeline
+            {t("timeline")}
           </button>
           <button
             className={`right-tab ${rightTab === "models" ? "right-tab-active" : ""}`}
             onClick={() => setRightTab("models")}
           >
-            Models
+            {t("models")}
           </button>
           <button
             className={`right-tab ${rightTab === "tasks" ? "right-tab-active" : ""}`}
             onClick={() => setRightTab("tasks")}
           >
-            Tasks
+            {t("tasks")}
           </button>
+          <LangSwitcher />
         </div>
         <div className="right-content">
           {rightTab === "timeline" && <Timeline events={events} />}

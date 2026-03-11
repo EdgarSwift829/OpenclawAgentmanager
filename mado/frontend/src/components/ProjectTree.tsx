@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import * as api from "@/lib/api";
+import { useI18n } from "@/lib/i18n";
 
 interface Props {
   projects: string[];
@@ -25,6 +26,7 @@ export function ProjectTree({
   onRefresh,
   runStatuses = {},
 }: Props) {
+  const { t } = useI18n();
   const [newId, setNewId] = useState("");
   const [creating, setCreating] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -48,7 +50,7 @@ export function ProjectTree({
     <div className="project-tree">
       <div className="tree-header" onClick={() => setCollapsed(!collapsed)}>
         <span className="tree-chevron">{collapsed ? "\u25B6" : "\u25BC"}</span>
-        <span className="tree-title">PROJECTS</span>
+        <span className="tree-title">{t("projects")}</span>
         <span className="tree-count">{projects.length}</span>
       </div>
 
@@ -56,7 +58,7 @@ export function ProjectTree({
         <>
           <div className="tree-create">
             <input
-              placeholder="New project..."
+              placeholder={t("newProject")}
               value={newId}
               onChange={(e) => setNewId(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleCreate()}
@@ -66,7 +68,7 @@ export function ProjectTree({
               className="tree-add-btn"
               onClick={handleCreate}
               disabled={creating}
-              title="Create project"
+              title={t("createProject")}
             >
               +
             </button>
@@ -74,7 +76,7 @@ export function ProjectTree({
 
           <div className="tree-list">
             {projects.length === 0 && (
-              <div className="tree-empty">No projects</div>
+              <div className="tree-empty">{t("noProjects")}</div>
             )}
             {projects.map((p) => {
               const status = runStatuses[p];
@@ -106,9 +108,9 @@ export function ProjectTree({
       <button
         className="tree-refresh"
         onClick={onRefresh}
-        title="Refresh projects"
+        title={t("refreshProjects")}
       >
-        Refresh
+        {t("refresh")}
       </button>
     </div>
   );
