@@ -1,8 +1,10 @@
-cto: qwen3.5-9b
-manager: qwen3.5-9b
-researcher: qwen3.5-9b
-engineer: qwen2.5-coder-7b
-reviewer: qwen3.5-9b
-tester: qwen2.5-coder-7b
-optimizer: qwen2.5-coder-7b
-documenter: qwen3.5-9b
+# Model assignments per role
+# Tier strategy: high-tier models for planning/review, standard for execution
+cto: qwen3.5-9b           # tier: high (architecture & planning)
+manager: qwen3.5-9b       # tier: high (task decomposition)
+researcher: qwen3.5-9b    # tier: high (analysis)
+engineer: qwen2.5-coder-7b  # tier: standard (code generation)
+reviewer: qwen3.5-9b      # tier: high (quality gate)
+tester: qwen2.5-coder-7b  # tier: standard (test execution)
+optimizer: qwen2.5-coder-7b # tier: standard (optimization)
+documenter: qwen2.5-coder-7b # tier: standard (documentation)

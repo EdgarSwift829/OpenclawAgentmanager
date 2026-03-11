@@ -2,13 +2,18 @@ models:
   qwen3.5-9b:
     provider: ollama
     context: 32768
+    tier: high
     capabilities:
       - reasoning
       - planning
+    fallback:
+      name: qwen2.5-coder-7b
+      provider: ollama
 
   qwen2.5-coder-7b:
     provider: ollama
     context: 32768
+    tier: standard
     capabilities:
       - coding
       - debugging
@@ -16,5 +21,14 @@ models:
   deepseek-coder:
     provider: vllm
     context: 32768
+    tier: high
     capabilities:
       - coding
+    fallback:
+      name: qwen2.5-coder-7b
+      provider: ollama
+
+# Tier definitions:
+#   high     - For planning, review, architecture (CTO, Reviewer)
+#   standard - For execution tasks (Engineer, Tester, Optimizer)
+#   light    - For simple tasks (Documenter, routine checks)

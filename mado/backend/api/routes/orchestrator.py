@@ -7,11 +7,13 @@ from typing import Optional
 
 from mado.backend.orchestrator.orchestrator import Orchestrator
 from mado.backend.api.routes.agents import register_session
+from mado.backend.api.routes.websocket import broadcaster
 
 router = APIRouter()
 
-# Active orchestration runs
+# Active orchestration runs and their orchestrator instances
 _runs: dict = {}
+_orchestrators: dict[str, Orchestrator] = {}
 
 
 class RunCreate(BaseModel):
@@ -46,14 +48,22 @@ async def start_run(data: RunCreate, background_tasks: BackgroundTasks):
 
 
 async def _execute_run(project_id: str, goal: str, max_iterations: int):
-    """Execute orchestration run in background."""
+    """Execute orchestration run in background with async support."""
     try:
         orch = Orchestrator(project_id)
         orch.max_iterations = max_iterations
+        _orchestrators[project_id] = orch
 
-        # Run in executor to avoid blocking
-        loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(None, orch.run, goal)
+        # Connect WebSocket broadcasting
+        async def ws_event_handler(event: dict):
+            await broadcaster.broadcast(project_id, event)
+            if event.get("type") == "iteration_started":
+                _runs[project_id]["iteration"] = event.get("iteration", 0)
+
+        orch.on_event(ws_event_handler)
+
+        # Run directly as async
+        result = await orch.run_async(goal)
 
         register_session(project_id, orch.agents)
 
@@ -70,6 +80,8 @@ async def _execute_run(project_id: str, goal: str, max_iterations: int):
             "max_iterations": max_iterations,
             "error": str(e),
         }
+    finally:
+        _orchestrators.pop(project_id, None)
 
 
 @router.get("/run/{project_id}")
@@ -83,10 +95,16 @@ async def get_run_status(project_id: str):
 
 @router.post("/run/{project_id}/stop")
 async def stop_run(project_id: str):
-    """Stop a running orchestration."""
+    """Stop a running orchestration with actual cancellation."""
     run = _runs.get(project_id)
     if not run or run["status"] != "running":
         raise HTTPException(status_code=404, detail="No active run to stop")
+
+    # Signal the orchestrator to cancel
+    orch = _orchestrators.get(project_id)
+    if orch:
+        orch.cancel()
+
     _runs[project_id]["status"] = "stopped"
     return {"status": "stopped", "project_id": project_id}
 
