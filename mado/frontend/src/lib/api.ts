@@ -14,6 +14,9 @@ async function fetchJSON(path: string, options?: RequestInit) {
 
 // Projects
 export const listProjects = () => fetchJSON("/projects/");
+export const getProjectsRoot = () => fetchJSON("/projects/settings/root");
+export const setProjectsRoot = (projects_root: string) =>
+  fetchJSON("/projects/settings/root", { method: "PUT", body: JSON.stringify({ projects_root }) });
 export const createProject = (project_id: string, goal: string) =>
   fetchJSON("/projects/", { method: "POST", body: JSON.stringify({ project_id, goal }) });
 export const getProject = (id: string) => fetchJSON(`/projects/${id}`);

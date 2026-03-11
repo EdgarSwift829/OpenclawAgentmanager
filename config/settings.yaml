@@ -1,0 +1,4 @@
+# MADO Global Settings
+# プロジェクトフォルダのルートパスを指定
+# 空欄またはコメントアウトの場合はデフォルト (リポジトリ内の projects/) を使用
+projects_root: ""

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import * as api from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 
@@ -30,6 +30,20 @@ export function ProjectTree({
   const [newId, setNewId] = useState("");
   const [creating, setCreating] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [showFolderSettings, setShowFolderSettings] = useState(false);
+  const [folderPath, setFolderPath] = useState("");
+  const [savedPath, setSavedPath] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  // Load current projects root on mount
+  useEffect(() => {
+    api.getProjectsRoot()
+      .then((data) => {
+        setFolderPath(data.projects_root || "");
+        setSavedPath(data.projects_root || "");
+      })
+      .catch(() => {});
+  }, []);
 
   const handleCreate = async () => {
     if (!newId.trim()) return;
@@ -46,6 +60,22 @@ export function ProjectTree({
     }
   };
 
+  const handleFolderSave = async () => {
+    if (!folderPath.trim()) return;
+    setSaving(true);
+    try {
+      const data = await api.setProjectsRoot(folderPath.trim());
+      setSavedPath(data.projects_root);
+      setFolderPath(data.projects_root);
+      setShowFolderSettings(false);
+      onRefresh();
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="project-tree">
       <div className="tree-header" onClick={() => setCollapsed(!collapsed)}>
@@ -56,6 +86,47 @@ export function ProjectTree({
 
       {!collapsed && (
         <>
+          {/* Folder settings toggle */}
+          <button
+            className="tree-folder-btn"
+            onClick={() => setShowFolderSettings(!showFolderSettings)}
+            title={t("projectsFolder")}
+          >
+            {showFolderSettings ? "\u25B2" : "\u{1F4C1}"} {t("projectsFolder")}
+          </button>
+
+          {showFolderSettings && (
+            <div className="tree-folder-settings">
+              <input
+                className="tree-input tree-folder-input"
+                placeholder={t("folderPath")}
+                value={folderPath}
+                onChange={(e) => setFolderPath(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleFolderSave()}
+              />
+              <div className="tree-folder-actions">
+                <button
+                  className="tree-add-btn"
+                  onClick={handleFolderSave}
+                  disabled={saving || folderPath.trim() === savedPath}
+                  title={t("apply")}
+                >
+                  {"\u2714"}
+                </button>
+                <button
+                  className="tree-folder-cancel"
+                  onClick={() => {
+                    setFolderPath(savedPath);
+                    setShowFolderSettings(false);
+                  }}
+                  title={t("cancel")}
+                >
+                  {"\u2716"}
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="tree-create">
             <input
               placeholder={t("newProject")}

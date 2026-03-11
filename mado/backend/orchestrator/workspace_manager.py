@@ -4,14 +4,65 @@ import os
 import json
 from pathlib import Path
 
-PROJECTS_ROOT = Path(__file__).resolve().parents[3] / "projects"
+import yaml
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+SETTINGS_PATH = REPO_ROOT / "config" / "settings.yaml"
+DEFAULT_PROJECTS_ROOT = REPO_ROOT / "projects"
+
+
+def _load_projects_root() -> Path:
+    """Load projects_root from config/settings.yaml, fall back to default."""
+    try:
+        if SETTINGS_PATH.exists():
+            data = yaml.safe_load(SETTINGS_PATH.read_text(encoding="utf-8")) or {}
+            root = data.get("projects_root", "")
+            if root and root.strip():
+                return Path(root.strip())
+    except Exception:
+        pass
+    return DEFAULT_PROJECTS_ROOT
+
+
+def _save_projects_root(new_root: str):
+    """Persist projects_root to config/settings.yaml."""
+    data: dict = {}
+    try:
+        if SETTINGS_PATH.exists():
+            data = yaml.safe_load(SETTINGS_PATH.read_text(encoding="utf-8")) or {}
+    except Exception:
+        data = {}
+    data["projects_root"] = new_root
+    SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    SETTINGS_PATH.write_text(
+        yaml.dump(data, allow_unicode=True, default_flow_style=False),
+        encoding="utf-8",
+    )
 
 
 class WorkspaceManager:
     """Create, validate, and enforce filesystem boundaries for project workspaces."""
 
     def __init__(self, projects_root: str = None):
-        self.projects_root = Path(projects_root) if projects_root else PROJECTS_ROOT
+        if projects_root:
+            self.projects_root = Path(projects_root)
+        else:
+            self.projects_root = _load_projects_root()
+
+    def reload_root(self):
+        """Re-read projects_root from settings file."""
+        self.projects_root = _load_projects_root()
+
+    def get_projects_root(self) -> str:
+        """Return current projects root path."""
+        return str(self.projects_root)
+
+    def set_projects_root(self, new_root: str):
+        """Update projects root path and persist to config."""
+        path = Path(new_root)
+        path.mkdir(parents=True, exist_ok=True)
+        _save_projects_root(new_root)
+        self.projects_root = path
 
     def create_workspace(self, project_id: str) -> str:
         """Create isolated workspace for a project."""

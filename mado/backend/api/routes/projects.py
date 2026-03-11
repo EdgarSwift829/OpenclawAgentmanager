@@ -21,11 +21,35 @@ class ProjectResponse(BaseModel):
     workspace_path: str
 
 
+class ProjectsRootUpdate(BaseModel):
+    projects_root: str
+
+
 @router.get("/")
 async def list_projects():
     """List all projects."""
     projects = workspace_manager.list_projects()
-    return {"projects": projects}
+    return {"projects": projects, "projects_root": workspace_manager.get_projects_root()}
+
+
+@router.get("/settings/root")
+async def get_projects_root():
+    """Get current projects root path."""
+    return {"projects_root": workspace_manager.get_projects_root()}
+
+
+@router.put("/settings/root")
+async def set_projects_root(data: ProjectsRootUpdate):
+    """Update projects root path."""
+    new_root = data.projects_root.strip()
+    if not new_root:
+        raise HTTPException(status_code=400, detail="Path cannot be empty")
+    try:
+        workspace_manager.set_projects_root(new_root)
+        projects = workspace_manager.list_projects()
+        return {"projects_root": workspace_manager.get_projects_root(), "projects": projects}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/", response_model=ProjectResponse)

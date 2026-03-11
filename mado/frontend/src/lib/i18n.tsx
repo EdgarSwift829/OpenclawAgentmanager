@@ -50,6 +50,14 @@ const dict = {
   iterationTimeline: { en: "Iteration Timeline", ja: "反復タイムライン" },
   noEventsYet: { en: "No events yet", ja: "イベントなし" },
 
+  // Settings
+  projectsFolder: { en: "Projects Folder", ja: "プロジェクトフォルダ" },
+  folderPath: { en: "Folder path", ja: "フォルダパス" },
+  apply: { en: "Apply", ja: "適用" },
+  cancel: { en: "Cancel", ja: "キャンセル" },
+  folderUpdated: { en: "Folder updated", ja: "フォルダを更新しました" },
+  settings: { en: "Settings", ja: "設定" },
+
   // TaskGraph
   taskGraph: { en: "Task Graph", ja: "タスクグラフ" },
   noActiveTasks: { en: "No active tasks", ja: "アクティブなタスクなし" },
