@@ -12,6 +12,7 @@ from typing import Optional, Callable
 from mado.backend.orchestrator.agent_factory import AgentFactory
 from mado.backend.orchestrator.workspace_manager import WorkspaceManager
 from mado.backend.orchestrator.message_bus import MessageBus, Message
+from mado.backend.orchestrator.task_graph import TaskGraph
 from mado.backend.models.model_manager import ModelManager
 
 logger = logging.getLogger(__name__)
@@ -163,26 +164,8 @@ class Orchestrator:
                 else:
                     tasks = [plan]
 
-                # Classify tasks: parallel (independent) vs sequential (dependent)
-                parallel_tasks, sequential_tasks = self._classify_tasks(tasks)
-
-                iteration_results = []
-
-                # Execute independent tasks in parallel
-                if parallel_tasks:
-                    await self._emit("parallel_start", {
-                        "iteration": self.iteration,
-                        "task_count": len(parallel_tasks),
-                    })
-                    parallel_results = await self._execute_parallel(parallel_tasks)
-                    iteration_results.extend(parallel_results)
-
-                # Execute dependent tasks sequentially
-                for task in sequential_tasks:
-                    if self._cancel_event.is_set():
-                        break
-                    result = await self._execute_single(task)
-                    iteration_results.append(result)
+                # Execute tasks via DAG (respects dependencies, maximizes parallelism)
+                iteration_results = await self._execute_task_graph(tasks)
 
                 # Broadcast results via message bus
                 await self.message_bus.send(Message(
@@ -315,11 +298,65 @@ class Orchestrator:
         await self._emit("task_complete", {"role": agent_role})
         return result
 
-    def _classify_tasks(self, tasks: list) -> tuple[list, list]:
-        """Classify tasks into parallel (independent) and sequential (dependent).
+    async def _execute_task_graph(self, tasks: list) -> list:
+        """Execute tasks respecting dependency order, maximizing parallelism.
 
-        Tasks with depends_on field are sequential; others are parallel.
+        Uses TaskGraph to compute execution layers. Each layer runs in parallel.
+        Falls back to simple parallel/sequential classification if tasks lack task_id.
         """
+        # Check if tasks have DAG structure (task_id + depends_on)
+        has_dag = any(t.get("task_id") for t in tasks)
+
+        if has_dag:
+            graph = TaskGraph()
+            graph.add_tasks(tasks)
+            errors = graph.validate()
+            if errors:
+                logger.warning(f"Invalid task graph, falling back to simple: {errors}")
+                has_dag = False
+
+        if has_dag:
+            layers = graph.get_execution_layers()
+            await self._emit("dag_execution", {
+                "iteration": self.iteration,
+                "layers": len(layers),
+                "total_tasks": graph.task_count,
+            })
+
+            all_results = []
+            for layer_idx, layer in enumerate(layers):
+                if self._cancel_event.is_set():
+                    break
+                await self._emit("dag_layer_start", {
+                    "layer": layer_idx,
+                    "task_count": len(layer),
+                    "tasks": [t.get("task_id", "") for t in layer],
+                })
+                if len(layer) == 1:
+                    result = await self._execute_single(layer[0])
+                    all_results.append(result)
+                else:
+                    layer_results = await self._execute_parallel(layer)
+                    all_results.extend(layer_results)
+            return all_results
+        else:
+            # Fallback: simple parallel/sequential classification
+            parallel, sequential = self._classify_tasks_simple(tasks)
+            results = []
+            if parallel:
+                await self._emit("parallel_start", {
+                    "iteration": self.iteration,
+                    "task_count": len(parallel),
+                })
+                results.extend(await self._execute_parallel(parallel))
+            for task in sequential:
+                if self._cancel_event.is_set():
+                    break
+                results.append(await self._execute_single(task))
+            return results
+
+    def _classify_tasks_simple(self, tasks: list) -> tuple[list, list]:
+        """Simple classification: tasks with depends_on are sequential, others parallel."""
         parallel = []
         sequential = []
         for task in tasks:

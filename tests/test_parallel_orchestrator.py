@@ -161,7 +161,7 @@ class TestOrchestratorParallel:
             {"description": "also independent", "assigned_to": "researcher"},
         ]
 
-        parallel, sequential = orch._classify_tasks(tasks)
+        parallel, sequential = orch._classify_tasks_simple(tasks)
         assert len(parallel) == 2
         assert len(sequential) == 1
         assert sequential[0]["assigned_to"] == "tester"
