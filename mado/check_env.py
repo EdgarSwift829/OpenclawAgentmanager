@@ -48,7 +48,9 @@ def info(msg: str) -> None:
 
 
 def run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, capture_output=True, text=True, **kwargs)
+    # Windows requires shell=True for commands like npm/npx that are .cmd scripts
+    use_shell = sys.platform.startswith("win")
+    return subprocess.run(cmd, capture_output=True, text=True, shell=use_shell, **kwargs)
 
 
 # ── Python check ────────────────────────────────────────────────
