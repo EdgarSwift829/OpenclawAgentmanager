@@ -308,8 +308,8 @@ class WorkspaceManager:
             config_path = d / "config.json"
             if config_path.exists():
                 projects.append(d.name)
-            elif (d / "workspace").exists() or any(d.iterdir()):
-                # Directory exists with content but no config.json - auto-initialize
+            else:
+                # Directory exists but no config.json - auto-initialize
                 try:
                     config = {
                         "project_id": d.name,
