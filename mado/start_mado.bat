@@ -40,22 +40,15 @@ echo [2/4] バックエンド起動中 (http://localhost:8000) ...
 start "MADO Backend" cmd /k ""%~dp0backend\run_backend.bat""
 timeout /t 3 /nobreak >nul
 
-:: ── Step 3: Start Frontend (Next.js dev server) ────
-echo [3/4] フロントエンド起動中...
-pushd "%~dp0frontend"
-start "MADO Frontend" cmd /k "npm run dev"
-popd
-timeout /t 2 /nobreak >nul
-
-:: ── Step 4: Open Desktop Window (pywebview) ────────
-echo [4/4] デスクトップウィンドウ起動中...
+:: ── Step 3: Start Frontend + Desktop Window ─────────
+echo [3/3] フロントエンド＋デスクトップウィンドウ起動中...
 start "MADO Desktop" cmd /k ""%PYTHON_CMD%" "%~dp0desktop_window.py""
 
 echo.
 echo ============================================
 echo   MADO 起動完了（デスクトップモード）
 echo   Backend:  http://localhost:8000
-echo   Frontend: http://localhost:3000
+echo   Frontend: http://localhost:3001
 echo   Health:   http://localhost:8000/api/health
 echo   venv:     %VENV_DIR%
 echo ============================================

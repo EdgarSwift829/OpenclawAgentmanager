@@ -13,7 +13,7 @@ import time
 import urllib.request
 import webview
 
-NEXT_URL = "http://localhost:3000"
+NEXT_URL = "http://localhost:3001"
 MAX_RETRIES = 30
 RETRY_INTERVAL = 1  # seconds
 
@@ -29,7 +29,7 @@ def start_nextjs():
     print("[MADO] Next.js dev server を起動中...")
     use_shell = sys.platform.startswith("win")
     _nextjs_proc = subprocess.Popen(
-        ["npm", "run", "dev"],
+        ["npm", "run", "dev", "--", "-p", "3001"],
         cwd=FRONTEND_DIR,
         shell=use_shell,
         stdout=subprocess.PIPE,
