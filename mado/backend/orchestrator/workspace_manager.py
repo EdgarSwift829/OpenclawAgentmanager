@@ -293,11 +293,39 @@ class WorkspaceManager:
         return True
 
     def list_projects(self) -> list:
-        """List all existing projects (only directories with config.json)."""
+        """List all existing projects.
+
+        Directories with config.json are listed directly.
+        Directories without config.json but with a workspace/ subdirectory
+        are auto-initialized (config.json created) and then listed.
+        """
         if not self.projects_root.exists():
             return []
-        return [
-            d.name
-            for d in self.projects_root.iterdir()
-            if d.is_dir() and (d / "config.json").exists()
-        ]
+        projects = []
+        for d in self.projects_root.iterdir():
+            if not d.is_dir():
+                continue
+            config_path = d / "config.json"
+            if config_path.exists():
+                projects.append(d.name)
+            elif (d / "workspace").exists() or any(d.iterdir()):
+                # Directory exists with content but no config.json - auto-initialize
+                try:
+                    config = {
+                        "project_id": d.name,
+                        "created": True,
+                        "agents": [],
+                        "status": "initialized",
+                        "parent_id": None,
+                        "children": [],
+                    }
+                    config_path.write_text(
+                        json.dumps(config, indent=2, ensure_ascii=False)
+                    )
+                    # Also ensure workspace directory exists
+                    (d / "workspace").mkdir(exist_ok=True)
+                    projects.append(d.name)
+                except Exception:
+                    # If we can't write config, skip this directory
+                    pass
+        return projects

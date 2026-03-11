@@ -81,9 +81,11 @@ async def create_project(data: ProjectCreate):
     except PermissionError:
         raise HTTPException(status_code=500, detail=f"Cannot write to projects folder: {projects_root}")
 
-    # Check for duplicate
+    # Check for duplicate - only reject if directory has config.json (fully initialized)
+    # If directory exists but has no config.json, allow initialization
     project_path = projects_root / pid
-    if project_path.exists():
+    config_exists = (project_path / "config.json").exists()
+    if project_path.exists() and config_exists:
         raise HTTPException(status_code=409, detail=f"Project already exists: {pid}")
 
     if data.parent_id:
