@@ -9,3 +9,12 @@ node_modules/
 dist/
 *.egg-info/
 mado/backend/storage/logs/
+
+# Project-specific configs (per-user, per-environment)
+projects/
+config/settings.yaml
+
+# Runtime / DB / logs
+*.log
+*.sqlite
+*.db
