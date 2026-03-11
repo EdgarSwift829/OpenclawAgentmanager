@@ -21,6 +21,7 @@ const dict = {
   refreshProjects: { en: "Refresh projects", ja: "更新" },
   refresh: { en: "Refresh", ja: "更新" },
   noProjects: { en: "No projects", ja: "プロジェクトなし" },
+  renameProject: { en: "Double-click to rename", ja: "ダブルクリックでリネーム" },
 
   // RunControl
   goalPlaceholder: { en: "Describe the project goal...", ja: "プロジェクトの目標を入力..." },
@@ -31,7 +32,7 @@ const dict = {
 
   // AgentGrid
   waitingForAgents: { en: "Waiting for agents...", ja: "エージェント待機中..." },
-  startRunToSpawn: { en: "Start a run to spawn agents", ja: "実行を開始してエージェントを起動" },
+  startRunToSpawn: { en: "Start to spawn agents", ja: "開始してエージェントを起動" },
   processing: { en: "Processing...", ja: "処理中..." },
   standby: { en: "Standby", ja: "待機中" },
   done: { en: "done", ja: "完了" },

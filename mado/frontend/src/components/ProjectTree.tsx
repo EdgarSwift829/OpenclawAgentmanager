@@ -30,6 +30,8 @@ export function ProjectTree({
   const [newId, setNewId] = useState("");
   const [creating, setCreating] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
   const [showFolderSettings, setShowFolderSettings] = useState(false);
   const [folderPath, setFolderPath] = useState("");
   const [savedPath, setSavedPath] = useState("");
@@ -57,6 +59,22 @@ export function ProjectTree({
       alert(e.message);
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleRename = async (oldId: string) => {
+    const trimmed = renameValue.trim();
+    if (!trimmed || trimmed === oldId) {
+      setRenamingId(null);
+      return;
+    }
+    try {
+      await api.renameProject(oldId, trimmed);
+      setRenamingId(null);
+      onRefresh();
+      if (activeProject === oldId) onSelect(trimmed);
+    } catch (e: any) {
+      alert(e.message);
     }
   };
 
@@ -152,24 +170,45 @@ export function ProjectTree({
             {projects.map((p) => {
               const status = runStatuses[p];
               const isActive = p === activeProject;
+              const isRenaming = renamingId === p;
               return (
-                <button
+                <div
                   key={p}
                   className={`tree-item ${isActive ? "tree-item-active" : ""}`}
-                  onClick={() => onSelect(p)}
+                  onClick={() => !isRenaming && onSelect(p)}
+                  onDoubleClick={() => {
+                    setRenamingId(p);
+                    setRenameValue(p);
+                  }}
+                  title={t("renameProject")}
                 >
                   <span className="tree-icon">
                     {status && STATUS_ICONS[status]
                       ? STATUS_ICONS[status]
                       : "\u25CB"}
                   </span>
-                  <span className="tree-label">{p}</span>
-                  {status && (
+                  {isRenaming ? (
+                    <input
+                      className="tree-rename-input"
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleRename(p);
+                        if (e.key === "Escape") setRenamingId(null);
+                      }}
+                      onBlur={() => handleRename(p)}
+                      autoFocus
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  ) : (
+                    <span className="tree-label">{p}</span>
+                  )}
+                  {status && !isRenaming && (
                     <span className={`tree-status tree-status-${status}`}>
                       {status}
                     </span>
                   )}
-                </button>
+                </div>
               );
             })}
           </div>

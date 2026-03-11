@@ -77,6 +77,40 @@ async def get_project(project_id: str):
     return config
 
 
+class ProjectRename(BaseModel):
+    new_id: str
+
+
+@router.put("/{project_id}/rename")
+async def rename_project(project_id: str, data: ProjectRename):
+    """Rename a project."""
+    from pathlib import Path
+
+    new_id = data.new_id.strip()
+    if not new_id:
+        raise HTTPException(status_code=400, detail="New name cannot be empty")
+
+    old_path = Path(workspace_manager.projects_root) / project_id
+    new_path = Path(workspace_manager.projects_root) / new_id
+
+    if not old_path.exists():
+        raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
+    if new_path.exists():
+        raise HTTPException(status_code=409, detail=f"Project already exists: {new_id}")
+
+    old_path.rename(new_path)
+
+    # Update config.json if it exists
+    import json
+    config_path = new_path / "config.json"
+    if config_path.exists():
+        config = json.loads(config_path.read_text())
+        config["project_id"] = new_id
+        config_path.write_text(json.dumps(config, indent=2))
+
+    return {"old_id": project_id, "new_id": new_id}
+
+
 @router.delete("/{project_id}")
 async def delete_project(project_id: str):
     """Delete a project (removes workspace)."""

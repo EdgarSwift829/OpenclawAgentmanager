@@ -1,19 +1,18 @@
 """Orchestrator API routes - Start/stop/monitor orchestration runs."""
 
 import asyncio
+import logging
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import Optional
 
-from mado.backend.orchestrator.orchestrator import Orchestrator
-from mado.backend.api.routes.agents import register_session
-from mado.backend.api.routes.websocket import broadcaster
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 # Active orchestration runs and their orchestrator instances
 _runs: dict = {}
-_orchestrators: dict[str, Orchestrator] = {}
+_orchestrators: dict = {}
 
 
 class RunCreate(BaseModel):
@@ -32,31 +31,47 @@ class RunStatus(BaseModel):
 @router.post("/run")
 async def start_run(data: RunCreate, background_tasks: BackgroundTasks):
     """Start an orchestration run for a project."""
-    if data.project_id in _runs and _runs[data.project_id].get("status") == "running":
-        raise HTTPException(status_code=409, detail="Run already in progress")
+    try:
+        if data.project_id in _runs and _runs[data.project_id].get("status") == "running":
+            raise HTTPException(status_code=409, detail="Run already in progress")
 
-    _runs[data.project_id] = {
-        "status": "running",
-        "iteration": 0,
-        "max_iterations": data.max_iterations,
-        "result": None,
-    }
+        max_iter = data.max_iterations if data.max_iterations and data.max_iterations > 0 else 10
 
-    background_tasks.add_task(_execute_run, data.project_id, data.goal, data.max_iterations)
+        _runs[data.project_id] = {
+            "status": "running",
+            "iteration": 0,
+            "max_iterations": max_iter,
+            "result": None,
+        }
 
-    return {"status": "started", "project_id": data.project_id}
+        background_tasks.add_task(_execute_run, data.project_id, data.goal, max_iter)
+
+        return {"status": "started", "project_id": data.project_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to start run for {data.project_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to start: {e}")
 
 
 async def _execute_run(project_id: str, goal: str, max_iterations: int):
     """Execute orchestration run in background with async support."""
     try:
+        # Lazy imports to avoid module-level import errors blocking the route
+        from mado.backend.orchestrator.orchestrator import Orchestrator
+        from mado.backend.api.routes.agents import register_session
+        from mado.backend.api.routes.websocket import broadcaster
+
         orch = Orchestrator(project_id)
         orch.max_iterations = max_iterations
         _orchestrators[project_id] = orch
 
         # Connect WebSocket broadcasting
         async def ws_event_handler(event: dict):
-            await broadcaster.broadcast(project_id, event)
+            try:
+                await broadcaster.broadcast(project_id, event)
+            except Exception:
+                pass
             if event.get("type") == "iteration_started":
                 _runs[project_id]["iteration"] = event.get("iteration", 0)
 
@@ -74,6 +89,7 @@ async def _execute_run(project_id: str, goal: str, max_iterations: int):
             "result": result,
         }
     except Exception as e:
+        logger.error(f"Orchestration error for {project_id}: {e}", exc_info=True)
         _runs[project_id] = {
             "status": "error",
             "iteration": 0,

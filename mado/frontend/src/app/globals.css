@@ -230,6 +230,19 @@ body {
 }
 .tree-folder-cancel:hover { color: var(--error); border-color: var(--error); }
 
+/* Rename inline input */
+.tree-rename-input {
+  flex: 1;
+  padding: 0.125rem 0.375rem;
+  font-size: 0.8125rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  color: var(--text-primary);
+  outline: none;
+  min-width: 0;
+}
+
 .tree-refresh {
   margin: 0.5rem 0.75rem;
   padding: 0.25rem;

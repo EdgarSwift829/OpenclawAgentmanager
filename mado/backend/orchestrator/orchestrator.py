@@ -134,7 +134,9 @@ class Orchestrator:
     async def run_async(self, goal: str) -> dict:
         """Execute the main orchestration loop with parallel task execution and lifecycle management."""
         self._start_time = time.time()
-        self.initialize_project(goal)
+        # Run blocking initialization in executor to avoid blocking the event loop
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, self.initialize_project, goal)
         self._status = "running"
         await self._emit("run_started", {
             "goal": goal,
@@ -152,15 +154,19 @@ class Orchestrator:
                 self.iteration += 1
                 await self._emit("iteration_started", {"iteration": self.iteration})
 
-                # CTO planning
-                plan = self.agents["cto"].plan(goal, self.iteration)
+                # CTO planning (blocking LLM call -> run in executor)
+                plan = await loop.run_in_executor(
+                    None, self.agents["cto"].plan, goal, self.iteration
+                )
                 await self.message_bus.send(Message(
                     sender="cto", recipient="*", msg_type="plan", payload=plan,
                 ))
 
-                # Manager task breakdown
+                # Manager task breakdown (blocking LLM call -> run in executor)
                 if "manager" in self.agents:
-                    tasks = self.agents["manager"].decompose(plan)
+                    tasks = await loop.run_in_executor(
+                        None, self.agents["manager"].decompose, plan
+                    )
                 else:
                     tasks = [plan]
 
@@ -173,9 +179,11 @@ class Orchestrator:
                     msg_type="results", payload=iteration_results,
                 ))
 
-                # Review
+                # Review (blocking LLM call -> run in executor)
                 if "reviewer" in self.agents:
-                    review = self.agents["reviewer"].review(iteration_results)
+                    review = await loop.run_in_executor(
+                        None, self.agents["reviewer"].review, iteration_results
+                    )
                     await self._emit("review_complete", {
                         "iteration": self.iteration,
                         "approved": review.get("approved", False),

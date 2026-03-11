@@ -20,6 +20,8 @@ export const setProjectsRoot = (projects_root: string) =>
 export const createProject = (project_id: string, goal: string) =>
   fetchJSON("/projects/", { method: "POST", body: JSON.stringify({ project_id, goal }) });
 export const getProject = (id: string) => fetchJSON(`/projects/${id}`);
+export const renameProject = (id: string, new_id: string) =>
+  fetchJSON(`/projects/${id}/rename`, { method: "PUT", body: JSON.stringify({ new_id }) });
 export const deleteProject = (id: string) => fetchJSON(`/projects/${id}`, { method: "DELETE" });
 export const getProjectMemory = (id: string) => fetchJSON(`/projects/${id}/memory`);
 export const getProjectFiles = (id: string) => fetchJSON(`/projects/${id}/files`);
