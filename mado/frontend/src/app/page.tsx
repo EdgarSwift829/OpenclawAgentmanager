@@ -56,6 +56,7 @@ function saveProjectState(id: string, state: ProjectState) {
 export default function Dashboard() {
   const { t } = useI18n();
   const [projects, setProjects] = useState<string[]>([]);
+  const [projectTree, setProjectTree] = useState<any[]>([]);
   const [activeProject, setActiveProject] = useState<string | null>(null);
   const [runStatus, setRunStatus] = useState<any>(null);
   const [agents, setAgents] = useState<any[]>([]);
@@ -98,6 +99,7 @@ export default function Dashboard() {
     try {
       const data = await api.listProjects();
       setProjects(data.projects);
+      setProjectTree(data.tree || []);
     } catch { /* API may not be running */ }
   }, []);
 
@@ -166,7 +168,7 @@ export default function Dashboard() {
         </div>
         {sidebarOpen && (
           <ProjectTree
-            projects={projects}
+            projectTree={projectTree}
             activeProject={activeProject}
             onSelect={switchProject}
             onRefresh={loadProjects}

@@ -110,11 +110,31 @@ class Orchestrator:
             except Exception:
                 pass
 
+    def _build_goal_with_children(self, goal: str) -> str:
+        """If project has children, augment the goal with child project context."""
+        config = self.workspace_manager.get_project_config(self.project_id)
+        children = config.get("children", [])
+        if not children:
+            return goal
+
+        parts = [goal, "\n\n--- Sub-projects (managed by this team) ---"]
+        for child_id in children:
+            child_config = self.workspace_manager.get_project_config(child_id)
+            if child_config.get("status") == "archived":
+                continue
+            child_goal = child_config.get("goal", "")
+            child_status = child_config.get("status", "initialized")
+            parts.append(f"- [{child_id}] status={child_status} goal={child_goal}")
+        return "\n".join(parts)
+
     def initialize_project(self, goal: str) -> None:
         """Initialize workspace and spawn agents for a project."""
         self._status = "initializing"
         self.workspace_manager.create_workspace(self.project_id)
         workspace_path = self.workspace_manager.get_workspace_path(self.project_id)
+
+        # Augment goal with child project context
+        augmented_goal = self._build_goal_with_children(goal)
 
         # CTO analyzes the goal and determines required roles
         cto = self.agent_factory.create("cto", workspace_path)
@@ -122,7 +142,7 @@ class Orchestrator:
         self.agent_states["cto"] = AgentState("cto")
         self.message_bus.register("cto")
 
-        required_roles = cto.analyze_and_plan(goal)
+        required_roles = cto.analyze_and_plan(augmented_goal)
 
         # Spawn required agents and register on message bus
         for role in required_roles:
@@ -131,6 +151,13 @@ class Orchestrator:
             self.agent_states[role] = AgentState(role)
             self.message_bus.register(role)
 
+        # Also create workspaces for children so they share the same agent set
+        config = self.workspace_manager.get_project_config(self.project_id)
+        for child_id in config.get("children", []):
+            child_config = self.workspace_manager.get_project_config(child_id)
+            if child_config.get("status") != "archived":
+                self.workspace_manager.create_workspace(child_id)
+
     async def run_async(self, goal: str) -> dict:
         """Execute the main orchestration loop with parallel task execution and lifecycle management."""
         self._start_time = time.time()
@@ -138,6 +165,10 @@ class Orchestrator:
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self.initialize_project, goal)
         self._status = "running"
+
+        # Build augmented goal with child project context for planning
+        augmented_goal = self._build_goal_with_children(goal)
+
         await self._emit("run_started", {
             "goal": goal,
             "agents": list(self.agents.keys()),
@@ -155,8 +186,9 @@ class Orchestrator:
                 await self._emit("iteration_started", {"iteration": self.iteration})
 
                 # CTO planning (blocking LLM call -> run in executor)
+                # Uses augmented_goal which includes child project context
                 plan = await loop.run_in_executor(
-                    None, self.agents["cto"].plan, goal, self.iteration
+                    None, self.agents["cto"].plan, augmented_goal, self.iteration
                 )
                 await self.message_bus.send(Message(
                     sender="cto", recipient="*", msg_type="plan", payload=plan,

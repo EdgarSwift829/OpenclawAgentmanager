@@ -4,8 +4,15 @@ import { useState, useEffect } from "react";
 import * as api from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 
+interface ProjectNode {
+  project_id: string;
+  parent_id: string | null;
+  children: string[];
+  status: string;
+}
+
 interface Props {
-  projects: string[];
+  projectTree: ProjectNode[];
   activeProject: string | null;
   onSelect: (id: string) => void;
   onRefresh: () => void;
@@ -17,10 +24,11 @@ const STATUS_ICONS: Record<string, string> = {
   completed: "\u2714",
   error: "\u2716",
   cancelled: "\u25A0",
+  archived: "\u{1F4E6}",
 };
 
 export function ProjectTree({
-  projects,
+  projectTree,
   activeProject,
   onSelect,
   onRefresh,
@@ -36,6 +44,10 @@ export function ProjectTree({
   const [folderPath, setFolderPath] = useState("");
   const [savedPath, setSavedPath] = useState("");
   const [saving, setSaving] = useState(false);
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const [addingChildTo, setAddingChildTo] = useState<string | null>(null);
+  const [childNewId, setChildNewId] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
 
   // Load current projects root on mount
   useEffect(() => {
@@ -47,14 +59,45 @@ export function ProjectTree({
       .catch(() => {});
   }, []);
 
-  const handleCreate = async () => {
-    if (!newId.trim()) return;
+  // Build lookup
+  const nodeMap = new Map<string, ProjectNode>();
+  for (const n of projectTree) nodeMap.set(n.project_id, n);
+
+  // Top-level = no parent (or parent doesn't exist in tree)
+  const topLevel = projectTree.filter(
+    (n) => !n.parent_id || !nodeMap.has(n.parent_id)
+  );
+
+  // Filter archived
+  const shouldShow = (n: ProjectNode) =>
+    showArchived || n.status !== "archived";
+
+  const totalProjects = projectTree.filter(shouldShow).length;
+
+  const toggleExpand = (id: string) => {
+    setExpandedNodes((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleCreate = async (parentId?: string) => {
+    const id = parentId ? childNewId.trim() : newId.trim();
+    if (!id) return;
     setCreating(true);
     try {
-      await api.createProject(newId.trim(), "");
-      setNewId("");
+      await api.createProject(id, "", parentId || undefined);
+      if (parentId) {
+        setChildNewId("");
+        setAddingChildTo(null);
+        setExpandedNodes((prev) => new Set(prev).add(parentId));
+      } else {
+        setNewId("");
+      }
       onRefresh();
-      onSelect(newId.trim());
+      onSelect(id);
     } catch (e: any) {
       alert(e.message);
     } finally {
@@ -78,6 +121,18 @@ export function ProjectTree({
     }
   };
 
+  const handleArchiveToggle = async (projectId: string) => {
+    const node = nodeMap.get(projectId);
+    if (!node) return;
+    const newStatus = node.status === "archived" ? "initialized" : "archived";
+    try {
+      await api.updateProjectConfig(projectId, { status: newStatus });
+      onRefresh();
+    } catch (e: any) {
+      alert(e.message);
+    }
+  };
+
   const handleFolderSave = async () => {
     if (!folderPath.trim()) return;
     setSaving(true);
@@ -94,12 +149,144 @@ export function ProjectTree({
     }
   };
 
+  // Render a project item (recursive for children)
+  const renderNode = (node: ProjectNode, depth: number = 0) => {
+    if (!shouldShow(node)) return null;
+
+    const p = node.project_id;
+    const status = node.status === "archived" ? "archived" : runStatuses[p];
+    const isActive = p === activeProject;
+    const isRenaming = renamingId === p;
+    const hasChildren = node.children.length > 0;
+    const isExpanded = expandedNodes.has(p);
+    const isArchived = node.status === "archived";
+    const childNodes = node.children
+      .map((cid) => nodeMap.get(cid))
+      .filter(Boolean) as ProjectNode[];
+
+    return (
+      <div key={p} className="tree-node-group">
+        <div
+          className={`tree-item ${isActive ? "tree-item-active" : ""} ${isArchived ? "tree-item-archived" : ""}`}
+          style={{ paddingLeft: `${0.5 + depth * 0.75}rem` }}
+          onClick={() => !isRenaming && onSelect(p)}
+          onDoubleClick={() => {
+            setRenamingId(p);
+            setRenameValue(p);
+          }}
+          title={t("renameProject")}
+        >
+          {/* Expand/collapse toggle for parent nodes */}
+          {hasChildren ? (
+            <span
+              className="tree-expand-toggle"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleExpand(p);
+              }}
+            >
+              {isExpanded ? "\u25BC" : "\u25B6"}
+            </span>
+          ) : (
+            <span className="tree-expand-spacer" />
+          )}
+
+          <span className="tree-icon">
+            {status && STATUS_ICONS[status] ? STATUS_ICONS[status] : "\u25CB"}
+          </span>
+
+          {isRenaming ? (
+            <input
+              className="tree-rename-input"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleRename(p);
+                if (e.key === "Escape") setRenamingId(null);
+              }}
+              onBlur={() => handleRename(p)}
+              autoFocus
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <span className="tree-label">{p}</span>
+          )}
+
+          {hasChildren && !isRenaming && (
+            <span className="tree-child-count">{node.children.length}</span>
+          )}
+
+          {/* Context actions */}
+          {!isRenaming && (
+            <span className="tree-actions">
+              <button
+                className="tree-action-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setAddingChildTo(addingChildTo === p ? null : p);
+                  setChildNewId("");
+                }}
+                title={t("addSubProject")}
+              >
+                +
+              </button>
+              <button
+                className="tree-action-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleArchiveToggle(p);
+                }}
+                title={isArchived ? t("unarchive") : t("archive")}
+              >
+                {isArchived ? "\u21A9" : "\u{1F4E6}"}
+              </button>
+            </span>
+          )}
+
+          {status && !isRenaming && status !== "archived" && (
+            <span className={`tree-status tree-status-${status}`}>
+              {status}
+            </span>
+          )}
+        </div>
+
+        {/* Inline child creation */}
+        {addingChildTo === p && (
+          <div className="tree-create tree-create-child" style={{ paddingLeft: `${1.25 + depth * 0.75}rem` }}>
+            <input
+              placeholder={t("newSubProject")}
+              value={childNewId}
+              onChange={(e) => setChildNewId(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleCreate(p);
+                if (e.key === "Escape") setAddingChildTo(null);
+              }}
+              className="tree-input"
+              autoFocus
+            />
+            <button
+              className="tree-add-btn"
+              onClick={() => handleCreate(p)}
+              disabled={creating}
+              title={t("createProject")}
+            >
+              +
+            </button>
+          </div>
+        )}
+
+        {/* Children */}
+        {isExpanded && childNodes.map((child) => renderNode(child, depth + 1))}
+      </div>
+    );
+  };
+
   return (
     <div className="project-tree">
       <div className="tree-header" onClick={() => setCollapsed(!collapsed)}>
         <span className="tree-chevron">{collapsed ? "\u25B6" : "\u25BC"}</span>
         <span className="tree-title">{t("projects")}</span>
-        <span className="tree-count">{projects.length}</span>
+        <span className="tree-count">{totalProjects}</span>
       </div>
 
       {!collapsed && (
@@ -155,7 +342,7 @@ export function ProjectTree({
             />
             <button
               className="tree-add-btn"
-              onClick={handleCreate}
+              onClick={() => handleCreate()}
               disabled={creating}
               title={t("createProject")}
             >
@@ -164,54 +351,19 @@ export function ProjectTree({
           </div>
 
           <div className="tree-list">
-            {projects.length === 0 && (
+            {topLevel.length === 0 && (
               <div className="tree-empty">{t("noProjects")}</div>
             )}
-            {projects.map((p) => {
-              const status = runStatuses[p];
-              const isActive = p === activeProject;
-              const isRenaming = renamingId === p;
-              return (
-                <div
-                  key={p}
-                  className={`tree-item ${isActive ? "tree-item-active" : ""}`}
-                  onClick={() => !isRenaming && onSelect(p)}
-                  onDoubleClick={() => {
-                    setRenamingId(p);
-                    setRenameValue(p);
-                  }}
-                  title={t("renameProject")}
-                >
-                  <span className="tree-icon">
-                    {status && STATUS_ICONS[status]
-                      ? STATUS_ICONS[status]
-                      : "\u25CB"}
-                  </span>
-                  {isRenaming ? (
-                    <input
-                      className="tree-rename-input"
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleRename(p);
-                        if (e.key === "Escape") setRenamingId(null);
-                      }}
-                      onBlur={() => handleRename(p)}
-                      autoFocus
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  ) : (
-                    <span className="tree-label">{p}</span>
-                  )}
-                  {status && !isRenaming && (
-                    <span className={`tree-status tree-status-${status}`}>
-                      {status}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
+            {topLevel.map((node) => renderNode(node))}
           </div>
+
+          {/* Toggle archived visibility */}
+          <button
+            className="tree-archive-toggle"
+            onClick={() => setShowArchived(!showArchived)}
+          >
+            {showArchived ? t("hideArchived") : t("showArchived")}
+          </button>
         </>
       )}
 

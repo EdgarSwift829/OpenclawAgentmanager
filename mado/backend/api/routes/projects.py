@@ -13,6 +13,7 @@ workspace_manager = WorkspaceManager()
 class ProjectCreate(BaseModel):
     project_id: str
     goal: Optional[str] = ""
+    parent_id: Optional[str] = None
 
 
 class ProjectResponse(BaseModel):
@@ -27,9 +28,15 @@ class ProjectsRootUpdate(BaseModel):
 
 @router.get("/")
 async def list_projects():
-    """List all projects."""
-    projects = workspace_manager.list_projects()
-    return {"projects": projects, "projects_root": workspace_manager.get_projects_root()}
+    """List all projects with hierarchy info."""
+    tree = workspace_manager.get_project_tree()
+    # Also return flat list for backward compatibility
+    projects = [p["project_id"] for p in tree]
+    return {
+        "projects": projects,
+        "tree": tree,
+        "projects_root": workspace_manager.get_projects_root(),
+    }
 
 
 @router.get("/settings/root")
@@ -54,8 +61,13 @@ async def set_projects_root(data: ProjectsRootUpdate):
 
 @router.post("/", response_model=ProjectResponse)
 async def create_project(data: ProjectCreate):
-    """Create a new project workspace."""
-    workspace_path = workspace_manager.create_workspace(data.project_id)
+    """Create a new project workspace (optionally as a child of parent_id)."""
+    if data.parent_id:
+        from pathlib import Path
+        parent_path = Path(workspace_manager.projects_root) / data.parent_id
+        if not parent_path.exists():
+            raise HTTPException(status_code=404, detail=f"Parent project not found: {data.parent_id}")
+    workspace_path = workspace_manager.create_workspace(data.project_id, parent_id=data.parent_id)
     return ProjectResponse(
         project_id=data.project_id,
         status="initialized",
@@ -75,6 +87,28 @@ async def get_project(project_id: str):
 
     config = json.loads(config_path.read_text())
     return config
+
+
+class ProjectConfigUpdate(BaseModel):
+    status: Optional[str] = None
+    goal: Optional[str] = None
+
+
+@router.put("/{project_id}/config")
+async def update_project_config(project_id: str, data: ProjectConfigUpdate):
+    """Update project config fields (status, goal, etc.)."""
+    from pathlib import Path
+
+    project_path = Path(workspace_manager.projects_root) / project_id
+    if not project_path.exists():
+        raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
+
+    updates = {k: v for k, v in data.model_dump().items() if v is not None}
+    if not updates:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    workspace_manager.update_project_config(project_id, updates)
+    return workspace_manager.get_project_config(project_id)
 
 
 class ProjectRename(BaseModel):
@@ -98,28 +132,56 @@ async def rename_project(project_id: str, data: ProjectRename):
     if new_path.exists():
         raise HTTPException(status_code=409, detail=f"Project already exists: {new_id}")
 
+    # Read config before rename to get parent/children info
+    import json
+    old_config_path = old_path / "config.json"
+    old_config = {}
+    if old_config_path.exists():
+        old_config = json.loads(old_config_path.read_text(encoding="utf-8"))
+
     old_path.rename(new_path)
 
-    # Update config.json if it exists
-    import json
+    # Update config.json
     config_path = new_path / "config.json"
     if config_path.exists():
-        config = json.loads(config_path.read_text())
+        config = json.loads(config_path.read_text(encoding="utf-8"))
         config["project_id"] = new_id
-        config_path.write_text(json.dumps(config, indent=2))
+        config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False))
+
+    # Update parent's children list
+    parent_id = old_config.get("parent_id")
+    if parent_id:
+        workspace_manager._remove_child_from_parent(parent_id, project_id)
+        workspace_manager._add_child_to_parent(parent_id, new_id)
+
+    # Update children's parent_id references
+    for child_id in old_config.get("children", []):
+        child_config = workspace_manager.get_project_config(child_id)
+        if child_config.get("parent_id") == project_id:
+            workspace_manager.update_project_config(child_id, {"parent_id": new_id})
 
     return {"old_id": project_id, "new_id": new_id}
 
 
 @router.delete("/{project_id}")
 async def delete_project(project_id: str):
-    """Delete a project (removes workspace)."""
+    """Delete a project (removes workspace). Unlinks from parent if applicable."""
     import shutil
     from pathlib import Path
 
     project_path = Path(workspace_manager.projects_root) / project_id
     if not project_path.exists():
         raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
+
+    # Remove from parent's children list
+    config = workspace_manager.get_project_config(project_id)
+    parent_id = config.get("parent_id")
+    if parent_id:
+        workspace_manager._remove_child_from_parent(parent_id, project_id)
+
+    # Orphan children (set their parent_id to None)
+    for child_id in config.get("children", []):
+        workspace_manager.update_project_config(child_id, {"parent_id": None})
 
     shutil.rmtree(project_path)
     return {"deleted": project_id}
@@ -151,3 +213,72 @@ async def list_project_files(project_id: str):
     except ValueError:
         files = []
     return {"files": files}
+
+
+@router.get("/{project_id}/children")
+async def list_children(project_id: str):
+    """List child projects with their status/progress."""
+    from pathlib import Path
+
+    project_path = Path(workspace_manager.projects_root) / project_id
+    if not project_path.exists():
+        raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
+
+    children_ids = workspace_manager.list_children(project_id)
+    children = []
+    for cid in children_ids:
+        config = workspace_manager.get_project_config(cid)
+        children.append({
+            "project_id": cid,
+            "status": config.get("status", "initialized"),
+            "goal": config.get("goal", ""),
+            "children": config.get("children", []),
+        })
+    return {"parent_id": project_id, "children": children}
+
+
+@router.get("/{project_id}/progress")
+async def get_project_progress(project_id: str):
+    """Get aggregated progress for a parent project including all children."""
+    from pathlib import Path
+
+    project_path = Path(workspace_manager.projects_root) / project_id
+    if not project_path.exists():
+        raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
+
+    config = workspace_manager.get_project_config(project_id)
+    children_ids = config.get("children", [])
+
+    # Gather run statuses from orchestrator
+    from mado.backend.api.routes.orchestrator import _runs
+
+    child_progress = []
+    for cid in children_ids:
+        child_config = workspace_manager.get_project_config(cid)
+        run = _runs.get(cid, {})
+        child_progress.append({
+            "project_id": cid,
+            "config_status": child_config.get("status", "initialized"),
+            "run_status": run.get("status", "idle"),
+            "iteration": run.get("iteration", 0),
+            "max_iterations": run.get("max_iterations", 0),
+            "error": run.get("error"),
+        })
+
+    # Summary
+    total = len(child_progress)
+    running = sum(1 for c in child_progress if c["run_status"] == "running")
+    completed = sum(1 for c in child_progress if c["run_status"] == "completed")
+    errored = sum(1 for c in child_progress if c["run_status"] == "error")
+
+    return {
+        "project_id": project_id,
+        "total_children": total,
+        "summary": {
+            "running": running,
+            "completed": completed,
+            "error": errored,
+            "idle": total - running - completed - errored,
+        },
+        "children": child_progress,
+    }

@@ -17,14 +17,18 @@ export const listProjects = () => fetchJSON("/projects/");
 export const getProjectsRoot = () => fetchJSON("/projects/settings/root");
 export const setProjectsRoot = (projects_root: string) =>
   fetchJSON("/projects/settings/root", { method: "PUT", body: JSON.stringify({ projects_root }) });
-export const createProject = (project_id: string, goal: string) =>
-  fetchJSON("/projects/", { method: "POST", body: JSON.stringify({ project_id, goal }) });
+export const createProject = (project_id: string, goal: string, parent_id?: string) =>
+  fetchJSON("/projects/", { method: "POST", body: JSON.stringify({ project_id, goal, parent_id }) });
 export const getProject = (id: string) => fetchJSON(`/projects/${id}`);
 export const renameProject = (id: string, new_id: string) =>
   fetchJSON(`/projects/${id}/rename`, { method: "PUT", body: JSON.stringify({ new_id }) });
 export const deleteProject = (id: string) => fetchJSON(`/projects/${id}`, { method: "DELETE" });
 export const getProjectMemory = (id: string) => fetchJSON(`/projects/${id}/memory`);
 export const getProjectFiles = (id: string) => fetchJSON(`/projects/${id}/files`);
+export const listChildren = (id: string) => fetchJSON(`/projects/${id}/children`);
+export const getProjectProgress = (id: string) => fetchJSON(`/projects/${id}/progress`);
+export const updateProjectConfig = (id: string, updates: Record<string, any>) =>
+  fetchJSON(`/projects/${id}/config`, { method: "PUT", body: JSON.stringify(updates) });
 
 // Agents
 export const listAgents = (projectId: string) => fetchJSON(`/agents/${projectId}`);

@@ -64,7 +64,7 @@ class WorkspaceManager:
         _save_projects_root(new_root)
         self.projects_root = path
 
-    def create_workspace(self, project_id: str) -> str:
+    def create_workspace(self, project_id: str, parent_id: str = None) -> str:
         """Create isolated workspace for a project."""
         project_dir = self.projects_root / project_id
         workspace_dir = project_dir / "workspace"
@@ -73,12 +73,19 @@ class WorkspaceManager:
         # Initialize config
         config_path = project_dir / "config.json"
         if not config_path.exists():
-            config_path.write_text(json.dumps({
+            config = {
                 "project_id": project_id,
                 "created": True,
                 "agents": [],
                 "status": "initialized",
-            }, indent=2))
+                "parent_id": parent_id,
+                "children": [],
+            }
+            config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False))
+
+        # Register as child in parent's config
+        if parent_id:
+            self._add_child_to_parent(parent_id, project_id)
 
         # Initialize project memory
         memory_path = project_dir / "project_memory.md"
@@ -86,6 +93,65 @@ class WorkspaceManager:
             memory_path.write_text(f"# Project Memory: {project_id}\n\n## Goal\n\n## Architecture\n\n## Key Modules\n\n## Coding Rules\n\n")
 
         return str(workspace_dir)
+
+    def _add_child_to_parent(self, parent_id: str, child_id: str):
+        """Register a child project in the parent's config.json."""
+        config_path = self.projects_root / parent_id / "config.json"
+        if not config_path.exists():
+            return
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        children = config.get("children", [])
+        if child_id not in children:
+            children.append(child_id)
+            config["children"] = children
+            config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False))
+
+    def _remove_child_from_parent(self, parent_id: str, child_id: str):
+        """Remove a child project from the parent's config.json."""
+        config_path = self.projects_root / parent_id / "config.json"
+        if not config_path.exists():
+            return
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        children = config.get("children", [])
+        if child_id in children:
+            children.remove(child_id)
+            config["children"] = children
+            config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False))
+
+    def get_project_config(self, project_id: str) -> dict:
+        """Read a project's config.json."""
+        config_path = self.projects_root / project_id / "config.json"
+        if not config_path.exists():
+            return {}
+        return json.loads(config_path.read_text(encoding="utf-8"))
+
+    def update_project_config(self, project_id: str, updates: dict):
+        """Merge updates into a project's config.json."""
+        config_path = self.projects_root / project_id / "config.json"
+        if not config_path.exists():
+            return
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        config.update(updates)
+        config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False))
+
+    def list_children(self, parent_id: str) -> list:
+        """List child project IDs for a parent."""
+        config = self.get_project_config(parent_id)
+        return config.get("children", [])
+
+    def get_project_tree(self) -> list:
+        """Return hierarchical project list. Top-level = projects with no parent."""
+        all_projects = self.list_projects()
+        tree = []
+        for pid in all_projects:
+            config = self.get_project_config(pid)
+            tree.append({
+                "project_id": pid,
+                "parent_id": config.get("parent_id"),
+                "children": config.get("children", []),
+                "status": config.get("status", "initialized"),
+            })
+        return tree
 
     def get_workspace_path(self, project_id: str) -> str:
         """Return workspace path for a project."""

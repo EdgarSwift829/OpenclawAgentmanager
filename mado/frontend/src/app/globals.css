@@ -243,6 +243,71 @@ body {
   min-width: 0;
 }
 
+/* Hierarchical tree nodes */
+.tree-node-group {
+  display: flex;
+  flex-direction: column;
+}
+.tree-expand-toggle {
+  font-size: 0.5rem;
+  cursor: pointer;
+  width: 14px;
+  flex-shrink: 0;
+  text-align: center;
+  color: var(--text-secondary);
+}
+.tree-expand-toggle:hover { color: var(--text-primary); }
+.tree-expand-spacer { width: 14px; flex-shrink: 0; }
+.tree-child-count {
+  font-size: 0.5625rem;
+  background: var(--border);
+  border-radius: 9999px;
+  padding: 0 0.3rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+.tree-actions {
+  display: none;
+  gap: 2px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.tree-item:hover .tree-actions { display: flex; }
+.tree-action-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.6875rem;
+  padding: 0 0.2rem;
+  border-radius: 3px;
+}
+.tree-action-btn:hover { color: var(--text-primary); background: var(--bg-primary); }
+.tree-item-archived {
+  opacity: 0.5;
+}
+.tree-item-archived .tree-label {
+  text-decoration: line-through;
+}
+.tree-create-child {
+  display: flex;
+  gap: 0.25rem;
+  padding-top: 0.125rem;
+  padding-bottom: 0.125rem;
+}
+.tree-archive-toggle {
+  margin: 0.25rem 0.75rem;
+  padding: 0.2rem;
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 0.625rem;
+  cursor: pointer;
+  text-align: center;
+}
+.tree-archive-toggle:hover { color: var(--text-primary); border-color: var(--text-secondary); }
+
 .tree-refresh {
   margin: 0.5rem 0.75rem;
   padding: 0.25rem;

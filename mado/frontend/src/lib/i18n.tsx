@@ -22,6 +22,15 @@ const dict = {
   refresh: { en: "Refresh", ja: "更新" },
   noProjects: { en: "No projects", ja: "プロジェクトなし" },
   renameProject: { en: "Double-click to rename", ja: "ダブルクリックでリネーム" },
+  addSubProject: { en: "Add sub-project", ja: "子プロジェクト追加" },
+  newSubProject: { en: "New sub-project...", ja: "新規子プロジェクト..." },
+  subProjects: { en: "sub-projects", ja: "子プロジェクト" },
+  progress: { en: "Progress", ja: "進捗" },
+  archive: { en: "Archive", ja: "アーカイブ" },
+  unarchive: { en: "Unarchive", ja: "アーカイブ解除" },
+  archived: { en: "Archived", ja: "アーカイブ済" },
+  showArchived: { en: "Show archived", ja: "アーカイブ表示" },
+  hideArchived: { en: "Hide archived", ja: "アーカイブ非表示" },
 
   // RunControl
   goalPlaceholder: { en: "Describe the project goal...", ja: "プロジェクトの目標を入力..." },
