@@ -93,6 +93,23 @@ const dict = {
   folderUpdated: { en: "Folder updated", ja: "フォルダを更新しました" },
   settings: { en: "Settings", ja: "設定" },
 
+  // Run Control per project
+  runProject: { en: "Run", ja: "実行" },
+  pauseProject: { en: "Pause", ja: "一時停止" },
+  resumeProject: { en: "Resume", ja: "再開" },
+  paused: { en: "Paused", ja: "一時停止中" },
+  stopped: { en: "Stopped", ja: "停止" },
+  running: { en: "Running", ja: "実行中" },
+  parentMustRun: { en: "Start parent project first", ja: "先に親プロジェクトを開始してください" },
+
+  // OpenClaw
+  openclawStatus: { en: "OpenClaw", ja: "OpenClaw" },
+  openclawInstalled: { en: "Installed", ja: "インストール済" },
+  openclawNotInstalled: { en: "Not installed", ja: "未インストール" },
+  openclawInstalling: { en: "Installing...", ja: "インストール中..." },
+  openclawInstallBtn: { en: "Install OpenClaw", ja: "OpenClawをインストール" },
+  openclawCheckFailed: { en: "Check failed", ja: "確認失敗" },
+
   // TaskGraph
   taskGraph: { en: "Task Graph", ja: "タスクグラフ" },
   noActiveTasks: { en: "No active tasks", ja: "アクティブなタスクなし" },

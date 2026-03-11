@@ -17,6 +17,9 @@ interface Props {
   onSelect: (id: string) => void;
   onRefresh: () => void;
   runStatuses?: Record<string, string>;
+  onStartRun?: (projectId: string) => void;
+  onStopRun?: (projectId: string) => void;
+  onPauseRun?: (projectId: string) => void;
 }
 
 const STATUS_ICONS: Record<string, string> = {
@@ -33,6 +36,9 @@ export function ProjectTree({
   onSelect,
   onRefresh,
   runStatuses = {},
+  onStartRun,
+  onStopRun,
+  onPauseRun,
 }: Props) {
   const { t } = useI18n();
   const [newId, setNewId] = useState("");
@@ -48,6 +54,8 @@ export function ProjectTree({
   const [addingChildTo, setAddingChildTo] = useState<string | null>(null);
   const [childNewId, setChildNewId] = useState("");
   const [showArchived, setShowArchived] = useState(false);
+  const [openclawStatus, setOpenclawStatus] = useState<"unknown" | "checking" | "installed" | "not_installed" | "installing" | "error">("unknown");
+  const [openclawVersion, setOpenclawVersion] = useState<string | null>(null);
 
   // Load current projects root on mount
   useEffect(() => {
@@ -58,6 +66,32 @@ export function ProjectTree({
       })
       .catch(() => {});
   }, []);
+
+  // Check OpenClaw install status on mount
+  useEffect(() => {
+    setOpenclawStatus("checking");
+    api.checkOpenClaw()
+      .then((data) => {
+        setOpenclawStatus(data.installed ? "installed" : "not_installed");
+        setOpenclawVersion(data.version || null);
+      })
+      .catch(() => setOpenclawStatus("error"));
+  }, []);
+
+  const handleInstallOpenClaw = async () => {
+    setOpenclawStatus("installing");
+    try {
+      const result = await api.installOpenClaw();
+      if (result.status === "already_installed" || result.status === "installed") {
+        setOpenclawStatus("installed");
+        setOpenclawVersion(result.version || null);
+      } else {
+        setOpenclawStatus("error");
+      }
+    } catch {
+      setOpenclawStatus("error");
+    }
+  };
 
   // Build lookup
   const nodeMap = new Map<string, ProjectNode>();
@@ -142,11 +176,25 @@ export function ProjectTree({
       setFolderPath(data.projects_root);
       setShowFolderSettings(false);
       onRefresh();
+      // Re-check OpenClaw after folder change
+      setOpenclawStatus("checking");
+      api.checkOpenClaw()
+        .then((d) => {
+          setOpenclawStatus(d.installed ? "installed" : "not_installed");
+          setOpenclawVersion(d.version || null);
+        })
+        .catch(() => setOpenclawStatus("error"));
     } catch (e: any) {
       alert(e.message);
     } finally {
       setSaving(false);
     }
+  };
+
+  // Check if a project's parent is running (for child run enablement)
+  const isParentRunning = (node: ProjectNode): boolean => {
+    if (!node.parent_id) return true; // top-level, no restriction
+    return runStatuses[node.parent_id] === "running";
   };
 
   // Render a project item (recursive for children)
@@ -219,6 +267,54 @@ export function ProjectTree({
           {/* Context actions */}
           {!isRenaming && (
             <span className="tree-actions">
+              {/* Run control buttons */}
+              {(() => {
+                const rs = runStatuses[p];
+                const parentOk = isParentRunning(node);
+                if (rs === "running") {
+                  return (
+                    <>
+                      <button
+                        className="tree-action-btn tree-run-pause"
+                        onClick={(e) => { e.stopPropagation(); onPauseRun?.(p); }}
+                        title={t("pauseProject")}
+                      >
+                        {"\u23F8"}
+                      </button>
+                      <button
+                        className="tree-action-btn tree-run-stop"
+                        onClick={(e) => { e.stopPropagation(); onStopRun?.(p); }}
+                        title={t("stop")}
+                      >
+                        {"\u25A0"}
+                      </button>
+                    </>
+                  );
+                }
+                if (rs === "paused") {
+                  return (
+                    <button
+                      className="tree-action-btn tree-run-resume"
+                      onClick={(e) => { e.stopPropagation(); onStartRun?.(p); }}
+                      title={t("resumeProject")}
+                      disabled={!parentOk}
+                    >
+                      {"\u25B6"}
+                    </button>
+                  );
+                }
+                // idle / stopped / completed / error → show play
+                return (
+                  <button
+                    className="tree-action-btn tree-run-start"
+                    onClick={(e) => { e.stopPropagation(); onStartRun?.(p); }}
+                    title={parentOk ? t("runProject") : t("parentMustRun")}
+                    disabled={!parentOk}
+                  >
+                    {"\u25B6"}
+                  </button>
+                );
+              })()}
               <button
                 className="tree-action-btn"
                 onClick={(e) => {
@@ -328,6 +424,29 @@ export function ProjectTree({
                 >
                   {"\u2716"}
                 </button>
+              </div>
+              {/* OpenClaw install status */}
+              <div className="tree-openclaw-status">
+                <span className="tree-openclaw-label">{t("openclawStatus")}:</span>
+                {openclawStatus === "checking" && (
+                  <span className="tree-openclaw-checking">...</span>
+                )}
+                {openclawStatus === "installed" && (
+                  <span className="tree-openclaw-ok">
+                    {t("openclawInstalled")} {openclawVersion && `(${openclawVersion})`}
+                  </span>
+                )}
+                {openclawStatus === "not_installed" && (
+                  <button className="tree-openclaw-install-btn" onClick={handleInstallOpenClaw}>
+                    {t("openclawInstallBtn")}
+                  </button>
+                )}
+                {openclawStatus === "installing" && (
+                  <span className="tree-openclaw-installing">{t("openclawInstalling")}</span>
+                )}
+                {openclawStatus === "error" && (
+                  <span className="tree-openclaw-error">{t("openclawCheckFailed")}</span>
+                )}
               </div>
             </div>
           )}

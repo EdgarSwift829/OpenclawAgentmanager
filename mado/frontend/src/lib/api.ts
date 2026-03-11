@@ -54,6 +54,14 @@ export const stopRun = (projectId: string) =>
   fetchJSON(`/orchestrator/run/${projectId}/stop`, { method: "POST" });
 export const listRuns = () => fetchJSON("/orchestrator/runs");
 
+// Orchestrator - pause
+export const pauseRun = (projectId: string) =>
+  fetchJSON(`/orchestrator/run/${projectId}/pause`, { method: "POST" });
+
+// OpenClaw
+export const checkOpenClaw = () => fetchJSON("/openclaw/status");
+export const installOpenClaw = () => fetchJSON("/openclaw/install", { method: "POST" });
+
 // WebSocket
 export function connectWebSocket(projectId: string, onMessage: (data: any) => void): WebSocket {
   const ws = new WebSocket(`ws://localhost:8000/api/ws/${projectId}`);

@@ -1094,3 +1094,56 @@ input, select {
   font-size: 0.75rem;
   padding: 0.25rem 0.75rem;
 }
+
+/* =========================================================================
+   Tree - Per-project run controls
+   ========================================================================= */
+.tree-run-start { color: var(--success) !important; }
+.tree-run-start:hover { color: var(--success) !important; background: rgba(34, 197, 94, 0.15) !important; }
+.tree-run-start:disabled { opacity: 0.3; cursor: not-allowed; }
+.tree-run-pause { color: var(--warning) !important; }
+.tree-run-pause:hover { color: var(--warning) !important; background: rgba(234, 179, 8, 0.15) !important; }
+.tree-run-stop { color: var(--error) !important; }
+.tree-run-stop:hover { color: var(--error) !important; background: rgba(239, 68, 68, 0.15) !important; }
+.tree-run-resume { color: var(--accent) !important; }
+.tree-run-resume:hover { color: var(--accent) !important; background: rgba(59, 130, 246, 0.15) !important; }
+.tree-run-resume:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* =========================================================================
+   Tree - OpenClaw status
+   ========================================================================= */
+.tree-openclaw-status {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0;
+  font-size: 0.625rem;
+}
+.tree-openclaw-label {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.tree-openclaw-ok {
+  color: var(--success);
+}
+.tree-openclaw-checking {
+  color: var(--text-secondary);
+}
+.tree-openclaw-installing {
+  color: var(--warning);
+}
+.tree-openclaw-error {
+  color: var(--error);
+}
+.tree-openclaw-install-btn {
+  background: var(--accent);
+  border: none;
+  color: white;
+  border-radius: 3px;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.625rem;
+  cursor: pointer;
+}
+.tree-openclaw-install-btn:hover {
+  background: var(--accent-hover);
+}

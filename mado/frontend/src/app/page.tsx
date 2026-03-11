@@ -66,6 +66,7 @@ export default function Dashboard() {
   const [maxIter, setMaxIter] = useState(30);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [rightTab, setRightTab] = useState<"timeline" | "models" | "tasks">("timeline");
+  const [allRunStatuses, setAllRunStatuses] = useState<Record<string, string>>({});
 
   // --- load / save per-project state on switch ---
   const switchProject = useCallback(
@@ -124,11 +125,27 @@ export default function Dashboard() {
     }
   }, [activeProject]);
 
+  // Poll all run statuses for the project tree
+  const loadAllRunStatuses = useCallback(async () => {
+    try {
+      const data = await api.listRuns();
+      const statuses: Record<string, string> = {};
+      for (const [pid, info] of Object.entries(data.runs as Record<string, any>)) {
+        statuses[pid] = info.status;
+      }
+      setAllRunStatuses(statuses);
+    } catch { /* ignore */ }
+  }, []);
+
   useEffect(() => {
     loadProjects();
-    const interval = setInterval(loadProjects, 10000);
+    loadAllRunStatuses();
+    const interval = setInterval(() => {
+      loadProjects();
+      loadAllRunStatuses();
+    }, 5000);
     return () => clearInterval(interval);
-  }, [loadProjects]);
+  }, [loadProjects, loadAllRunStatuses]);
 
   useEffect(() => {
     if (!activeProject) return;
@@ -173,6 +190,35 @@ export default function Dashboard() {
             activeProject={activeProject}
             onSelect={switchProject}
             onRefresh={loadProjects}
+            runStatuses={allRunStatuses}
+            onStartRun={async (pid) => {
+              const st = loadProjectState(pid);
+              try {
+                await api.startRun(pid, st.goal || goal, st.maxIter || maxIter);
+                loadAllRunStatuses();
+                if (pid === activeProject) loadRunStatus();
+              } catch (e: any) {
+                alert(e.message);
+              }
+            }}
+            onStopRun={async (pid) => {
+              try {
+                await api.stopRun(pid);
+                loadAllRunStatuses();
+                if (pid === activeProject) loadRunStatus();
+              } catch (e: any) {
+                alert(e.message);
+              }
+            }}
+            onPauseRun={async (pid) => {
+              try {
+                await api.pauseRun(pid);
+                loadAllRunStatuses();
+                if (pid === activeProject) loadRunStatus();
+              } catch (e: any) {
+                alert(e.message);
+              }
+            }}
           />
         )}
       </aside>

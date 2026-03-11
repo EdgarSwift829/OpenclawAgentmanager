@@ -6,6 +6,8 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import Optional
 
+from mado.backend.orchestrator.workspace_manager import WorkspaceManager
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -13,12 +15,13 @@ router = APIRouter()
 # Active orchestration runs and their orchestrator instances
 _runs: dict = {}
 _orchestrators: dict = {}
+_workspace_manager = WorkspaceManager()
 
 
 class RunCreate(BaseModel):
     project_id: str
     goal: str
-    max_iterations: Optional[int] = 10
+    max_iterations: Optional[int] = 30
 
 
 class RunStatus(BaseModel):
@@ -28,6 +31,20 @@ class RunStatus(BaseModel):
     max_iterations: int
 
 
+def _check_parent_running(project_id: str):
+    """Ensure parent project is running before allowing child to start."""
+    config = _workspace_manager.get_project_config(project_id)
+    parent_id = config.get("parent_id")
+    if not parent_id:
+        return  # Top-level project, no restriction
+    parent_run = _runs.get(parent_id, {})
+    if parent_run.get("status") != "running":
+        raise HTTPException(
+            status_code=409,
+            detail=f"Parent project '{parent_id}' is not running. Start the parent first.",
+        )
+
+
 @router.post("/run")
 async def start_run(data: RunCreate, background_tasks: BackgroundTasks):
     """Start an orchestration run for a project."""
@@ -35,7 +52,10 @@ async def start_run(data: RunCreate, background_tasks: BackgroundTasks):
         if data.project_id in _runs and _runs[data.project_id].get("status") == "running":
             raise HTTPException(status_code=409, detail="Run already in progress")
 
-        max_iter = data.max_iterations if data.max_iterations and data.max_iterations > 0 else 10
+        # Enforce parent dependency: child can't start if parent is off
+        _check_parent_running(data.project_id)
+
+        max_iter = data.max_iterations if data.max_iterations and data.max_iterations > 0 else 30
 
         _runs[data.project_id] = {
             "status": "running",
@@ -111,7 +131,9 @@ async def get_run_status(project_id: str):
 
 @router.post("/run/{project_id}/stop")
 async def stop_run(project_id: str):
-    """Stop a running orchestration with actual cancellation."""
+    """Stop a running orchestration with actual cancellation.
+    Also stops all running child projects (parent off = children off).
+    """
     run = _runs.get(project_id)
     if not run or run["status"] != "running":
         raise HTTPException(status_code=404, detail="No active run to stop")
@@ -122,7 +144,49 @@ async def stop_run(project_id: str):
         orch.cancel()
 
     _runs[project_id]["status"] = "stopped"
-    return {"status": "stopped", "project_id": project_id}
+
+    # Cascade stop to children
+    stopped_children = _cascade_stop_children(project_id)
+
+    return {"status": "stopped", "project_id": project_id, "stopped_children": stopped_children}
+
+
+def _cascade_stop_children(parent_id: str) -> list:
+    """Recursively stop all running child projects."""
+    config = _workspace_manager.get_project_config(parent_id)
+    children_ids = config.get("children", [])
+    stopped = []
+    for cid in children_ids:
+        child_run = _runs.get(cid, {})
+        if child_run.get("status") == "running":
+            orch = _orchestrators.get(cid)
+            if orch:
+                orch.cancel()
+            _runs[cid]["status"] = "stopped"
+            stopped.append(cid)
+        # Recurse into grandchildren
+        stopped.extend(_cascade_stop_children(cid))
+    return stopped
+
+
+@router.post("/run/{project_id}/pause")
+async def pause_run(project_id: str):
+    """Pause a running orchestration (stops but preserves iteration count for resume)."""
+    run = _runs.get(project_id)
+    if not run or run["status"] != "running":
+        raise HTTPException(status_code=404, detail="No active run to pause")
+
+    orch = _orchestrators.get(project_id)
+    if orch:
+        orch.cancel()
+
+    _runs[project_id]["status"] = "paused"
+    return {
+        "status": "paused",
+        "project_id": project_id,
+        "iteration": run.get("iteration", 0),
+        "max_iterations": run.get("max_iterations", 0),
+    }
 
 
 @router.get("/run/{project_id}/state")
