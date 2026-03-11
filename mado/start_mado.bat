@@ -37,13 +37,7 @@ echo.
 
 :: ── Step 2: Start Backend ────────────────────────
 echo [2/3] バックエンド起動中 (http://localhost:8000) ...
-pushd "%~dp0backend"
-if exist "%VENV_ACTIVATE%" (
-    start "MADO Backend" cmd /k "call "%VENV_ACTIVATE%" && python -m uvicorn mado.backend.api.main:app --host 0.0.0.0 --port 8000 --reload"
-) else (
-    start "MADO Backend" cmd /k "python -m uvicorn mado.backend.api.main:app --host 0.0.0.0 --port 8000 --reload"
-)
-popd
+start "MADO Backend" cmd /k ""%~dp0backend\run_backend.bat""
 timeout /t 3 /nobreak >nul
 
 :: ── Step 3: Start Frontend ───────────────────────
