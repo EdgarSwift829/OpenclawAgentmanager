@@ -40,20 +40,21 @@ echo [2/3] バックエンド起動中 (http://localhost:8000) ...
 start "MADO Backend" cmd /k ""%~dp0backend\run_backend.bat""
 timeout /t 3 /nobreak >nul
 
-:: ── Step 3: Start Frontend ───────────────────────
-echo [3/3] フロントエンド起動中 (http://localhost:3000) ...
+:: ── Step 3: Start Frontend + Desktop Window ────────
+echo [3/3] フロントエンド＋デスクトップUI起動中...
 pushd "%~dp0frontend"
-start "MADO Frontend" cmd /k "npm run dev"
+start "MADO Frontend" cmd /k "npm run dev:desktop"
 popd
 
 echo.
 echo ============================================
-echo   MADO 起動完了
+echo   MADO 起動完了（デスクトップモード）
 echo   Backend:  http://localhost:8000
 echo   Frontend: http://localhost:3000
 echo   Health:   http://localhost:8000/api/health
 echo   venv:     %VENV_DIR%
 echo ============================================
 echo.
+echo Electron ウィンドウが自動的に開きます。
 echo このウィンドウは閉じて構いません。
 pause
