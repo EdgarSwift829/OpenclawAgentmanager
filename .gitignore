@@ -10,11 +10,19 @@ dist/
 *.egg-info/
 mado/backend/storage/logs/
 
-# Project-specific configs (per-user, per-environment)
+# Project data (per-user, per-environment)
 projects/
+
+# User-specific config (model assignments, provider settings)
 config/settings.yaml
+config/agents.yaml
+config/models.yaml
 
 # Runtime / DB / logs
 *.log
 *.sqlite
 *.db
+*.jsonl
+
+# Backend storage data
+mado/backend/storage/
