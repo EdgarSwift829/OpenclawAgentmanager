@@ -66,6 +66,8 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh }: Props) 
   const [description, setDescription] = useState("");
   const [deadline, setDeadline] = useState("");
   const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [rulesMust, setRulesMust] = useState("");
+  const [rulesForbidden, setRulesForbidden] = useState("");
   const [agentProfiles, setAgentProfiles] = useState<Record<string, AgentProfile>>({});
 
   const node = projectTree.find((n) => n.project_id === activeProject);
@@ -81,6 +83,8 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh }: Props) 
     setDescription(node.description || "");
     setDeadline(node.deadline || "");
     setTasks(node.tasks || []);
+    setRulesMust((node as any).rules_must || "");
+    setRulesForbidden((node as any).rules_forbidden || "");
     setAgentProfiles(node.agent_profiles || {});
     setDirty(false);
     setSaved(false);
@@ -95,7 +99,12 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh }: Props) 
     if (!activeProject) return;
     setSaving(true);
     try {
-      const updates: Record<string, any> = { goal, agent_profiles: agentProfiles };
+      const updates: Record<string, any> = {
+        goal,
+        rules_must: rulesMust,
+        rules_forbidden: rulesForbidden,
+        agent_profiles: agentProfiles,
+      };
       if (isParent || !node?.parent_id) {
         updates.overview = overview;
         updates.policy = policy;
@@ -176,6 +185,30 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh }: Props) 
           value={goal}
           onChange={(e) => { setGoal(e.target.value); markDirty(); }}
         />
+      </div>
+
+      {/* Project Rules - common to all */}
+      <div className="detail-rules-group">
+        <div className="detail-field detail-rules-must">
+          <label className="detail-label">{t("rulesMust")}</label>
+          <textarea
+            className="detail-textarea"
+            rows={3}
+            placeholder={t("rulesMustPlaceholder")}
+            value={rulesMust}
+            onChange={(e) => { setRulesMust(e.target.value); markDirty(); }}
+          />
+        </div>
+        <div className="detail-field detail-rules-forbidden">
+          <label className="detail-label">{t("rulesForbidden")}</label>
+          <textarea
+            className="detail-textarea"
+            rows={3}
+            placeholder={t("rulesForbiddenPlaceholder")}
+            value={rulesForbidden}
+            onChange={(e) => { setRulesForbidden(e.target.value); markDirty(); }}
+          />
+        </div>
       </div>
 
       {/* Parent project: overview, policy, roadmap */}

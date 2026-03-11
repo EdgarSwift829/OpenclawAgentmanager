@@ -1215,3 +1215,17 @@ input, select {
   resize: vertical;
 }
 .agent-profile-textarea:focus { outline: none; border-color: var(--accent); }
+
+/* Project Rules */
+.detail-rules-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+@media (max-width: 768px) {
+  .detail-rules-group { grid-template-columns: 1fr; }
+}
+.detail-rules-must .detail-label { color: #22c55e; }
+.detail-rules-must .detail-textarea { border-left: 3px solid #22c55e; }
+.detail-rules-forbidden .detail-label { color: #ef4444; }
+.detail-rules-forbidden .detail-textarea { border-left: 3px solid #ef4444; }

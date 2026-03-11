@@ -194,6 +194,8 @@ class WorkspaceManager:
                     "description": config.get("description", ""),
                     "deadline": config.get("deadline"),
                     "tasks": config.get("tasks", []),
+                    "rules_must": config.get("rules_must", ""),
+                    "rules_forbidden": config.get("rules_forbidden", ""),
                     "agent_profiles": config.get("agent_profiles", {}),
                 })
             except Exception as e:

@@ -112,6 +112,12 @@ const dict = {
   deleteProject: { en: "Delete", ja: "削除" },
   confirmDelete: { en: "Are you sure you want to delete", ja: "を削除してよろしいですか？" },
 
+  // Project Rules
+  rulesMust: { en: "Rules (MUST)", ja: "遵守事項（必ず守ること）" },
+  rulesMustPlaceholder: { en: "Rules that all agents must follow...", ja: "全エージェントが必ず守るルールを入力..." },
+  rulesForbidden: { en: "Rules (FORBIDDEN)", ja: "禁止事項（絶対にやらないこと）" },
+  rulesForbiddenPlaceholder: { en: "Actions that are strictly prohibited...", ja: "絶対にやってはいけないことを入力..." },
+
   // Agent Profiles
   agentProfiles: { en: "Agent Profiles", ja: "エージェント設定" },
   agentTitlePlaceholder: { en: "Title (e.g. Top Engineer)", ja: "肩書き（例：トップエンジニア）" },
