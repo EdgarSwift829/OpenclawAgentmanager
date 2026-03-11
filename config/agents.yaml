@@ -1,0 +1,8 @@
+cto: qwen3.5-9b
+manager: qwen3.5-9b
+researcher: qwen3.5-9b
+engineer: qwen2.5-coder-7b
+reviewer: qwen3.5-9b
+tester: qwen2.5-coder-7b
+optimizer: qwen2.5-coder-7b
+documenter: qwen3.5-9b

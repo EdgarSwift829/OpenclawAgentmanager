@@ -1,0 +1,20 @@
+models:
+  qwen3.5-9b:
+    provider: ollama
+    context: 32768
+    capabilities:
+      - reasoning
+      - planning
+
+  qwen2.5-coder-7b:
+    provider: ollama
+    context: 32768
+    capabilities:
+      - coding
+      - debugging
+
+  deepseek-coder:
+    provider: vllm
+    context: 32768
+    capabilities:
+      - coding
