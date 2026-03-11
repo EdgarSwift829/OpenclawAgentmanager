@@ -1,15 +1,58 @@
-"""Orchestrator - Main loop for multi-agent task execution with parallel support."""
+"""Orchestrator - Main loop for multi-agent task execution with parallel support.
+
+Lifecycle states:
+  idle -> initializing -> running -> completed | cancelled | error
+  Agent states: idle -> active -> done | error
+"""
 
 import asyncio
+import logging
+import time
 from typing import Optional, Callable
 from mado.backend.orchestrator.agent_factory import AgentFactory
 from mado.backend.orchestrator.workspace_manager import WorkspaceManager
 from mado.backend.orchestrator.message_bus import MessageBus, Message
 from mado.backend.models.model_manager import ModelManager
 
+logger = logging.getLogger(__name__)
+
+
+class AgentState:
+    """Track individual agent lifecycle state."""
+
+    def __init__(self, role: str):
+        self.role = role
+        self.status = "idle"  # idle | active | done | error
+        self.tasks_completed = 0
+        self.tasks_failed = 0
+        self.last_active: Optional[float] = None
+        self.error: Optional[str] = None
+
+    def activate(self):
+        self.status = "active"
+        self.last_active = time.time()
+
+    def complete_task(self):
+        self.tasks_completed += 1
+        self.status = "idle"
+
+    def fail_task(self, error: str):
+        self.tasks_failed += 1
+        self.error = error
+        self.status = "error"
+
+    def to_dict(self) -> dict:
+        return {
+            "role": self.role,
+            "status": self.status,
+            "tasks_completed": self.tasks_completed,
+            "tasks_failed": self.tasks_failed,
+            "error": self.error,
+        }
+
 
 class Orchestrator:
-    """Core orchestration loop with parallel task execution and message bus.
+    """Core orchestration loop with parallel task execution, message bus, and lifecycle management.
 
     Flow: goal -> CTO planning -> Manager breakdown -> parallel execute -> review -> iterate.
     """
@@ -20,11 +63,38 @@ class Orchestrator:
         self.model_manager = ModelManager()
         self.agent_factory = AgentFactory(self.model_manager)
         self.agents: dict = {}
+        self.agent_states: dict[str, AgentState] = {}
         self.iteration = 0
         self.max_iterations = 10
+        self.task_timeout = 300  # seconds per individual task
         self.message_bus = MessageBus()
         self._cancel_event = asyncio.Event()
         self._event_callback: Optional[Callable] = None
+        self._status = "idle"  # idle | initializing | running | completed | cancelled | error
+        self._start_time: Optional[float] = None
+        self._end_time: Optional[float] = None
+
+    @property
+    def status(self) -> str:
+        return self._status
+
+    @property
+    def elapsed_seconds(self) -> Optional[float]:
+        if self._start_time is None:
+            return None
+        end = self._end_time or time.time()
+        return round(end - self._start_time, 2)
+
+    def get_state(self) -> dict:
+        """Get full orchestrator state snapshot for monitoring."""
+        return {
+            "project_id": self.project_id,
+            "status": self._status,
+            "iteration": self.iteration,
+            "max_iterations": self.max_iterations,
+            "elapsed_seconds": self.elapsed_seconds,
+            "agents": {role: s.to_dict() for role, s in self.agent_states.items()},
+        }
 
     def on_event(self, callback: Callable) -> None:
         """Register callback for orchestration events (e.g. WebSocket broadcast)."""
@@ -41,12 +111,14 @@ class Orchestrator:
 
     def initialize_project(self, goal: str) -> None:
         """Initialize workspace and spawn agents for a project."""
+        self._status = "initializing"
         self.workspace_manager.create_workspace(self.project_id)
         workspace_path = self.workspace_manager.get_workspace_path(self.project_id)
 
         # CTO analyzes the goal and determines required roles
         cto = self.agent_factory.create("cto", workspace_path)
         self.agents["cto"] = cto
+        self.agent_states["cto"] = AgentState("cto")
         self.message_bus.register("cto")
 
         required_roles = cto.analyze_and_plan(goal)
@@ -55,85 +127,109 @@ class Orchestrator:
         for role in required_roles:
             agent = self.agent_factory.create(role, workspace_path)
             self.agents[role] = agent
+            self.agent_states[role] = AgentState(role)
             self.message_bus.register(role)
 
     async def run_async(self, goal: str) -> dict:
-        """Execute the main orchestration loop with parallel task execution."""
+        """Execute the main orchestration loop with parallel task execution and lifecycle management."""
+        self._start_time = time.time()
         self.initialize_project(goal)
-        await self._emit("run_started", {"goal": goal})
+        self._status = "running"
+        await self._emit("run_started", {
+            "goal": goal,
+            "agents": list(self.agents.keys()),
+        })
 
         results = []
-        while self.iteration < self.max_iterations:
-            if self._cancel_event.is_set():
-                await self._emit("run_cancelled", {"iteration": self.iteration})
-                break
-
-            self.iteration += 1
-            await self._emit("iteration_started", {"iteration": self.iteration})
-
-            # CTO planning
-            plan = self.agents["cto"].plan(goal, self.iteration)
-            await self.message_bus.send(Message(
-                sender="cto", recipient="*", msg_type="plan", payload=plan,
-            ))
-
-            # Manager task breakdown
-            if "manager" in self.agents:
-                tasks = self.agents["manager"].decompose(plan)
-            else:
-                tasks = [plan]
-
-            # Classify tasks: parallel (independent) vs sequential (dependent)
-            parallel_tasks, sequential_tasks = self._classify_tasks(tasks)
-
-            iteration_results = []
-
-            # Execute independent tasks in parallel
-            if parallel_tasks:
-                await self._emit("parallel_start", {
-                    "iteration": self.iteration,
-                    "task_count": len(parallel_tasks),
-                })
-                parallel_results = await self._execute_parallel(parallel_tasks)
-                iteration_results.extend(parallel_results)
-
-            # Execute dependent tasks sequentially
-            for task in sequential_tasks:
+        try:
+            while self.iteration < self.max_iterations:
                 if self._cancel_event.is_set():
+                    self._status = "cancelled"
+                    await self._emit("run_cancelled", {"iteration": self.iteration})
                     break
-                result = await self._execute_single(task)
-                iteration_results.append(result)
 
-            # Broadcast results via message bus
-            await self.message_bus.send(Message(
-                sender="orchestrator", recipient="*",
-                msg_type="results", payload=iteration_results,
-            ))
+                self.iteration += 1
+                await self._emit("iteration_started", {"iteration": self.iteration})
 
-            # Review
-            if "reviewer" in self.agents:
-                review = self.agents["reviewer"].review(iteration_results)
-                await self._emit("review_complete", {
+                # CTO planning
+                plan = self.agents["cto"].plan(goal, self.iteration)
+                await self.message_bus.send(Message(
+                    sender="cto", recipient="*", msg_type="plan", payload=plan,
+                ))
+
+                # Manager task breakdown
+                if "manager" in self.agents:
+                    tasks = self.agents["manager"].decompose(plan)
+                else:
+                    tasks = [plan]
+
+                # Classify tasks: parallel (independent) vs sequential (dependent)
+                parallel_tasks, sequential_tasks = self._classify_tasks(tasks)
+
+                iteration_results = []
+
+                # Execute independent tasks in parallel
+                if parallel_tasks:
+                    await self._emit("parallel_start", {
+                        "iteration": self.iteration,
+                        "task_count": len(parallel_tasks),
+                    })
+                    parallel_results = await self._execute_parallel(parallel_tasks)
+                    iteration_results.extend(parallel_results)
+
+                # Execute dependent tasks sequentially
+                for task in sequential_tasks:
+                    if self._cancel_event.is_set():
+                        break
+                    result = await self._execute_single(task)
+                    iteration_results.append(result)
+
+                # Broadcast results via message bus
+                await self.message_bus.send(Message(
+                    sender="orchestrator", recipient="*",
+                    msg_type="results", payload=iteration_results,
+                ))
+
+                # Review
+                if "reviewer" in self.agents:
+                    review = self.agents["reviewer"].review(iteration_results)
+                    await self._emit("review_complete", {
+                        "iteration": self.iteration,
+                        "approved": review.get("approved", False),
+                    })
+                    if review.get("approved", False):
+                        break
+
+                results.extend(iteration_results)
+                await self._emit("iteration_complete", {
                     "iteration": self.iteration,
-                    "approved": review.get("approved", False),
+                    "result_count": len(iteration_results),
+                    "agents": {r: s.to_dict() for r, s in self.agent_states.items()},
                 })
-                if review.get("approved", False):
-                    break
 
-            results.extend(iteration_results)
-            await self._emit("iteration_complete", {
-                "iteration": self.iteration,
-                "result_count": len(iteration_results),
-            })
+            if self._status == "running":
+                self._status = "completed"
+
+        except Exception as e:
+            self._status = "error"
+            logger.error(f"Orchestration error: {e}")
+            await self._emit("run_error", {"error": str(e)})
+            raise
+        finally:
+            self._end_time = time.time()
+            await self._cleanup()
 
         await self._emit("run_complete", {
             "iterations": self.iteration,
             "total_results": len(results),
+            "elapsed_seconds": self.elapsed_seconds,
+            "agent_summary": {r: s.to_dict() for r, s in self.agent_states.items()},
         })
         return {
             "project_id": self.project_id,
             "iterations": self.iteration,
             "results": results,
+            "elapsed_seconds": self.elapsed_seconds,
         }
 
     def run(self, goal: str) -> dict:
@@ -174,20 +270,41 @@ class Orchestrator:
         return processed
 
     async def _execute_single(self, task: dict) -> dict:
-        """Execute a single task via its assigned agent, in a thread executor."""
+        """Execute a single task via its assigned agent, with state tracking and timeout."""
         agent_role = task.get("assigned_to", "engineer")
         if agent_role not in self.agents:
             return {"role": agent_role, "result": f"[Error] No agent for role: {agent_role}", "error": True}
 
         agent = self.agents[agent_role]
+        state = self.agent_states.get(agent_role)
+        if state:
+            state.activate()
+
         await self._emit("task_started", {
             "role": agent_role,
             "task": str(task.get("description", ""))[:200],
         })
 
-        # Run blocking LLM call in thread executor
+        # Run blocking LLM call in thread executor with timeout
         loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(None, agent.execute, task)
+        try:
+            result = await asyncio.wait_for(
+                loop.run_in_executor(None, agent.execute, task),
+                timeout=self.task_timeout,
+            )
+            if state:
+                state.complete_task()
+        except asyncio.TimeoutError:
+            error_msg = f"[Error] Task timed out after {self.task_timeout}s"
+            if state:
+                state.fail_task(error_msg)
+            await self._emit("task_timeout", {"role": agent_role, "timeout": self.task_timeout})
+            return {"role": agent_role, "result": error_msg, "error": True}
+        except Exception as e:
+            error_msg = f"[Error] {e}"
+            if state:
+                state.fail_task(error_msg)
+            return {"role": agent_role, "result": error_msg, "error": True}
 
         # Post result to message bus
         await self.message_bus.send(Message(
@@ -215,3 +332,16 @@ class Orchestrator:
     def cancel(self) -> None:
         """Request cancellation of the current run."""
         self._cancel_event.set()
+        self._status = "cancelled"
+        logger.info(f"Cancellation requested for project {self.project_id}")
+
+    async def _cleanup(self) -> None:
+        """Clean up resources after run completes, cancels, or errors."""
+        logger.info(
+            f"Cleanup: project={self.project_id} status={self._status} "
+            f"elapsed={self.elapsed_seconds}s"
+        )
+        # Reset agent states to idle
+        for state in self.agent_states.values():
+            if state.status == "active":
+                state.status = "idle"

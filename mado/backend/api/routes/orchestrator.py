@@ -109,6 +109,19 @@ async def stop_run(project_id: str):
     return {"status": "stopped", "project_id": project_id}
 
 
+@router.get("/run/{project_id}/state")
+async def get_run_state(project_id: str):
+    """Get detailed orchestrator state including agent lifecycle info."""
+    orch = _orchestrators.get(project_id)
+    if orch:
+        return orch.get_state()
+
+    run = _runs.get(project_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="No run found for this project")
+    return run
+
+
 @router.get("/runs")
 async def list_runs():
     """List all orchestration runs."""
