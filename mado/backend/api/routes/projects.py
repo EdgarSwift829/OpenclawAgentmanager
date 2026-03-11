@@ -72,14 +72,14 @@ async def create_project(data: ProjectCreate):
     from pathlib import Path
 
     # Validate project_id
-    pid = data.project_id.strip()
-    if not pid:
+    display_name = data.project_id.strip()
+    if not display_name:
         raise HTTPException(status_code=400, detail="Project ID cannot be empty")
 
     # Reject IDs with path-unsafe characters
     unsafe_chars = set('/\\:*?"<>|')
-    if any(c in unsafe_chars for c in pid):
-        raise HTTPException(status_code=400, detail=f"Project ID contains invalid characters: {pid}")
+    if any(c in unsafe_chars for c in display_name):
+        raise HTTPException(status_code=400, detail=f"Project ID contains invalid characters: {display_name}")
 
     # Ensure projects root exists and is writable
     projects_root = Path(workspace_manager.projects_root)
@@ -87,13 +87,6 @@ async def create_project(data: ProjectCreate):
         projects_root.mkdir(parents=True, exist_ok=True)
     except PermissionError:
         raise HTTPException(status_code=500, detail=f"Cannot write to projects folder: {projects_root}")
-
-    # Check for duplicate - only reject if directory has config.json (fully initialized)
-    # If directory exists but has no config.json, allow initialization
-    project_path = projects_root / pid
-    config_exists = (project_path / "config.json").exists()
-    if project_path.exists() and config_exists:
-        raise HTTPException(status_code=409, detail=f"Project already exists: {pid}")
 
     if data.parent_id:
         parent_path = projects_root / data.parent_id
@@ -103,8 +96,29 @@ async def create_project(data: ProjectCreate):
         if not parent_config.exists():
             raise HTTPException(status_code=404, detail=f"Parent project config missing: {data.parent_id}")
 
+    # Determine unique directory name (pid)
+    pid = display_name
+    project_path = projects_root / pid
+    config_exists = (project_path / "config.json").exists()
+
+    if project_path.exists() and config_exists:
+        if data.parent_id:
+            # Child project: allow same display name, generate unique dir name
+            counter = 2
+            while True:
+                pid = f"{display_name}_{counter}"
+                candidate = projects_root / pid
+                if not candidate.exists():
+                    break
+                counter += 1
+        else:
+            # Top-level: reject duplicate
+            raise HTTPException(status_code=409, detail=f"Project already exists: {display_name}")
+
     try:
-        workspace_path = workspace_manager.create_workspace(pid, parent_id=data.parent_id)
+        workspace_path = workspace_manager.create_workspace(
+            pid, parent_id=data.parent_id, display_name=display_name,
+        )
     except PermissionError:
         raise HTTPException(status_code=500, detail=f"Permission denied creating project workspace")
     except Exception as e:

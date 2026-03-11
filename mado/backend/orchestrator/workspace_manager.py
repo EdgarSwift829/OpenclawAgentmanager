@@ -71,7 +71,8 @@ class WorkspaceManager:
         _save_projects_root(new_root)
         self.projects_root = path
 
-    def create_workspace(self, project_id: str, parent_id: str = None) -> str:
+    def create_workspace(self, project_id: str, parent_id: str = None,
+                         display_name: str = None) -> str:
         """Create isolated workspace for a project."""
         project_dir = self.projects_root / project_id
         workspace_dir = project_dir / "workspace"
@@ -82,6 +83,7 @@ class WorkspaceManager:
         if not config_path.exists():
             config = {
                 "project_id": project_id,
+                "display_name": display_name or project_id,
                 "created": True,
                 "agents": [],
                 "status": "initialized",
@@ -181,6 +183,7 @@ class WorkspaceManager:
                 config = self.get_project_config(pid)
                 tree.append({
                     "project_id": pid,
+                    "display_name": config.get("display_name", pid),
                     "parent_id": config.get("parent_id"),
                     "children": config.get("children", []),
                     "status": config.get("status", "initialized"),
@@ -194,9 +197,9 @@ class WorkspaceManager:
                 })
             except Exception as e:
                 logger.error("Failed to load config for project '%s': %s", pid, e)
-                # Still include the project with minimal info so it's visible
                 tree.append({
                     "project_id": pid,
+                    "display_name": pid,
                     "parent_id": None,
                     "children": [],
                     "status": "initialized",

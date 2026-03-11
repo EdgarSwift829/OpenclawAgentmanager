@@ -6,6 +6,7 @@ import { useI18n } from "@/lib/i18n";
 
 interface ProjectNode {
   project_id: string;
+  display_name?: string;
   parent_id: string | null;
   children: string[];
   status: string;
@@ -150,7 +151,8 @@ export function ProjectTree({
 
     setCreating(true);
     try {
-      await api.createProject(id, "", parentId || undefined);
+      const result = await api.createProject(id, "", parentId || undefined);
+      const actualId = result.project_id || id;
       if (parentId) {
         setChildNewId("");
         setAddingChildTo(null);
@@ -159,7 +161,7 @@ export function ProjectTree({
         setNewId("");
       }
       onRefresh();
-      onSelect(id);
+      onSelect(actualId);
     } catch (e: any) {
       const msg = e?.message || "Unknown error";
       alert(msg);
@@ -196,8 +198,9 @@ export function ProjectTree({
     }
   };
 
-  const handleDelete = async (projectId: string) => {
-    const ok = window.confirm(`「${projectId}」${t("confirmDelete")}`);
+  const handleDelete = async (projectId: string, displayName?: string) => {
+    const name = displayName || projectId;
+    const ok = window.confirm(`「${name}」${t("confirmDelete")}`);
     if (!ok) return;
     try {
       await api.deleteProject(projectId);
@@ -298,7 +301,7 @@ export function ProjectTree({
               onClick={(e) => e.stopPropagation()}
             />
           ) : (
-            <span className="tree-label">{p}</span>
+            <span className="tree-label">{node.display_name || p}</span>
           )}
 
           {hasChildren && !isRenaming && (
@@ -381,7 +384,7 @@ export function ProjectTree({
                 className="tree-action-btn tree-action-delete"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDelete(p);
+                  handleDelete(p, node.display_name);
                 }}
                 title={t("deleteProject")}
               >

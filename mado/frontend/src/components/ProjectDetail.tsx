@@ -15,6 +15,7 @@ interface TaskItem {
 
 interface ProjectNode {
   project_id: string;
+  display_name?: string;
   parent_id: string | null;
   children: string[];
   status: string;
@@ -132,7 +133,7 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh }: Props) 
   return (
     <div className="project-detail">
       <div className="detail-header">
-        <h3 className="detail-title">{activeProject}</h3>
+        <h3 className="detail-title">{node?.display_name || activeProject}</h3>
         <div className="detail-save-area">
           {saved && <span className="detail-saved">{t("saved")}</span>}
           <button
