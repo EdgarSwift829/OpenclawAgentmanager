@@ -7,8 +7,8 @@ interface Props {
   activeProject: string | null;
   runStatus: any;
   onRefresh: () => void;
+  /** Goal from project config (ProjectDetail saves this) */
   goal: string;
-  onGoalChange: (goal: string) => void;
   maxIter: number;
   onMaxIterChange: (n: number) => void;
   onExtendIterations?: (extra: number) => void;
@@ -19,7 +19,6 @@ export function RunControl({
   runStatus,
   onRefresh,
   goal,
-  onGoalChange,
   maxIter,
   onMaxIterChange,
   onExtendIterations,
@@ -69,14 +68,6 @@ export function RunControl({
 
   return (
     <div className="run-control">
-      <input
-        className="run-goal-input"
-        placeholder={t("goalPlaceholder")}
-        value={goal}
-        onChange={(e) => onGoalChange(e.target.value)}
-        disabled={isRunning}
-        onKeyDown={(e) => e.key === "Enter" && !isRunning && handleStart()}
-      />
       <div className="run-controls-row">
         <label className="run-iter-label">
           {t("iterations")}

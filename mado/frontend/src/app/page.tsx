@@ -18,7 +18,6 @@ import { LangSwitcher } from "@/components/LangSwitcher";
 const STORAGE_KEY = "mado_project_states";
 
 interface ProjectState {
-  goal: string;
   maxIter: number;
   events: any[];
 }
@@ -42,7 +41,7 @@ function saveAllStates(states: Record<string, ProjectState>) {
 
 function loadProjectState(id: string): ProjectState {
   const all = loadAllStates();
-  return all[id] || { goal: "", maxIter: 30, events: [] };
+  return all[id] || { maxIter: 30, events: [] };
 }
 
 function saveProjectState(id: string, state: ProjectState) {
@@ -62,7 +61,6 @@ export default function Dashboard() {
   const [runStatus, setRunStatus] = useState<any>(null);
   const [agents, setAgents] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
-  const [goal, setGoal] = useState("");
   const [maxIter, setMaxIter] = useState(30);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [rightTab, setRightTab] = useState<"timeline" | "models" | "tasks">("timeline");
@@ -73,28 +71,30 @@ export default function Dashboard() {
     (id: string) => {
       // Save current project state before switching
       if (activeProject) {
-        saveProjectState(activeProject, { goal, maxIter, events });
+        saveProjectState(activeProject, { maxIter, events });
       }
       // Load new project state
       const saved = loadProjectState(id);
-      setGoal(saved.goal);
       setMaxIter(saved.maxIter);
       setEvents(saved.events);
       setActiveProject(id);
     },
-    [activeProject, goal, maxIter, events],
+    [activeProject, maxIter, events],
   );
 
   // Persist on unmount / tab close
   useEffect(() => {
     const handleUnload = () => {
       if (activeProject) {
-        saveProjectState(activeProject, { goal, maxIter, events });
+        saveProjectState(activeProject, { maxIter, events });
       }
     };
     window.addEventListener("beforeunload", handleUnload);
     return () => window.removeEventListener("beforeunload", handleUnload);
-  }, [activeProject, goal, maxIter, events]);
+  }, [activeProject, maxIter, events]);
+
+  // Get goal from project config (saved by ProjectDetail)
+  const activeGoal = projectTree.find((n: any) => n.project_id === activeProject)?.goal || "";
 
   // --- data fetching ---
   const loadProjects = useCallback(async () => {
@@ -192,9 +192,11 @@ export default function Dashboard() {
             onRefresh={loadProjects}
             runStatuses={allRunStatuses}
             onStartRun={async (pid) => {
+              const node = projectTree.find((n: any) => n.project_id === pid);
+              const configGoal = node?.goal || "";
               const st = loadProjectState(pid);
               try {
-                await api.startRun(pid, st.goal || goal, st.maxIter || maxIter);
+                await api.startRun(pid, configGoal, st.maxIter || maxIter);
                 loadAllRunStatuses();
                 if (pid === activeProject) loadRunStatus();
               } catch (e: any) {
@@ -230,13 +232,12 @@ export default function Dashboard() {
             activeProject={activeProject}
             runStatus={runStatus}
             onRefresh={loadRunStatus}
-            goal={goal}
-            onGoalChange={setGoal}
+            goal={activeGoal}
             maxIter={maxIter}
             onMaxIterChange={setMaxIter}
             onExtendIterations={(extra) => {
               if (!activeProject) return;
-              api.startRun(activeProject, goal.trim(), extra).then(loadRunStatus).catch(() => {});
+              api.startRun(activeProject, activeGoal.trim(), extra).then(loadRunStatus).catch(() => {});
             }}
           />
         </div>
