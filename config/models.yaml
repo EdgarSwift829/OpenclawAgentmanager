@@ -1,6 +1,12 @@
+# Provider priority: lmstudio (primary) > ollama (alternative) > vllm
+#
+# LM Studio: http://localhost:1234  (OpenAI-compatible Chat API)
+# Ollama:    http://localhost:11434 (Ollama native API)
+# vLLM:      http://localhost:8000  (OpenAI-compatible Completions API)
+
 models:
   qwen3.5-9b:
-    provider: ollama
+    provider: lmstudio
     context: 32768
     tier: high
     capabilities:
@@ -11,15 +17,18 @@ models:
       provider: ollama
 
   qwen2.5-coder-7b:
-    provider: ollama
+    provider: lmstudio
     context: 32768
     tier: standard
     capabilities:
       - coding
       - debugging
+    fallback:
+      name: qwen2.5-coder-7b
+      provider: ollama
 
   deepseek-coder:
-    provider: vllm
+    provider: lmstudio
     context: 32768
     tier: high
     capabilities:

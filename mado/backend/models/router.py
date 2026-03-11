@@ -1,4 +1,9 @@
-"""Router - Route inference requests to the appropriate LLM backend (Ollama / vLLM).
+"""Router - Route inference requests to the appropriate LLM backend.
+
+Supported providers:
+- lmstudio  (primary) - OpenAI-compatible API on localhost:1234
+- ollama    (alternative) - Ollama API on localhost:11434
+- vllm      - OpenAI-compatible API on localhost:8000
 
 Enhanced with:
 - Retry with exponential backoff
@@ -35,7 +40,7 @@ def route_inference(
         max_retries: Max retry attempts with exponential backoff.
         timeout: Request timeout in seconds.
     """
-    provider = model.get("provider", "ollama")
+    provider = model.get("provider", "lmstudio")
     model_name = model.get("name", "qwen3.5-9b")
     fallback_model = model.get("fallback")
 
@@ -69,7 +74,9 @@ def _call_with_retry(
     last_error = None
     for attempt in range(max_retries):
         try:
-            if provider == "ollama":
+            if provider == "lmstudio":
+                return _call_lmstudio(model_name, prompt, system_prompt, timeout)
+            elif provider == "ollama":
                 return _call_ollama(model_name, prompt, system_prompt, timeout)
             elif provider == "vllm":
                 return _call_vllm(model_name, prompt, system_prompt, timeout)
@@ -86,6 +93,28 @@ def _call_with_retry(
                 time.sleep(delay)
 
     return f"[LLM Error] All {max_retries} attempts failed: {last_error}"
+
+
+def _call_lmstudio(
+    model_name: str, prompt: str, system_prompt: Optional[str], timeout: int,
+) -> str:
+    """Call LM Studio OpenAI-compatible Chat API (localhost:1234)."""
+    url = "http://localhost:1234/v1/chat/completions"
+    messages = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": prompt})
+
+    payload = {
+        "model": model_name,
+        "messages": messages,
+        "stream": False,
+    }
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        result = json.loads(resp.read().decode("utf-8"))
+        return result.get("choices", [{}])[0].get("message", {}).get("content", "")
 
 
 def _call_ollama(

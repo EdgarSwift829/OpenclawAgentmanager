@@ -136,17 +136,55 @@ def check_npm_packages() -> bool:
     return True
 
 
+# ── LLM provider check ──────────────────────────────────────────
+def check_llm_providers() -> bool:
+    print("\n── LLM Providers ──")
+    import urllib.request
+    import json
+
+    found_any = False
+
+    # LM Studio (primary) - check localhost:1234
+    try:
+        req = urllib.request.Request("http://localhost:1234/v1/models")
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            models = [m.get("id", "?") for m in data.get("data", [])]
+            ok(f"LM Studio (localhost:1234) — 稼働中")
+            if models:
+                for m in models:
+                    print(f"         モデル: {m}")
+            else:
+                warn("LM Studio にモデルがロードされていません")
+            found_any = True
+    except Exception:
+        warn("LM Studio (localhost:1234) — 未起動またはアクセス不可")
+
+    # Ollama (alternative) - check localhost:11434
+    try:
+        req = urllib.request.Request("http://localhost:11434/api/tags")
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            models = [m.get("name", "?") for m in data.get("models", [])]
+            ok(f"Ollama (localhost:11434) — 稼働中")
+            if models:
+                for m in models:
+                    print(f"         モデル: {m}")
+            found_any = True
+    except Exception:
+        warn("Ollama (localhost:11434) — 未起動またはアクセス不可")
+
+    if not found_any:
+        warn("LLM プロバイダーが検出されませんでした")
+        warn("LM Studio または Ollama を起動してください")
+
+    # Result is informational, don't block startup
+    return True
+
+
 # ── Optional tools check ────────────────────────────────────────
 def check_optional() -> None:
     print("\n── Optional ──")
-
-    # Ollama
-    if shutil.which("ollama"):
-        result = run(["ollama", "--version"])
-        ver = result.stdout.strip() or result.stderr.strip()
-        ok(f"Ollama: {ver}")
-    else:
-        warn("Ollama が見つかりません（ローカルLLM未使用なら問題なし）")
 
     # Docker
     if shutil.which("docker"):
@@ -167,6 +205,7 @@ def main() -> int:
     results.append(check_pip_packages())
     results.append(check_node())
     results.append(check_npm_packages())
+    check_llm_providers()
     check_optional()
 
     print("\n" + "=" * 50)
