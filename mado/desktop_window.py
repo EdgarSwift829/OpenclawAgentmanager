@@ -24,16 +24,36 @@ _nextjs_proc = None
 
 
 def start_nextjs():
-    """Start the Next.js dev server as a subprocess."""
+    """Start the Next.js dev server as a subprocess (hidden on Windows)."""
     global _nextjs_proc
     print("[MADO] Next.js dev server を起動中...")
-    use_shell = sys.platform.startswith("win")
+
+    kwargs = {}
+    if sys.platform.startswith("win"):
+        # Hide the console window on Windows
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = 0  # SW_HIDE
+        kwargs["startupinfo"] = startupinfo
+        kwargs["shell"] = True
+        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+
+    # Build if .next directory doesn't exist
+    next_dir = os.path.join(FRONTEND_DIR, ".next")
+    if not os.path.isdir(next_dir):
+        print("[MADO] Next.js ビルド中 (初回のみ)...")
+        build_kw = {"cwd": FRONTEND_DIR}
+        if sys.platform.startswith("win"):
+            build_kw["shell"] = True
+        subprocess.run(["npm", "run", "build"], **build_kw)
+
+    # Use production server (next start) for stability
     _nextjs_proc = subprocess.Popen(
-        ["npm", "run", "dev", "--", "-p", "3001"],
+        ["npm", "run", "start", "--", "-p", "3001"],
         cwd=FRONTEND_DIR,
-        shell=use_shell,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
+        **kwargs,
     )
 
 
@@ -46,7 +66,10 @@ def stop_nextjs():
             _nextjs_proc.terminate()
         else:
             os.killpg(os.getpgid(_nextjs_proc.pid), signal.SIGTERM)
-        _nextjs_proc.wait(timeout=5)
+        try:
+            _nextjs_proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            _nextjs_proc.kill()
 
 
 def wait_for_nextjs() -> bool:

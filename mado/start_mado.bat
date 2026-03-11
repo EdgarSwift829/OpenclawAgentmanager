@@ -22,7 +22,6 @@ echo.
 :: ── Determine venv python path ───────────────────
 set "VENV_DIR=%~dp0.venv"
 set "VENV_PYTHON=%VENV_DIR%\Scripts\python.exe"
-set "VENV_ACTIVATE=%VENV_DIR%\Scripts\activate.bat"
 
 :: Fall back to global python if venv doesn't exist
 if exist "%VENV_PYTHON%" (
@@ -35,24 +34,22 @@ if exist "%VENV_PYTHON%" (
 
 echo.
 
-:: ── Step 2: Start Backend ────────────────────────
+:: ── Step 2: Start Backend (hidden) ─────────────────
 echo [2/3] バックエンド起動中 (http://localhost:8000) ...
-start "MADO Backend" cmd /c ""%~dp0backend\run_backend.bat" || (echo. & echo [ERROR] バックエンドの起動に失敗しました & pause)"
+start /min "MADO Backend" cmd /c ""%~dp0backend\run_backend.bat""
 timeout /t 3 /nobreak >nul
 
-:: ── Step 3: Start Frontend + Desktop Window ─────────
+:: ── Step 3: Start Frontend + Desktop Window (hidden) ──
 echo [3/3] フロントエンド＋デスクトップウィンドウ起動中...
-start "MADO Desktop" cmd /c ""%PYTHON_CMD%" "%~dp0desktop_window.py"" || (echo. & echo [ERROR] デスクトップウィンドウの起動に失敗しました & pause)
+start /min "MADO Desktop" cmd /c ""%PYTHON_CMD%" "%~dp0desktop_window.py""
 
 echo.
 echo ============================================
 echo   MADO 起動完了（デスクトップモード）
 echo   Backend:  http://localhost:8000
 echo   Frontend: http://localhost:3001
-echo   Health:   http://localhost:8000/api/health
 echo ============================================
 echo.
-:: 成功時は自動で閉じる（3秒後）
 echo 3秒後にこのウィンドウは自動で閉じます...
 timeout /t 3 /nobreak >nul
 exit /b 0
