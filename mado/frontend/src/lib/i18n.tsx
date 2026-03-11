@@ -112,6 +112,11 @@ const dict = {
   deleteProject: { en: "Delete", ja: "削除" },
   confirmDelete: { en: "Are you sure you want to delete", ja: "を削除してよろしいですか？" },
 
+  // Agent Profiles
+  agentProfiles: { en: "Agent Profiles", ja: "エージェント設定" },
+  agentTitlePlaceholder: { en: "Title (e.g. Top Engineer)", ja: "肩書き（例：トップエンジニア）" },
+  agentPersonalityPlaceholder: { en: "Personality & strengths...", ja: "特徴・得意分野を入力..." },
+
   // TaskGraph
   taskGraph: { en: "Task Graph", ja: "タスクグラフ" },
   noActiveTasks: { en: "No active tasks", ja: "アクティブなタスクなし" },

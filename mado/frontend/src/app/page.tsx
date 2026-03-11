@@ -94,7 +94,9 @@ export default function Dashboard() {
   }, [activeProject, maxIter, events]);
 
   // Get goal from project config (saved by ProjectDetail)
-  const activeGoal = projectTree.find((n: any) => n.project_id === activeProject)?.goal || "";
+  const activeNode = projectTree.find((n: any) => n.project_id === activeProject);
+  const activeGoal = activeNode?.goal || "";
+  const activeAgentProfiles = activeNode?.agent_profiles || {};
 
   // --- data fetching ---
   const loadProjects = useCallback(async () => {
@@ -246,7 +248,7 @@ export default function Dashboard() {
           projectTree={projectTree}
           onRefresh={loadProjects}
         />
-        <AgentGrid agents={agents} events={events} />
+        <AgentGrid agents={agents} events={events} agentProfiles={activeAgentProfiles} />
       </main>
 
       {/* ---- Right panel: Tabs (Timeline / Models / Tasks) ---- */}

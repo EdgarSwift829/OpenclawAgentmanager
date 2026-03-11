@@ -13,6 +13,11 @@ interface TaskItem {
   priority: string;
 }
 
+interface AgentProfile {
+  title: string;
+  personality: string;
+}
+
 interface ProjectNode {
   project_id: string;
   display_name?: string;
@@ -26,7 +31,19 @@ interface ProjectNode {
   description: string;
   deadline: string | null;
   tasks: TaskItem[];
+  agent_profiles?: Record<string, AgentProfile>;
 }
+
+const AGENT_ROLES = [
+  { key: "cto", icon: "\uD83D\uDCCB", label: "CTO" },
+  { key: "manager", icon: "\uD83D\uDCC1", label: "PM" },
+  { key: "researcher", icon: "\uD83D\uDD0D", label: "Researcher" },
+  { key: "engineer", icon: "\u2699\uFE0F", label: "Engineer" },
+  { key: "reviewer", icon: "\uD83D\uDCDD", label: "Reviewer" },
+  { key: "tester", icon: "\uD83E\uDDEA", label: "Tester" },
+  { key: "optimizer", icon: "\u26A1", label: "Optimizer" },
+  { key: "documenter", icon: "\uD83D\uDCD6", label: "Documenter" },
+];
 
 interface Props {
   activeProject: string | null;
@@ -48,6 +65,7 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh }: Props) 
   const [description, setDescription] = useState("");
   const [deadline, setDeadline] = useState("");
   const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [agentProfiles, setAgentProfiles] = useState<Record<string, AgentProfile>>({});
 
   const node = projectTree.find((n) => n.project_id === activeProject);
   const isParent = node ? node.children.length > 0 || !node.parent_id : false;
@@ -62,6 +80,7 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh }: Props) 
     setDescription(node.description || "");
     setDeadline(node.deadline || "");
     setTasks(node.tasks || []);
+    setAgentProfiles(node.agent_profiles || {});
     setDirty(false);
     setSaved(false);
   }, [activeProject, node?.project_id]);
@@ -75,7 +94,7 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh }: Props) 
     if (!activeProject) return;
     setSaving(true);
     try {
-      const updates: Record<string, any> = { goal };
+      const updates: Record<string, any> = { goal, agent_profiles: agentProfiles };
       if (isParent || !node?.parent_id) {
         updates.overview = overview;
         updates.policy = policy;
@@ -274,6 +293,49 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh }: Props) 
           </div>
         </>
       )}
+
+      {/* Agent Profiles */}
+      <div className="detail-field">
+        <label className="detail-label">{t("agentProfiles")}</label>
+        <div className="agent-profiles-list">
+          {AGENT_ROLES.map(({ key, icon, label }) => {
+            const profile = agentProfiles[key] || { title: "", personality: "" };
+            return (
+              <div key={key} className="agent-profile-card">
+                <div className="agent-profile-header">
+                  <span className="agent-profile-icon">{icon}</span>
+                  <span className="agent-profile-role">{label}</span>
+                </div>
+                <input
+                  className="agent-profile-input"
+                  placeholder={t("agentTitlePlaceholder")}
+                  value={profile.title}
+                  onChange={(e) => {
+                    setAgentProfiles({
+                      ...agentProfiles,
+                      [key]: { ...profile, title: e.target.value },
+                    });
+                    markDirty();
+                  }}
+                />
+                <textarea
+                  className="agent-profile-textarea"
+                  rows={2}
+                  placeholder={t("agentPersonalityPlaceholder")}
+                  value={profile.personality}
+                  onChange={(e) => {
+                    setAgentProfiles({
+                      ...agentProfiles,
+                      [key]: { ...profile, personality: e.target.value },
+                    });
+                    markDirty();
+                  }}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

@@ -12,9 +12,15 @@ interface AgentInfo {
   current_task?: string;
 }
 
+interface AgentProfile {
+  title: string;
+  personality: string;
+}
+
 interface Props {
   agents: AgentInfo[];
   events: any[];
+  agentProfiles?: Record<string, AgentProfile>;
 }
 
 const ROLE_COLORS: Record<string, string> = {
@@ -68,7 +74,7 @@ function getLatestOutput(role: string, events: any[]): string {
   return "";
 }
 
-export function AgentGrid({ agents, events }: Props) {
+export function AgentGrid({ agents, events, agentProfiles = {} }: Props) {
   const { t } = useI18n();
 
   if (agents.length === 0) {
@@ -93,6 +99,7 @@ export function AgentGrid({ agents, events }: Props) {
           const icon = ROLE_ICONS[agent.role] || "\uD83E\uDD16";
           const latestOutput = getLatestOutput(agent.role, events);
           const statusClass = getStatusClass(agent.status);
+          const profile = agentProfiles[agent.role];
 
           return (
             <div
@@ -123,7 +130,14 @@ export function AgentGrid({ agents, events }: Props) {
 
               {/* Name bar (bottom, like Zoom name bar) */}
               <div className="tile-namebar">
-                <span className="tile-role">{agent.role.toUpperCase()}</span>
+                <span className="tile-role">
+                  {profile?.title || agent.role.toUpperCase()}
+                </span>
+                {profile?.personality && (
+                  <span className="tile-personality" title={profile.personality}>
+                    {profile.personality}
+                  </span>
+                )}
                 {agent.model && (
                   <span className="tile-model">{agent.model}</span>
                 )}

@@ -194,6 +194,7 @@ class WorkspaceManager:
                     "description": config.get("description", ""),
                     "deadline": config.get("deadline"),
                     "tasks": config.get("tasks", []),
+                    "agent_profiles": config.get("agent_profiles", {}),
                 })
             except Exception as e:
                 logger.error("Failed to load config for project '%s': %s", pid, e)

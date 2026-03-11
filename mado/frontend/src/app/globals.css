@@ -509,6 +509,14 @@ body {
   color: var(--tile-color, var(--text-primary));
   letter-spacing: 0.05em;
 }
+.tile-personality {
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .tile-model {
   font-size: 0.625rem;
   color: var(--text-secondary);
@@ -1160,3 +1168,50 @@ input, select {
 .tree-openclaw-install-btn:hover {
   background: var(--accent-hover);
 }
+
+/* Agent Profiles */
+.agent-profiles-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.5rem;
+}
+.agent-profile-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.agent-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-bottom: 0.125rem;
+}
+.agent-profile-icon { font-size: 1rem; }
+.agent-profile-role {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.agent-profile-input {
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0.25rem 0.375rem;
+  font-size: 0.6875rem;
+  color: var(--text-primary);
+}
+.agent-profile-input:focus { outline: none; border-color: var(--accent); }
+.agent-profile-textarea {
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0.25rem 0.375rem;
+  font-size: 0.625rem;
+  color: var(--text-secondary);
+  resize: vertical;
+}
+.agent-profile-textarea:focus { outline: none; border-color: var(--accent); }
