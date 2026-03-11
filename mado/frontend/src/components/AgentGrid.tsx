@@ -32,6 +32,7 @@ const ROLE_COLORS: Record<string, string> = {
   tester: "#06b6d4",
   optimizer: "#f97316",
   documenter: "#64748b",
+  marketer: "#e11d48",
 };
 
 const ROLE_ICONS: Record<string, string> = {
@@ -43,6 +44,7 @@ const ROLE_ICONS: Record<string, string> = {
   tester: "\uD83E\uDDEA",
   optimizer: "\u26A1",
   documenter: "\uD83D\uDCD6",
+  marketer: "\uD83D\uDCE2",
 };
 
 function getStatusClass(status: string): string {

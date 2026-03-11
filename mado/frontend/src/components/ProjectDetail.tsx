@@ -43,6 +43,7 @@ const AGENT_ROLES = [
   { key: "tester", icon: "\uD83E\uDDEA", label: "Tester" },
   { key: "optimizer", icon: "\u26A1", label: "Optimizer" },
   { key: "documenter", icon: "\uD83D\uDCD6", label: "Documenter" },
+  { key: "marketer", icon: "\uD83D\uDCE2", label: "Marketer" },
 ];
 
 interface Props {

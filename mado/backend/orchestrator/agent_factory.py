@@ -13,6 +13,7 @@ AGENT_CLASSES = {
     "tester": "mado.backend.agents.tester.TesterAgent",
     "optimizer": "mado.backend.agents.optimizer.OptimizerAgent",
     "documenter": "mado.backend.agents.documenter.DocumenterAgent",
+    "marketer": "mado.backend.agents.marketer.MarketerAgent",
 }
 
 # Role -> tool type mapping
@@ -26,6 +27,7 @@ ROLE_TOOLS: dict[str, list[str]] = {
     "tester": ["file", "exec", "memory"],
     "optimizer": ["file", "exec", "memory"],
     "documenter": ["file", "memory"],
+    "marketer": ["file", "web", "memory"],
 }
 
 

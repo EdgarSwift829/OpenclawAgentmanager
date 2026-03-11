@@ -13,6 +13,7 @@ const ROLE_META: Record<string, { icon: string; label: string; tier: string }> =
   tester:     { icon: "\u{1F9EA}", label: "Tester",     tier: "standard" },
   optimizer:  { icon: "\u26A1",    label: "Optimizer",  tier: "standard" },
   documenter: { icon: "\u{1F4DD}", label: "Documenter", tier: "standard" },
+  marketer:   { icon: "\u{1F4E2}", label: "Marketer",   tier: "standard" },
 };
 
 const PROVIDER_BADGE: Record<string, string> = {
