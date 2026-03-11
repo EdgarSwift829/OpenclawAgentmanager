@@ -29,6 +29,9 @@ export const listChildren = (id: string) => fetchJSON(`/projects/${id}/children`
 export const getProjectProgress = (id: string) => fetchJSON(`/projects/${id}/progress`);
 export const updateProjectConfig = (id: string, updates: Record<string, any>) =>
   fetchJSON(`/projects/${id}/config`, { method: "PUT", body: JSON.stringify(updates) });
+export const listBackups = (id: string) => fetchJSON(`/projects/${id}/backups`);
+export const restoreBackup = (id: string, backup_name: string) =>
+  fetchJSON(`/projects/${id}/backups/restore`, { method: "POST", body: JSON.stringify({ backup_name }) });
 
 // Agents
 export const listAgents = (projectId: string) => fetchJSON(`/agents/${projectId}`);

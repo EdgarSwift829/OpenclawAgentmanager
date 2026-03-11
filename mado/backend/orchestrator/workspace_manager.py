@@ -170,6 +170,104 @@ class WorkspaceManager:
         target = Path(target_path).resolve()
         return str(target).startswith(str(workspace))
 
+    def backup_project(self, project_id: str, reason: str = "manual") -> str:
+        """Create a timestamped backup of a project's workspace and config.
+
+        Backups are stored under <project_dir>/backups/<timestamp>_<reason>/
+        Returns the backup directory path.
+        """
+        import shutil
+        from datetime import datetime
+
+        project_dir = self.projects_root / project_id
+        if not project_dir.exists():
+            raise FileNotFoundError(f"Project not found: {project_id}")
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_reason = reason.replace(" ", "_").replace("/", "_")[:20]
+        backup_name = f"{timestamp}_{safe_reason}"
+        backup_dir = project_dir / "backups" / backup_name
+        backup_dir.mkdir(parents=True, exist_ok=True)
+
+        # Backup config.json
+        config_path = project_dir / "config.json"
+        if config_path.exists():
+            shutil.copy2(str(config_path), str(backup_dir / "config.json"))
+
+        # Backup workspace directory
+        workspace_dir = project_dir / "workspace"
+        if workspace_dir.exists():
+            shutil.copytree(
+                str(workspace_dir),
+                str(backup_dir / "workspace"),
+                dirs_exist_ok=True,
+            )
+
+        # Backup project memory
+        memory_path = project_dir / "project_memory.md"
+        if memory_path.exists():
+            shutil.copy2(str(memory_path), str(backup_dir / "project_memory.md"))
+
+        # Write backup metadata
+        meta = {
+            "project_id": project_id,
+            "reason": reason,
+            "timestamp": timestamp,
+            "backup_name": backup_name,
+        }
+        (backup_dir / "backup_meta.json").write_text(
+            json.dumps(meta, indent=2, ensure_ascii=False)
+        )
+
+        return str(backup_dir)
+
+    def list_backups(self, project_id: str) -> list:
+        """List available backups for a project, newest first."""
+        backup_root = self.projects_root / project_id / "backups"
+        if not backup_root.exists():
+            return []
+        backups = []
+        for d in sorted(backup_root.iterdir(), reverse=True):
+            if d.is_dir():
+                meta_path = d / "backup_meta.json"
+                if meta_path.exists():
+                    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+                    meta["path"] = str(d)
+                    backups.append(meta)
+                else:
+                    backups.append({"backup_name": d.name, "path": str(d)})
+        return backups
+
+    def restore_backup(self, project_id: str, backup_name: str) -> bool:
+        """Restore a project from a named backup."""
+        import shutil
+
+        backup_dir = self.projects_root / project_id / "backups" / backup_name
+        if not backup_dir.exists():
+            return False
+
+        project_dir = self.projects_root / project_id
+
+        # Restore config.json
+        backup_config = backup_dir / "config.json"
+        if backup_config.exists():
+            shutil.copy2(str(backup_config), str(project_dir / "config.json"))
+
+        # Restore workspace
+        backup_workspace = backup_dir / "workspace"
+        if backup_workspace.exists():
+            target_workspace = project_dir / "workspace"
+            if target_workspace.exists():
+                shutil.rmtree(str(target_workspace))
+            shutil.copytree(str(backup_workspace), str(target_workspace))
+
+        # Restore project memory
+        backup_memory = backup_dir / "project_memory.md"
+        if backup_memory.exists():
+            shutil.copy2(str(backup_memory), str(project_dir / "project_memory.md"))
+
+        return True
+
     def list_projects(self) -> list:
         """List all existing projects."""
         if not self.projects_root.exists():

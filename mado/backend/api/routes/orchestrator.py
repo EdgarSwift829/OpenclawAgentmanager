@@ -129,14 +129,29 @@ async def get_run_status(project_id: str):
     return run
 
 
+def _backup_project(project_id: str, reason: str):
+    """Take a backup of the project, logging any errors."""
+    try:
+        path = _workspace_manager.backup_project(project_id, reason)
+        logger.info(f"Backup created for {project_id}: {path}")
+        return path
+    except Exception as e:
+        logger.warning(f"Backup failed for {project_id}: {e}")
+        return None
+
+
 @router.post("/run/{project_id}/stop")
 async def stop_run(project_id: str):
     """Stop a running orchestration with actual cancellation.
-    Also stops all running child projects (parent off = children off).
+    Creates a backup before stopping. Also stops all running child projects.
     """
     run = _runs.get(project_id)
     if not run or run["status"] != "running":
         raise HTTPException(status_code=404, detail="No active run to stop")
+
+    # Backup before stopping
+    iter_info = f"iter{run.get('iteration', 0)}"
+    backup_path = _backup_project(project_id, f"stop_{iter_info}")
 
     # Signal the orchestrator to cancel
     orch = _orchestrators.get(project_id)
@@ -145,20 +160,27 @@ async def stop_run(project_id: str):
 
     _runs[project_id]["status"] = "stopped"
 
-    # Cascade stop to children
+    # Cascade stop to children (with backups)
     stopped_children = _cascade_stop_children(project_id)
 
-    return {"status": "stopped", "project_id": project_id, "stopped_children": stopped_children}
+    return {
+        "status": "stopped",
+        "project_id": project_id,
+        "stopped_children": stopped_children,
+        "backup": backup_path,
+    }
 
 
 def _cascade_stop_children(parent_id: str) -> list:
-    """Recursively stop all running child projects."""
+    """Recursively stop all running child projects with backups."""
     config = _workspace_manager.get_project_config(parent_id)
     children_ids = config.get("children", [])
     stopped = []
     for cid in children_ids:
         child_run = _runs.get(cid, {})
         if child_run.get("status") == "running":
+            # Backup child before stopping
+            _backup_project(cid, f"cascade_stop_iter{child_run.get('iteration', 0)}")
             orch = _orchestrators.get(cid)
             if orch:
                 orch.cancel()
@@ -171,10 +193,16 @@ def _cascade_stop_children(parent_id: str) -> list:
 
 @router.post("/run/{project_id}/pause")
 async def pause_run(project_id: str):
-    """Pause a running orchestration (stops but preserves iteration count for resume)."""
+    """Pause a running orchestration (stops but preserves iteration count for resume).
+    Creates a backup before pausing.
+    """
     run = _runs.get(project_id)
     if not run or run["status"] != "running":
         raise HTTPException(status_code=404, detail="No active run to pause")
+
+    # Backup before pausing
+    iter_info = f"iter{run.get('iteration', 0)}"
+    backup_path = _backup_project(project_id, f"pause_{iter_info}")
 
     orch = _orchestrators.get(project_id)
     if orch:
@@ -186,6 +214,7 @@ async def pause_run(project_id: str):
         "project_id": project_id,
         "iteration": run.get("iteration", 0),
         "max_iterations": run.get("max_iterations", 0),
+        "backup": backup_path,
     }
 
 

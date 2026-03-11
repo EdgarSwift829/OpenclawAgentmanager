@@ -302,3 +302,36 @@ async def get_project_progress(project_id: str):
         },
         "children": child_progress,
     }
+
+
+@router.get("/{project_id}/backups")
+async def list_backups(project_id: str):
+    """List available backups for a project."""
+    from pathlib import Path
+
+    project_path = Path(workspace_manager.projects_root) / project_id
+    if not project_path.exists():
+        raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
+
+    backups = workspace_manager.list_backups(project_id)
+    return {"project_id": project_id, "backups": backups}
+
+
+class BackupRestore(BaseModel):
+    backup_name: str
+
+
+@router.post("/{project_id}/backups/restore")
+async def restore_backup(project_id: str, data: BackupRestore):
+    """Restore a project from a named backup."""
+    from pathlib import Path
+
+    project_path = Path(workspace_manager.projects_root) / project_id
+    if not project_path.exists():
+        raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
+
+    success = workspace_manager.restore_backup(project_id, data.backup_name)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Backup not found: {data.backup_name}")
+
+    return {"status": "restored", "project_id": project_id, "backup_name": data.backup_name}
