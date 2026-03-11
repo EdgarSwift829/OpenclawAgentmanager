@@ -102,7 +102,7 @@ export default function Dashboard() {
       const data = await api.listProjects();
       setProjects(data.projects);
       setProjectTree(data.tree || []);
-    } catch { /* API may not be running */ }
+    } catch (e) { console.warn("[loadProjects] API error:", e); }
   }, []);
 
   const loadRunStatus = useCallback(async () => {

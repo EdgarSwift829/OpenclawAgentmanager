@@ -53,9 +53,16 @@ async def set_projects_root(data: ProjectsRootUpdate):
         raise HTTPException(status_code=400, detail="Path cannot be empty")
     try:
         workspace_manager.set_projects_root(new_root)
-        projects = workspace_manager.list_projects()
-        return {"projects_root": workspace_manager.get_projects_root(), "projects": projects}
+        tree = workspace_manager.get_project_tree()
+        projects = [p["project_id"] for p in tree]
+        return {
+            "projects_root": workspace_manager.get_projects_root(),
+            "projects": projects,
+            "tree": tree,
+        }
     except Exception as e:
+        import logging
+        logging.getLogger(__name__).error("set_projects_root failed: %s", e, exc_info=True)
         raise HTTPException(status_code=400, detail=str(e))
 
 

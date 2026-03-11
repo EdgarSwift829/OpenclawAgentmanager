@@ -2,9 +2,12 @@
 
 import os
 import json
+import logging
 from pathlib import Path
 
 import yaml
+
+logger = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SETTINGS_PATH = REPO_ROOT / "config" / "settings.yaml"
@@ -18,9 +21,12 @@ def _load_projects_root() -> Path:
             data = yaml.safe_load(SETTINGS_PATH.read_text(encoding="utf-8")) or {}
             root = data.get("projects_root", "")
             if root and root.strip():
-                return Path(root.strip())
-    except Exception:
-        pass
+                loaded = Path(root.strip())
+                logger.info("Loaded projects_root from settings: %s", loaded)
+                return loaded
+    except Exception as e:
+        logger.error("Failed to load settings.yaml: %s", e)
+    logger.info("Using default projects_root: %s", DEFAULT_PROJECTS_ROOT)
     return DEFAULT_PROJECTS_ROOT
 
 
@@ -38,6 +44,7 @@ def _save_projects_root(new_root: str):
         yaml.dump(data, allow_unicode=True, default_flow_style=False),
         encoding="utf-8",
     )
+    logger.info("Saved projects_root to %s: %s", SETTINGS_PATH, new_root)
 
 
 class WorkspaceManager:
@@ -166,22 +173,41 @@ class WorkspaceManager:
     def get_project_tree(self) -> list:
         """Return hierarchical project list with full config data."""
         all_projects = self.list_projects()
+        logger.info("list_projects returned %d projects from %s: %s",
+                     len(all_projects), self.projects_root, all_projects)
         tree = []
         for pid in all_projects:
-            config = self.get_project_config(pid)
-            tree.append({
-                "project_id": pid,
-                "parent_id": config.get("parent_id"),
-                "children": config.get("children", []),
-                "status": config.get("status", "initialized"),
-                "goal": config.get("goal", ""),
-                "overview": config.get("overview", ""),
-                "policy": config.get("policy", ""),
-                "roadmap": config.get("roadmap", ""),
-                "description": config.get("description", ""),
-                "deadline": config.get("deadline"),
-                "tasks": config.get("tasks", []),
-            })
+            try:
+                config = self.get_project_config(pid)
+                tree.append({
+                    "project_id": pid,
+                    "parent_id": config.get("parent_id"),
+                    "children": config.get("children", []),
+                    "status": config.get("status", "initialized"),
+                    "goal": config.get("goal", ""),
+                    "overview": config.get("overview", ""),
+                    "policy": config.get("policy", ""),
+                    "roadmap": config.get("roadmap", ""),
+                    "description": config.get("description", ""),
+                    "deadline": config.get("deadline"),
+                    "tasks": config.get("tasks", []),
+                })
+            except Exception as e:
+                logger.error("Failed to load config for project '%s': %s", pid, e)
+                # Still include the project with minimal info so it's visible
+                tree.append({
+                    "project_id": pid,
+                    "parent_id": None,
+                    "children": [],
+                    "status": "initialized",
+                    "goal": "",
+                    "overview": "",
+                    "policy": "",
+                    "roadmap": "",
+                    "description": "",
+                    "deadline": None,
+                    "tasks": [],
+                })
         return tree
 
     def get_workspace_path(self, project_id: str) -> str:
@@ -300,6 +326,7 @@ class WorkspaceManager:
         are auto-initialized (config.json created) and then listed.
         """
         if not self.projects_root.exists():
+            logger.warning("projects_root does not exist: %s", self.projects_root)
             return []
         projects = []
         for d in self.projects_root.iterdir():
