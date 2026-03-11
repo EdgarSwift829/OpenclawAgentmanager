@@ -34,18 +34,26 @@ if exist "%VENV_PYTHON%" (
 
 echo.
 
-:: ── Step 2: Start Backend (hidden) ─────────────────
+:: ── Step 2: Start Backend (minimized) ──────────────
 echo [2/3] バックエンド起動中 (http://localhost:8000) ...
-start /min "MADO Backend" cmd /c ""%~dp0backend\run_backend.bat""
+start /min "" cmd /c "call "%~dp0backend\run_backend.bat""
 timeout /t 3 /nobreak >nul
 
-:: ── Step 3: Start Frontend + Desktop Window (hidden) ──
-echo [3/3] フロントエンド＋デスクトップウィンドウ起動中...
-start /min "MADO Desktop" cmd /c ""%PYTHON_CMD%" "%~dp0desktop_window.py""
+:: ── Step 3: Build frontend if needed ───────────────
+if not exist "%~dp0frontend\.next" (
+    echo [INFO] フロントエンド初回ビルド中...
+    pushd "%~dp0frontend"
+    call npm run build
+    popd
+)
+
+:: ── Step 4: Start Desktop Window ───────────────────
+echo [3/3] デスクトップウィンドウ起動中...
+start "" "%PYTHON_CMD%" "%~dp0desktop_window.py"
 
 echo.
 echo ============================================
-echo   MADO 起動完了（デスクトップモード）
+echo   MADO 起動完了
 echo   Backend:  http://localhost:8000
 echo   Frontend: http://localhost:3001
 echo ============================================
