@@ -20,13 +20,23 @@ class BaseAgent(ABC):
         """Execute a given task and return results."""
         pass
 
-    def call_llm(self, prompt: str, system_prompt: Optional[str] = None) -> str:
-        """Send prompt to the assigned LLM model."""
+    def call_llm(self, prompt: str, system_prompt: Optional[str] = None,
+                  project_memory: str = "", retrieved_files: list = None) -> str:
+        """Send prompt to the assigned LLM model with token-optimized context."""
         from mado.backend.models.router import route_inference
+        from mado.backend.token_optimizer import TokenOptimizer
+
+        optimizer = TokenOptimizer()
+        optimized_prompt = optimizer.build_context(
+            system_prompt=system_prompt or self.load_prompt_template(),
+            task=prompt,
+            project_memory=project_memory,
+            retrieved_files=retrieved_files or [],
+        )
         return route_inference(
             model=self.model,
-            prompt=prompt,
-            system_prompt=system_prompt,
+            prompt=optimized_prompt,
+            system_prompt=None,
         )
 
     def load_prompt_template(self) -> str:
