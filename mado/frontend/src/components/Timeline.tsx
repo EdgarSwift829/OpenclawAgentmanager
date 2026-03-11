@@ -1,17 +1,21 @@
 "use client";
 
+import { useI18n } from "@/lib/i18n";
+
 interface Props {
   events: any[];
 }
 
 export function Timeline({ events }: Props) {
+  const { t } = useI18n();
+
   return (
     <div className="card">
-      <h2>Iteration Timeline</h2>
+      <h2>{t("iterationTimeline")}</h2>
       <div className="timeline">
         {events.length === 0 ? (
           <span style={{ color: "var(--text-secondary)", fontSize: "0.8125rem" }}>
-            No events yet
+            {t("noEventsYet")}
           </span>
         ) : (
           events

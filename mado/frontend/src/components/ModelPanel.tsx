@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import * as api from "@/lib/api";
+import { useI18n } from "@/lib/i18n";
 
 const ROLE_META: Record<string, { icon: string; label: string; tier: string }> = {
   cto:        { icon: "\u{1F3D7}", label: "CTO",        tier: "high" },
@@ -21,6 +22,7 @@ const PROVIDER_BADGE: Record<string, string> = {
 };
 
 export function ModelPanel() {
+  const { t } = useI18n();
   const [models, setModels] = useState<Record<string, any>>({});
   const [roles, setRoles] = useState<string[]>([]);
   const [assignments, setAssignments] = useState<Record<string, string>>({});
@@ -114,12 +116,12 @@ export function ModelPanel() {
   return (
     <div className="model-panel">
       <div className="model-panel-header">
-        <h2>Agent Pipeline</h2>
-        <span className="model-panel-hint">Drag to reorder</span>
+        <h2>{t("agentPipeline")}</h2>
+        <span className="model-panel-hint">{t("dragToReorder")}</span>
       </div>
 
       {roles.length === 0 && (
-        <div className="model-panel-empty">No agent config loaded</div>
+        <div className="model-panel-empty">{t("noAgentConfig")}</div>
       )}
 
       <div className="block-list">
