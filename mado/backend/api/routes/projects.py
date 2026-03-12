@@ -1,5 +1,6 @@
 """Project management API routes."""
 
+import logging
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
@@ -245,21 +246,53 @@ async def delete_project(project_id: str):
     import shutil
     from pathlib import Path
 
+    logger = logging.getLogger(__name__)
     project_path = Path(workspace_manager.projects_root) / project_id
     if not project_path.exists():
         raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
+
+    # Stop running orchestration if active
+    try:
+        from mado.backend.api.routes.orchestrator import _runs, _orchestrators
+        run = _runs.get(project_id)
+        if run and run.get("status") == "running":
+            orch = _orchestrators.get(project_id)
+            if orch:
+                orch.cancel()
+            run["status"] = "stopped"
+        _runs.pop(project_id, None)
+        _orchestrators.pop(project_id, None)
+    except Exception as e:
+        logger.warning("Failed to clean up orchestrator state for %s: %s", project_id, e)
 
     # Remove from parent's children list
     config = workspace_manager.get_project_config(project_id)
     parent_id = config.get("parent_id")
     if parent_id:
-        workspace_manager._remove_child_from_parent(parent_id, project_id)
+        try:
+            workspace_manager._remove_child_from_parent(parent_id, project_id)
+        except Exception as e:
+            logger.warning("Failed to unlink from parent %s: %s", parent_id, e)
 
     # Orphan children (set their parent_id to None)
     for child_id in config.get("children", []):
-        workspace_manager.update_project_config(child_id, {"parent_id": None})
+        try:
+            workspace_manager.update_project_config(child_id, {"parent_id": None})
+        except Exception as e:
+            logger.warning("Failed to orphan child %s: %s", child_id, e)
 
-    shutil.rmtree(project_path)
+    try:
+        shutil.rmtree(project_path)
+    except PermissionError as e:
+        raise HTTPException(
+            status_code=409,
+            detail=f"プロジェクトのファイルがロックされています。実行中のプロセスを停止してから再試行してください: {e}",
+        )
+    except OSError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"プロジェクトの削除に失敗しました: {e}",
+        )
     return {"deleted": project_id}
 
 
