@@ -44,7 +44,10 @@ export function ModelPanel() {
       const asgn = a.assignments || {};
       setAssignments(asgn);
       setRoles(Object.keys(asgn));
-    } catch { /* API not available */ }
+    } catch (e: any) {
+      console.error("ModelPanel load error:", e);
+      showStatus(`モデル読み込みエラー: ${e?.message || "API未接続"}`, "error");
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -128,7 +131,12 @@ export function ModelPanel() {
       )}
 
       {roles.length === 0 && (
-        <div className="model-panel-empty">{t("noAgentConfig")}</div>
+        <div className="model-panel-empty">
+          <p>{t("noAgentConfig")}</p>
+          <button className="tree-action-btn" onClick={load} style={{ marginTop: "0.5rem", padding: "0.25rem 0.75rem", border: "1px solid var(--border)", borderRadius: "4px" }}>
+            再読み込み
+          </button>
+        </div>
       )}
 
       <div className="block-list">
