@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import * as api from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
+import { useToast } from "@/components/Toast";
 
 interface ProjectNode {
   project_id: string;
@@ -31,6 +32,16 @@ const STATUS_ICONS: Record<string, string> = {
   archived: "\u{1F4E6}",
 };
 
+interface ContextMenuState {
+  visible: boolean;
+  x: number;
+  y: number;
+  projectId: string;
+  displayName: string;
+  isArchived: boolean;
+  hasChildren: boolean;
+}
+
 export function ProjectTree({
   projectTree,
   activeProject,
@@ -42,6 +53,7 @@ export function ProjectTree({
   onPauseRun,
 }: Props) {
   const { t } = useI18n();
+  const { showToast } = useToast();
   const [newId, setNewId] = useState("");
   const [creating, setCreating] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -57,6 +69,72 @@ export function ProjectTree({
   const [showArchived, setShowArchived] = useState(false);
   const [openclawStatus, setOpenclawStatus] = useState<"unknown" | "checking" | "installed" | "not_installed" | "installing" | "error">("unknown");
   const [openclawVersion, setOpenclawVersion] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState>({
+    visible: false, x: 0, y: 0, projectId: "", displayName: "", isArchived: false, hasChildren: false,
+  });
+  const treeRef = useRef<HTMLDivElement>(null);
+
+  // Auto-expand: when activeProject changes, expand its ancestors + itself if it has children
+  useEffect(() => {
+    if (!activeProject || projectTree.length === 0) return;
+
+    const nm = new Map<string, ProjectNode>();
+    for (const n of projectTree) nm.set(n.project_id, n);
+
+    const toExpand = new Set<string>();
+
+    // Expand ancestors of active project so it's visible
+    const current = nm.get(activeProject);
+    if (current?.parent_id) {
+      let parentId: string | null = current.parent_id;
+      while (parentId) {
+        toExpand.add(parentId);
+        const parent = nm.get(parentId);
+        parentId = parent?.parent_id || null;
+      }
+    }
+
+    // Expand active project itself if it has children
+    if (current && current.children.length > 0) {
+      toExpand.add(activeProject);
+    }
+
+    if (toExpand.size > 0) {
+      setExpandedNodes((prev) => {
+        const next = new Set(prev);
+        for (const id of toExpand) next.add(id);
+        return next;
+      });
+    }
+  }, [activeProject, projectTree]);
+
+  // Close context menu on click outside
+  useEffect(() => {
+    const handleClick = () => setContextMenu((prev) => ({ ...prev, visible: false }));
+    if (contextMenu.visible) {
+      document.addEventListener("click", handleClick);
+      return () => document.removeEventListener("click", handleClick);
+    }
+  }, [contextMenu.visible]);
+
+  // Delete key handler
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Delete" && activeProject && !renamingId) {
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+        const nm = new Map<string, ProjectNode>();
+        for (const n of projectTree) nm.set(n.project_id, n);
+        const node = nm.get(activeProject);
+        if (node) {
+          handleDelete(activeProject, node.display_name);
+        }
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [activeProject, renamingId, projectTree]);
 
   // Load current projects root on mount
   useEffect(() => {
@@ -92,24 +170,25 @@ export function ProjectTree({
 
   const handleInstallOpenClaw = async () => {
     setOpenclawStatus("installing");
+    showToast("OpenClaw をインストール中...", "info");
     try {
       const result = await api.installOpenClaw();
       if (result.status === "already_installed" || result.status === "installed") {
         setOpenclawStatus("installed");
         setOpenclawVersion(result.version || null);
+        showToast("OpenClaw インストール完了", "success");
       } else {
-        // Install failed - re-check status in case it's actually installed
-        // (e.g. PATH issue during install but openclaw is now available)
         const isInstalled = await recheckOpenClaw();
         if (!isInstalled) {
           setOpenclawStatus("error");
+          showToast("OpenClaw インストール失敗", "error");
         }
       }
     } catch {
-      // Network/API error - try re-checking status
       const isInstalled = await recheckOpenClaw();
       if (!isInstalled) {
         setOpenclawStatus("error");
+        showToast("OpenClaw インストールエラー", "error");
       }
     }
   };
@@ -118,12 +197,10 @@ export function ProjectTree({
   const nodeMap = new Map<string, ProjectNode>();
   for (const n of projectTree) nodeMap.set(n.project_id, n);
 
-  // Top-level = no parent (or parent doesn't exist in tree)
   const topLevel = projectTree.filter(
     (n) => !n.parent_id || !nodeMap.has(n.parent_id)
   );
 
-  // Filter archived
   const shouldShow = (n: ProjectNode) =>
     showArchived || n.status !== "archived";
 
@@ -142,14 +219,14 @@ export function ProjectTree({
     const id = parentId ? childNewId.trim() : newId.trim();
     if (!id) return;
 
-    // Basic client-side validation
     const unsafeChars = /[/\\:*?"<>|]/;
     if (unsafeChars.test(id)) {
-      alert("Project ID contains invalid characters");
+      showToast("プロジェクトIDに無効な文字が含まれています", "error");
       return;
     }
 
     setCreating(true);
+    showToast("プロジェクト作成中...", "info");
     try {
       const result = await api.createProject(id, "", parentId || undefined);
       const actualId = result.project_id || id;
@@ -162,9 +239,9 @@ export function ProjectTree({
       }
       onRefresh();
       onSelect(actualId);
+      showToast(`プロジェクト「${id}」を作成しました`, "success");
     } catch (e: any) {
-      const msg = e?.message || "Unknown error";
-      alert(msg);
+      showToast(`作成エラー: ${e?.message || "不明なエラー"}`, "error");
     } finally {
       setCreating(false);
     }
@@ -181,8 +258,9 @@ export function ProjectTree({
       setRenamingId(null);
       onRefresh();
       if (activeProject === oldId) onSelect(trimmed);
+      showToast(`「${oldId}」→「${trimmed}」に名前変更`, "success");
     } catch (e: any) {
-      alert(e.message);
+      showToast(`名前変更エラー: ${e.message}`, "error");
     }
   };
 
@@ -193,8 +271,14 @@ export function ProjectTree({
     try {
       await api.updateProjectConfig(projectId, { status: newStatus });
       onRefresh();
+      showToast(
+        newStatus === "archived"
+          ? `「${node.display_name || projectId}」をアーカイブ`
+          : `「${node.display_name || projectId}」のアーカイブ解除`,
+        "success"
+      );
     } catch (e: any) {
-      alert(e.message);
+      showToast(`エラー: ${e.message}`, "error");
     }
   };
 
@@ -202,25 +286,28 @@ export function ProjectTree({
     const name = displayName || projectId;
     const ok = window.confirm(`「${name}」${t("confirmDelete")}`);
     if (!ok) return;
+    showToast(`「${name}」を削除中...`, "info");
     try {
       await api.deleteProject(projectId);
       onRefresh();
       if (activeProject === projectId) onSelect("");
+      showToast(`「${name}」を削除しました`, "success");
     } catch (e: any) {
-      alert(e.message || "Delete failed");
+      showToast(`削除エラー: ${e.message || "不明なエラー"}`, "error");
     }
   };
 
   const handleFolderSave = async () => {
     if (!folderPath.trim()) return;
     setSaving(true);
+    showToast("フォルダ設定を保存中...", "info");
     try {
       const data = await api.setProjectsRoot(folderPath.trim());
       setSavedPath(data.projects_root);
       setFolderPath(data.projects_root);
       setShowFolderSettings(false);
       onRefresh();
-      // Re-check OpenClaw after folder change
+      showToast("フォルダ設定を保存しました", "success");
       setOpenclawStatus("checking");
       api.checkOpenClaw()
         .then((d) => {
@@ -229,19 +316,32 @@ export function ProjectTree({
         })
         .catch(() => setOpenclawStatus("not_installed"));
     } catch (e: any) {
-      alert(e.message);
+      showToast(`フォルダ設定エラー: ${e.message}`, "error");
     } finally {
       setSaving(false);
     }
   };
 
-  // Check if a project's parent is running (for child run enablement)
+  // Right-click handler
+  const handleContextMenu = (e: React.MouseEvent, node: ProjectNode) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      projectId: node.project_id,
+      displayName: node.display_name || node.project_id,
+      isArchived: node.status === "archived",
+      hasChildren: node.children.length > 0,
+    });
+  };
+
   const isParentRunning = (node: ProjectNode): boolean => {
-    if (!node.parent_id) return true; // top-level, no restriction
+    if (!node.parent_id) return true;
     return runStatuses[node.parent_id] === "running";
   };
 
-  // Render a project item (recursive for children)
   const renderNode = (node: ProjectNode, depth: number = 0) => {
     if (!shouldShow(node)) return null;
 
@@ -266,9 +366,9 @@ export function ProjectTree({
             setRenamingId(p);
             setRenameValue(p);
           }}
+          onContextMenu={(e) => handleContextMenu(e, node)}
           title={t("renameProject")}
         >
-          {/* Expand/collapse toggle for parent nodes */}
           {hasChildren ? (
             <span
               className="tree-expand-toggle"
@@ -308,10 +408,9 @@ export function ProjectTree({
             <span className="tree-child-count">{node.children.length}</span>
           )}
 
-          {/* Context actions */}
+          {/* Hover actions: run controls + add child only */}
           {!isRenaming && (
             <span className="tree-actions">
-              {/* Run control buttons */}
               {(() => {
                 const rs = runStatuses[p];
                 const parentOk = isParentRunning(node);
@@ -347,7 +446,6 @@ export function ProjectTree({
                     </button>
                   );
                 }
-                // idle / stopped / completed / error → show play
                 return (
                   <button
                     className="tree-action-btn tree-run-start"
@@ -369,26 +467,6 @@ export function ProjectTree({
                 title={t("addSubProject")}
               >
                 +
-              </button>
-              <button
-                className="tree-action-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleArchiveToggle(p);
-                }}
-                title={isArchived ? t("unarchive") : t("archive")}
-              >
-                {isArchived ? "\u21A9" : "\u{1F4E6}"}
-              </button>
-              <button
-                className="tree-action-btn tree-action-delete"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDelete(p, node.display_name);
-                }}
-                title={t("deleteProject")}
-              >
-                {"\u{1F5D1}"}
               </button>
             </span>
           )}
@@ -432,7 +510,7 @@ export function ProjectTree({
   };
 
   return (
-    <div className="project-tree">
+    <div className="project-tree" ref={treeRef}>
       <div className="tree-header" onClick={() => setCollapsed(!collapsed)}>
         <span className="tree-chevron">{collapsed ? "\u25B6" : "\u25BC"}</span>
         <span className="tree-title">{t("projects")}</span>
@@ -441,7 +519,6 @@ export function ProjectTree({
 
       {!collapsed && (
         <>
-          {/* Folder settings toggle */}
           <button
             className="tree-folder-btn"
             onClick={() => setShowFolderSettings(!showFolderSettings)}
@@ -484,7 +561,6 @@ export function ProjectTree({
                   {"\u2716"}
                 </button>
               </div>
-              {/* OpenClaw install status */}
               <div className="tree-openclaw-status">
                 <span className="tree-openclaw-label">{t("openclawStatus")}:</span>
                 {openclawStatus === "checking" && (
@@ -548,7 +624,6 @@ export function ProjectTree({
             {topLevel.map((node) => renderNode(node))}
           </div>
 
-          {/* Toggle archived visibility */}
           <button
             className="tree-archive-toggle"
             onClick={() => setShowArchived(!showArchived)}
@@ -565,6 +640,57 @@ export function ProjectTree({
       >
         {t("refresh")}
       </button>
+
+      {/* Right-click context menu */}
+      {contextMenu.visible && (
+        <div
+          className="context-menu"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className="context-menu-item"
+            onClick={() => {
+              setContextMenu((prev) => ({ ...prev, visible: false }));
+              setRenamingId(contextMenu.projectId);
+              setRenameValue(contextMenu.projectId);
+            }}
+          >
+            ✏️ {t("renameProject")}
+          </button>
+          <button
+            className="context-menu-item"
+            onClick={() => {
+              setContextMenu((prev) => ({ ...prev, visible: false }));
+              setAddingChildTo(contextMenu.projectId);
+              setChildNewId("");
+            }}
+          >
+            ➕ {t("addSubProject")}
+          </button>
+          <div className="context-menu-separator" />
+          <button
+            className="context-menu-item"
+            onClick={() => {
+              setContextMenu((prev) => ({ ...prev, visible: false }));
+              handleArchiveToggle(contextMenu.projectId);
+            }}
+          >
+            {contextMenu.isArchived ? "↩ " : "📦 "}
+            {contextMenu.isArchived ? t("unarchive") : t("archive")}
+          </button>
+          <div className="context-menu-separator" />
+          <button
+            className="context-menu-item context-menu-item-danger"
+            onClick={() => {
+              setContextMenu((prev) => ({ ...prev, visible: false }));
+              handleDelete(contextMenu.projectId, contextMenu.displayName);
+            }}
+          >
+            🗑 {t("deleteProject")}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

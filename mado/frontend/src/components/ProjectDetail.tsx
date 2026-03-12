@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import * as api from "@/lib/api";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, type Locale } from "@/lib/i18n";
+import { useToast } from "@/components/Toast";
 
 interface TaskItem {
   id: string;
@@ -34,16 +35,103 @@ interface ProjectNode {
   agent_profiles?: Record<string, AgentProfile>;
 }
 
-const AGENT_ROLES = [
-  { key: "cto", icon: "\uD83D\uDCCB", label: "CTO" },
-  { key: "manager", icon: "\uD83D\uDCC1", label: "PM" },
-  { key: "researcher", icon: "\uD83D\uDD0D", label: "Researcher" },
-  { key: "engineer", icon: "\u2699\uFE0F", label: "Engineer" },
-  { key: "reviewer", icon: "\uD83D\uDCDD", label: "Reviewer" },
-  { key: "tester", icon: "\uD83E\uDDEA", label: "Tester" },
-  { key: "optimizer", icon: "\u26A1", label: "Optimizer" },
-  { key: "documenter", icon: "\uD83D\uDCD6", label: "Documenter" },
-  { key: "marketer", icon: "\uD83D\uDCE2", label: "Marketer" },
+const AGENT_ROLES: {
+  key: string;
+  icon: string;
+  label: { en: string; ja: string };
+  defaultTitle: { en: string; ja: string };
+  defaultPersonality: { en: string; ja: string };
+}[] = [
+  {
+    key: "cto",
+    icon: "\uD83D\uDCCB",
+    label: { en: "CTO", ja: "CTO" },
+    defaultTitle: { en: "Chief Technology Officer", ja: "最高技術責任者" },
+    defaultPersonality: {
+      en: "Visionary architect with deep expertise in system design and technology selection. Excels at breaking complex problems into manageable phases. Strong at risk assessment and making pragmatic trade-off decisions.",
+      ja: "システム設計と技術選定に精通した先見性のあるアーキテクト。複雑な問題をフェーズに分解するのが得意。リスク評価と現実的なトレードオフ判断に優れる。",
+    },
+  },
+  {
+    key: "manager",
+    icon: "\uD83D\uDCC1",
+    label: { en: "PM", ja: "PM" },
+    defaultTitle: { en: "Project Manager", ja: "プロジェクトマネージャー" },
+    defaultPersonality: {
+      en: "Organized coordinator who excels at task decomposition and dependency management. Keeps the team on track with clear priorities and realistic scheduling. Strong communication and progress tracking skills.",
+      ja: "タスク分解と依存関係管理に長けた組織力のあるコーディネーター。明確な優先順位と現実的なスケジューリングでチームを導く。コミュニケーション力と進捗管理に優れる。",
+    },
+  },
+  {
+    key: "researcher",
+    icon: "\uD83D\uDD0D",
+    label: { en: "Researcher", ja: "リサーチャー" },
+    defaultTitle: { en: "Senior Technical Researcher", ja: "シニアテクニカルリサーチャー" },
+    defaultPersonality: {
+      en: "Thorough investigator with broad technical knowledge. Quickly synthesizes information from multiple sources into actionable insights. Specializes in technology evaluation, best practice research, and competitive analysis.",
+      ja: "幅広い技術知識を持つ徹底的な調査者。複数ソースの情報を実用的なインサイトに素早くまとめる。技術評価、ベストプラクティス調査、競合分析が専門。",
+    },
+  },
+  {
+    key: "engineer",
+    icon: "\u2699\uFE0F",
+    label: { en: "Engineer", ja: "エンジニア" },
+    defaultTitle: { en: "Full-Stack Developer", ja: "フルスタックデベロッパー" },
+    defaultPersonality: {
+      en: "Highly productive developer who writes clean, maintainable code. Proficient in multiple languages and frameworks. Values simplicity and readability over cleverness. Follows project conventions and writes code that others can easily understand.",
+      ja: "クリーンで保守しやすいコードを書く高い生産性の開発者。複数の言語・フレームワークに精通。巧妙さよりシンプルさと可読性を重視。プロジェクト規約に従い、他者が理解しやすいコードを書く。",
+    },
+  },
+  {
+    key: "reviewer",
+    icon: "\uD83D\uDCDD",
+    label: { en: "Reviewer", ja: "レビュアー" },
+    defaultTitle: { en: "Code Quality Lead", ja: "コード品質リード" },
+    defaultPersonality: {
+      en: "Meticulous code reviewer with a sharp eye for bugs, security vulnerabilities, and design issues. Provides constructive feedback with concrete suggestions. Enforces coding standards while respecting developer intent.",
+      ja: "バグ・セキュリティ脆弱性・設計問題を鋭く見抜く綿密なコードレビュアー。具体的な改善案を伴う建設的なフィードバックを提供。開発者の意図を尊重しつつコーディング規約を徹底。",
+    },
+  },
+  {
+    key: "tester",
+    icon: "\uD83E\uDDEA",
+    label: { en: "Tester", ja: "テスター" },
+    defaultTitle: { en: "QA Engineer", ja: "QAエンジニア" },
+    defaultPersonality: {
+      en: "Quality-focused tester who designs comprehensive test strategies. Expert at identifying edge cases and writing reliable automated tests. Systematic approach to unit, integration, and end-to-end testing.",
+      ja: "包括的なテスト戦略を設計する品質重視のテスター。エッジケースの特定と信頼性の高い自動テストの作成が得意。ユニット・統合・E2Eテストへの体系的アプローチ。",
+    },
+  },
+  {
+    key: "optimizer",
+    icon: "\u26A1",
+    label: { en: "Optimizer", ja: "オプティマイザー" },
+    defaultTitle: { en: "Performance Engineer", ja: "パフォーマンスエンジニア" },
+    defaultPersonality: {
+      en: "Performance-obsessed engineer who identifies bottlenecks through profiling and metrics. Skilled at algorithmic optimization, caching strategies, and resource efficiency. Balances performance gains against code complexity.",
+      ja: "プロファイリングとメトリクスでボトルネックを特定するパフォーマンス専門エンジニア。アルゴリズム最適化、キャッシュ戦略、リソース効率化に精通。パフォーマンス向上とコード複雑性のバランスを重視。",
+    },
+  },
+  {
+    key: "documenter",
+    icon: "\uD83D\uDCD6",
+    label: { en: "Documenter", ja: "ドキュメンター" },
+    defaultTitle: { en: "Technical Writer", ja: "テクニカルライター" },
+    defaultPersonality: {
+      en: "Clear and concise technical writer who creates documentation developers actually want to read. Expert at API docs, architecture guides, and README files. Focuses on practical examples and maintainable documentation structure.",
+      ja: "開発者が実際に読みたくなるドキュメントを作成する明瞭なテクニカルライター。API仕様書・アーキテクチャガイド・READMEの作成が得意。実践的なサンプルと保守しやすい構成を重視。",
+    },
+  },
+  {
+    key: "marketer",
+    icon: "\uD83D\uDCE2",
+    label: { en: "Marketer", ja: "マーケター" },
+    defaultTitle: { en: "Growth Marketing Specialist", ja: "グロースマーケティングスペシャリスト" },
+    defaultPersonality: {
+      en: "Data-driven marketer who creates compelling content and growth strategies. Skilled at market analysis, SEO, social media strategy, and launch planning. Translates technical features into user-facing value propositions.",
+      ja: "データ駆動で魅力的なコンテンツと成長戦略を立案するマーケター。市場分析・SEO・SNS戦略・ローンチ計画に精通。技術的な機能をユーザー向けの価値提案に変換するのが得意。",
+    },
+  },
 ];
 
 interface Props {
@@ -53,7 +141,8 @@ interface Props {
 }
 
 export function ProjectDetail({ activeProject, projectTree, onRefresh }: Props) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const { showToast } = useToast();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -119,8 +208,9 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh }: Props) 
       setSaved(true);
       setDirty(false);
       onRefresh();
+      showToast("設定を保存しました", "success");
     } catch (e: any) {
-      alert(e.message);
+      showToast(`保存エラー: ${e.message}`, "error");
     } finally {
       setSaving(false);
     }
@@ -332,22 +422,25 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh }: Props) 
       <div className="detail-field">
         <label className="detail-label">{t("agentProfiles")}</label>
         <div className="agent-profiles-list">
-          {AGENT_ROLES.map(({ key, icon, label }) => {
-            const profile = agentProfiles[key] || { title: "", personality: "" };
+          {AGENT_ROLES.map((role) => {
+            const profile = agentProfiles[role.key] || { title: "", personality: "" };
+            const loc = locale as Locale;
+            const defTitle = role.defaultTitle[loc];
+            const defPersonality = role.defaultPersonality[loc];
             return (
-              <div key={key} className="agent-profile-card">
+              <div key={role.key} className="agent-profile-card">
                 <div className="agent-profile-header">
-                  <span className="agent-profile-icon">{icon}</span>
-                  <span className="agent-profile-role">{label}</span>
+                  <span className="agent-profile-icon">{role.icon}</span>
+                  <span className="agent-profile-role">{role.label[loc]}</span>
                 </div>
                 <input
                   className="agent-profile-input"
-                  placeholder={t("agentTitlePlaceholder")}
+                  placeholder={defTitle}
                   value={profile.title}
                   onChange={(e) => {
                     setAgentProfiles({
                       ...agentProfiles,
-                      [key]: { ...profile, title: e.target.value },
+                      [role.key]: { ...profile, title: e.target.value },
                     });
                     markDirty();
                   }}
@@ -355,12 +448,12 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh }: Props) 
                 <textarea
                   className="agent-profile-textarea"
                   rows={2}
-                  placeholder={t("agentPersonalityPlaceholder")}
+                  placeholder={defPersonality}
                   value={profile.personality}
                   onChange={(e) => {
                     setAgentProfiles({
                       ...agentProfiles,
-                      [key]: { ...profile, personality: e.target.value },
+                      [role.key]: { ...profile, personality: e.target.value },
                     });
                     markDirty();
                   }}
