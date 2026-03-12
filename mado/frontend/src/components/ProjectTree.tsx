@@ -446,43 +446,6 @@ export function ProjectTree({
     }
   };
 
-  // Promote: move child to top-level (or parent's parent)
-  const handlePromote = async (projectId: string) => {
-    const node = nodeMap.get(projectId);
-    if (!node || !node.parent_id) return;
-    const parent = nodeMap.get(node.parent_id);
-    const newParentId = parent?.parent_id || null;
-    try {
-      await api.moveProject(projectId, newParentId);
-      onRefresh();
-      showStatus(`「${node.display_name || projectId}」を昇格しました`, "success");
-    } catch (e: any) {
-      showStatus(`昇格エラー: ${e.message || "不明なエラー"}`, "error");
-    }
-  };
-
-  // Demote: make project a child of its previous sibling
-  const handleDemote = async (projectId: string) => {
-    const node = nodeMap.get(projectId);
-    if (!node) return;
-    const siblings = node.parent_id
-      ? (nodeMap.get(node.parent_id)?.children || [])
-      : topLevel.map((n) => n.project_id);
-    const idx = siblings.indexOf(projectId);
-    if (idx <= 0) {
-      showStatus("降格先がありません（前のプロジェクトが必要）", "error");
-      return;
-    }
-    const newParentId = siblings[idx - 1];
-    try {
-      await api.moveProject(projectId, newParentId);
-      onRefresh();
-      showStatus(`「${node.display_name || projectId}」を「${nodeMap.get(newParentId)?.display_name || newParentId}」の子に降格`, "success");
-    } catch (e: any) {
-      showStatus(`降格エラー: ${e.message || "不明なエラー"}`, "error");
-    }
-  };
-
   const isParentRunning = (node: ProjectNode): boolean => {
     if (!node.parent_id) return true;
     return runStatuses[node.parent_id] === "running";
@@ -868,40 +831,6 @@ export function ProjectTree({
           >
             ➕ {t("addSubProject")}
           </button>
-          <div className="context-menu-separator" />
-          {/* Promote: only show if project has a parent */}
-          {nodeMap.get(contextMenu.projectId)?.parent_id && (
-            <button
-              className="context-menu-item"
-              onClick={() => {
-                setContextMenu((prev) => ({ ...prev, visible: false }));
-                handlePromote(contextMenu.projectId);
-              }}
-            >
-              ⬆ {t("promoteProject")}
-            </button>
-          )}
-          {/* Demote: only show if project has a previous sibling */}
-          {(() => {
-            const node = nodeMap.get(contextMenu.projectId);
-            if (!node) return null;
-            const siblings = node.parent_id
-              ? (nodeMap.get(node.parent_id)?.children || [])
-              : topLevel.map((n) => n.project_id);
-            const idx = siblings.indexOf(contextMenu.projectId);
-            if (idx <= 0) return null;
-            return (
-              <button
-                className="context-menu-item"
-                onClick={() => {
-                  setContextMenu((prev) => ({ ...prev, visible: false }));
-                  handleDemote(contextMenu.projectId);
-                }}
-              >
-                ⬇ {t("demoteProject")}
-              </button>
-            );
-          })()}
           <div className="context-menu-separator" />
           <button
             className="context-menu-item"

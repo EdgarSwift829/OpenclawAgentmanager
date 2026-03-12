@@ -143,7 +143,9 @@ async def create_project(data: ProjectCreate):
     except PermissionError:
         raise HTTPException(status_code=500, detail=f"Permission denied creating project workspace")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create project: {e}")
+        import logging as _log
+        _log.getLogger(__name__).error("create_workspace failed for '%s': %s", pid, e, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"プロジェクト作成失敗: {type(e).__name__}: {e}")
 
     return ProjectResponse(
         project_id=pid,
@@ -216,48 +218,69 @@ class ProjectRename(BaseModel):
 async def rename_project(project_id: str, data: ProjectRename):
     """Rename a project."""
     from pathlib import Path
+    import json
+
+    logger = logging.getLogger(__name__)
 
     new_id = data.new_id.strip()
     if not new_id:
         raise HTTPException(status_code=400, detail="New name cannot be empty")
+
+    # Reject path-unsafe characters
+    unsafe_chars = set('/\\:*?"<>|')
+    if any(c in unsafe_chars for c in new_id):
+        raise HTTPException(status_code=400, detail=f"名前に無効な文字が含まれています: {new_id}")
 
     old_path = Path(workspace_manager.projects_root) / project_id
     new_path = Path(workspace_manager.projects_root) / new_id
 
     if not old_path.exists():
         raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
-    if new_path.exists():
+    if new_path.exists() and new_path != old_path:
         raise HTTPException(status_code=409, detail=f"Project already exists: {new_id}")
 
-    # Read config before rename to get parent/children info
-    import json
-    old_config_path = old_path / "config.json"
-    old_config = {}
-    if old_config_path.exists():
-        old_config = json.loads(old_config_path.read_text(encoding="utf-8"))
+    try:
+        # Read config before rename to get parent/children info
+        old_config_path = old_path / "config.json"
+        old_config = {}
+        if old_config_path.exists():
+            old_config = json.loads(old_config_path.read_text(encoding="utf-8"))
 
-    old_path.rename(new_path)
+        old_path.rename(new_path)
 
-    # Update config.json
-    config_path = new_path / "config.json"
-    if config_path.exists():
-        config = json.loads(config_path.read_text(encoding="utf-8"))
-        config["project_id"] = new_id
-        config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8")
+        # Update config.json (project_id + display_name)
+        config_path = new_path / "config.json"
+        if config_path.exists():
+            config = json.loads(config_path.read_text(encoding="utf-8"))
+            config["project_id"] = new_id
+            config["display_name"] = new_id
+            config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8")
 
-    # Update parent's children list
-    parent_id = old_config.get("parent_id")
-    if parent_id:
-        workspace_manager._remove_child_from_parent(parent_id, project_id)
-        workspace_manager._add_child_to_parent(parent_id, new_id)
+        # Update parent's children list
+        parent_id = old_config.get("parent_id")
+        if parent_id:
+            try:
+                workspace_manager._remove_child_from_parent(parent_id, project_id)
+                workspace_manager._add_child_to_parent(parent_id, new_id)
+            except Exception as e:
+                logger.warning("Failed to update parent children list: %s", e)
 
-    # Update children's parent_id references
-    for child_id in old_config.get("children", []):
-        child_config = workspace_manager.get_project_config(child_id)
-        if child_config.get("parent_id") == project_id:
-            workspace_manager.update_project_config(child_id, {"parent_id": new_id})
+        # Update children's parent_id references
+        for child_id in old_config.get("children", []):
+            try:
+                child_config = workspace_manager.get_project_config(child_id)
+                if child_config.get("parent_id") == project_id:
+                    workspace_manager.update_project_config(child_id, {"parent_id": new_id})
+            except Exception as e:
+                logger.warning("Failed to update child %s parent_id: %s", child_id, e)
 
-    return {"old_id": project_id, "new_id": new_id}
+        return {"old_id": project_id, "new_id": new_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("rename_project failed '%s' -> '%s': %s", project_id, new_id, e, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"名前変更に失敗: {type(e).__name__}: {e}")
 
 
 class MoveProject(BaseModel):
@@ -269,50 +292,58 @@ async def move_project(project_id: str, data: MoveProject):
     """Move a project to a new parent or promote to top-level."""
     from pathlib import Path
 
+    logger = logging.getLogger(__name__)
+
     project_path = Path(workspace_manager.projects_root) / project_id
     if not project_path.exists():
         raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
 
-    config = workspace_manager.get_project_config(project_id)
-    old_parent_id = config.get("parent_id")
-    new_parent_id = data.new_parent_id
+    try:
+        config = workspace_manager.get_project_config(project_id)
+        old_parent_id = config.get("parent_id")
+        new_parent_id = data.new_parent_id
 
-    # No change
-    if old_parent_id == new_parent_id:
+        # No change
+        if old_parent_id == new_parent_id:
+            return {"project_id": project_id, "parent_id": new_parent_id}
+
+        # Prevent making a project its own parent
+        if new_parent_id == project_id:
+            raise HTTPException(status_code=400, detail="Cannot make a project its own parent")
+
+        # Prevent circular: new_parent must not be a descendant of project_id
+        if new_parent_id:
+            new_parent_path = Path(workspace_manager.projects_root) / new_parent_id
+            if not new_parent_path.exists():
+                raise HTTPException(status_code=404, detail=f"Target parent not found: {new_parent_id}")
+            check_id = new_parent_id
+            while check_id:
+                if check_id == project_id:
+                    raise HTTPException(status_code=400, detail="Circular parent-child relationship detected")
+                parent_config = workspace_manager.get_project_config(check_id)
+                check_id = parent_config.get("parent_id")
+
+        # Remove from old parent
+        if old_parent_id:
+            try:
+                workspace_manager._remove_child_from_parent(old_parent_id, project_id)
+            except Exception as e:
+                logger.warning("Failed to remove from old parent %s: %s", old_parent_id, e)
+
+        # Add to new parent
+        if new_parent_id:
+            workspace_manager._add_child_to_parent(new_parent_id, project_id)
+
+        # Update project's own config
+        workspace_manager.update_project_config(project_id, {"parent_id": new_parent_id})
+
         return {"project_id": project_id, "parent_id": new_parent_id}
 
-    # Prevent making a project its own parent
-    if new_parent_id == project_id:
-        raise HTTPException(status_code=400, detail="Cannot make a project its own parent")
-
-    # Prevent circular: new_parent must not be a descendant of project_id
-    if new_parent_id:
-        new_parent_path = Path(workspace_manager.projects_root) / new_parent_id
-        if not new_parent_path.exists():
-            raise HTTPException(status_code=404, detail=f"Target parent not found: {new_parent_id}")
-        # Walk ancestors of new_parent to check for cycle
-        check_id = new_parent_id
-        while check_id:
-            if check_id == project_id:
-                raise HTTPException(status_code=400, detail="Circular parent-child relationship detected")
-            parent_config = workspace_manager.get_project_config(check_id)
-            check_id = parent_config.get("parent_id")
-
-    # Remove from old parent
-    if old_parent_id:
-        try:
-            workspace_manager._remove_child_from_parent(old_parent_id, project_id)
-        except Exception:
-            pass
-
-    # Add to new parent
-    if new_parent_id:
-        workspace_manager._add_child_to_parent(new_parent_id, project_id)
-
-    # Update project's own config
-    workspace_manager.update_project_config(project_id, {"parent_id": new_parent_id})
-
-    return {"project_id": project_id, "parent_id": new_parent_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("move_project failed for '%s': %s", project_id, e, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"移動に失敗: {type(e).__name__}: {e}")
 
 
 @router.delete("/{project_id}")

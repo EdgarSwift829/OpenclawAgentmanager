@@ -22,12 +22,12 @@ class ModelManager:
         agents_path = self.config_dir / "agents.yaml"
 
         if models_path.exists():
-            with open(models_path) as f:
+            with open(models_path, encoding="utf-8") as f:
                 data = yaml.safe_load(f) or {}
                 self.models = data.get("models", {})
 
         if agents_path.exists():
-            with open(agents_path) as f:
+            with open(agents_path, encoding="utf-8") as f:
                 self.agent_assignments = yaml.safe_load(f) or {}
 
     def get_model(self, role: str) -> dict:
@@ -41,6 +41,7 @@ class ModelManager:
         if new_model not in self.models:
             raise ValueError(f"Model not registered: {new_model}")
         self.agent_assignments[role] = new_model
+        self._save_assignments()
 
     def register_model(self, name: str, config: dict) -> None:
         """Register a new model."""
@@ -48,3 +49,22 @@ class ModelManager:
 
     def list_models(self) -> dict:
         return self.models
+
+    def save_assignments(self) -> None:
+        """Public method to persist current assignments to agents.yaml."""
+        self._save_assignments()
+
+    def _save_assignments(self) -> None:
+        """Persist agent_assignments to agents.yaml."""
+        import logging
+        logger = logging.getLogger(__name__)
+        try:
+            agents_path = self.config_dir / "agents.yaml"
+            agents_path.parent.mkdir(parents=True, exist_ok=True)
+            agents_path.write_text(
+                yaml.dump(dict(self.agent_assignments), allow_unicode=True, default_flow_style=False),
+                encoding="utf-8",
+            )
+            logger.info("Saved agent assignments to %s", agents_path)
+        except Exception as e:
+            logger.error("Failed to save agent assignments: %s", e)

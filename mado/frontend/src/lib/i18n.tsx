@@ -109,8 +109,6 @@ const dict = {
   openclawInstalling: { en: "Installing...", ja: "インストール中..." },
   openclawInstallBtn: { en: "Install OpenClaw", ja: "OpenClawをインストール" },
   openclawCheckFailed: { en: "Check failed", ja: "確認失敗" },
-  promoteProject: { en: "Promote (to parent level)", ja: "昇格（親レベルへ）" },
-  demoteProject: { en: "Demote (to child of above)", ja: "降格（上のプロジェクトの子へ）" },
   deleteProject: { en: "Delete", ja: "削除" },
   confirmDelete: { en: "Are you sure you want to delete", ja: "を削除してよろしいですか？" },
 

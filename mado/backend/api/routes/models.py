@@ -74,6 +74,7 @@ async def reorder_roles(data: RoleOrder):
         if role not in reordered:
             reordered[role] = current[role]
     model_manager.agent_assignments = reordered
+    model_manager.save_assignments()
     return {"status": "reordered", "roles": list(reordered.keys())}
 
 
