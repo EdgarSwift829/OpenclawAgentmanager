@@ -451,7 +451,7 @@ export function ProjectTree({
     return runStatuses[node.parent_id] === "running";
   };
 
-  const renderNode = (node: ProjectNode, depth: number = 0) => {
+  const renderNode = (node: ProjectNode, depth: number = 0, isLastChild: boolean = false, parentLines: boolean[] = []) => {
     if (!shouldShow(node)) return null;
 
     const p = node.project_id;
@@ -461,21 +461,31 @@ export function ProjectTree({
     const hasChildren = node.children.length > 0;
     const isExpanded = expandedNodes.has(p);
     const isArchived = node.status === "archived";
+    const isChild = depth > 0;
     const childNodes = node.children
       .map((cid) => nodeMap.get(cid))
       .filter(Boolean) as ProjectNode[];
+    const visibleChildren = childNodes.filter(shouldShow);
 
     const isDragOver = dropTarget?.id === p;
     const dropPos = dropTarget?.position;
 
+    // Choose icon based on role
+    const nodeIcon = (() => {
+      if (status && STATUS_ICONS[status]) return STATUS_ICONS[status];
+      if (hasChildren) return isExpanded ? "\uD83D\uDCC2" : "\uD83D\uDCC1"; // open/closed folder
+      if (isChild) return "\uD83D\uDCC4"; // document
+      return "\uD83D\uDCC1"; // folder
+    })();
+
     return (
       <div key={p} className="tree-node-group">
         {isDragOver && dropPos === "before" && (
-          <div className="tree-drop-indicator" style={{ marginLeft: `${0.5 + depth * 0.75}rem` }} />
+          <div className="tree-drop-indicator" style={{ marginLeft: `${0.5 + depth * 1}rem` }} />
         )}
         <div
           className={`tree-item ${isActive ? "tree-item-active" : ""} ${isArchived ? "tree-item-archived" : ""} ${isDragOver && dropPos === "inside" ? "tree-item-drop-inside" : ""}`}
-          style={{ paddingLeft: `${0.5 + depth * 0.75}rem` }}
+          style={{ paddingLeft: `${0.375 + depth * 1}rem` }}
           draggable={!isRenaming}
           onDragStart={(e) => handleDragStart(e, p)}
           onDragOver={(e) => handleDragOver(e, p)}
@@ -490,6 +500,16 @@ export function ProjectTree({
           onContextMenu={(e) => handleContextMenu(e, node)}
           title={t("renameProject")}
         >
+          {/* Tree guide lines for child nodes */}
+          {isChild && (
+            <span className="tree-guide">
+              {parentLines.map((showLine, i) => (
+                <span key={i} className={`tree-guide-segment ${showLine ? "tree-guide-line" : ""}`} />
+              ))}
+              <span className={`tree-guide-branch ${isLastChild ? "tree-guide-last" : "tree-guide-mid"}`} />
+            </span>
+          )}
+
           {hasChildren ? (
             <span
               className="tree-expand-toggle"
@@ -501,11 +521,11 @@ export function ProjectTree({
               {isExpanded ? "\u25BC" : "\u25B6"}
             </span>
           ) : (
-            <span className="tree-expand-spacer" />
+            isChild ? null : <span className="tree-expand-spacer" />
           )}
 
           <span className="tree-icon">
-            {status && STATUS_ICONS[status] ? STATUS_ICONS[status] : "\u25CB"}
+            {nodeIcon}
           </span>
 
           {isRenaming ? (
@@ -625,7 +645,9 @@ export function ProjectTree({
         )}
 
         {/* Children */}
-        {isExpanded && childNodes.map((child) => renderNode(child, depth + 1))}
+        {isExpanded && visibleChildren.map((child, idx) =>
+          renderNode(child, depth + 1, idx === visibleChildren.length - 1, [...parentLines, !isLastChild && isChild])
+        )}
         {isDragOver && dropPos === "after" && (
           <div className="tree-drop-indicator" style={{ marginLeft: `${0.5 + depth * 0.75}rem` }} />
         )}
