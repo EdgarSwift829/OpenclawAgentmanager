@@ -2,7 +2,7 @@
 
 import * as api from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
-import { useToast } from "@/components/Toast";
+import { useInlineStatus, StatusIndicator } from "@/components/Toast";
 
 interface Props {
   activeProject: string | null;
@@ -25,20 +25,20 @@ export function RunControl({
   onExtendIterations,
 }: Props) {
   const { t } = useI18n();
-  const { showToast } = useToast();
+  const { status, showStatus } = useInlineStatus();
 
   const handleStart = async () => {
     if (!activeProject || !goal.trim()) {
-      showToast("目標を入力してください", "warning");
+      showStatus("目標を入力してください", "warning");
       return;
     }
-    showToast("実行準備中...", "info");
+    showStatus("実行準備中…", "info");
     try {
       await api.startRun(activeProject, goal.trim(), maxIter);
       onRefresh();
-      showToast("実行を開始しました", "success");
+      showStatus("実行開始", "success");
     } catch (e: any) {
-      showToast(`実行エラー: ${e.message}`, "error");
+      showStatus(`実行エラー: ${e.message}`, "error");
     }
   };
 
@@ -47,9 +47,9 @@ export function RunControl({
     try {
       await api.stopRun(activeProject);
       onRefresh();
-      showToast("実行を停止しました", "success");
+      showStatus("停止完了", "success");
     } catch (e: any) {
-      showToast(`停止エラー: ${e.message}`, "error");
+      showStatus(`停止エラー: ${e.message}`, "error");
     }
   };
 
@@ -98,6 +98,7 @@ export function RunControl({
             {t("stop")}
           </button>
         )}
+        <StatusIndicator status={status} />
         {runStatus && (
           <span className="run-status-info">
             <span className={`badge badge-${runStatus.status === "running" ? "running" : runStatus.status === "completed" ? "completed" : runStatus.status === "error" ? "error" : "idle"}`}>

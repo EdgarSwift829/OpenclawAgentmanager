@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import * as api from "@/lib/api";
 import { useI18n, type Locale } from "@/lib/i18n";
-import { useToast } from "@/components/Toast";
+import { useInlineStatus, StatusIndicator } from "@/components/Toast";
 
 interface TaskItem {
   id: string;
@@ -142,7 +142,7 @@ interface Props {
 
 export function ProjectDetail({ activeProject, projectTree, onRefresh }: Props) {
   const { t, locale } = useI18n();
-  const { showToast } = useToast();
+  const { status, showStatus } = useInlineStatus();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -208,9 +208,9 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh }: Props) 
       setSaved(true);
       setDirty(false);
       onRefresh();
-      showToast("設定を保存しました", "success");
+      showStatus("保存完了", "success");
     } catch (e: any) {
-      showToast(`保存エラー: ${e.message}`, "error");
+      showStatus(`保存エラー: ${e.message}`, "error");
     } finally {
       setSaving(false);
     }
@@ -254,7 +254,7 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh }: Props) 
       <div className="detail-header">
         <h3 className="detail-title">{node?.display_name || activeProject}</h3>
         <div className="detail-save-area">
-          {saved && <span className="detail-saved">{t("saved")}</span>}
+          <StatusIndicator status={status} />
           <button
             className="btn btn-primary detail-save-btn"
             onClick={handleSave}

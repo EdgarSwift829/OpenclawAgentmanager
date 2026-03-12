@@ -1,65 +1,50 @@
 "use client";
 
-import { useState, useEffect, useCallback, createContext, useContext } from "react";
+import { useState, useCallback, useRef } from "react";
 
-type ToastType = "success" | "error" | "info" | "warning";
+export type StatusType = "success" | "error" | "info" | "warning";
 
-interface Toast {
-  id: number;
+export interface InlineStatus {
   message: string;
-  type: ToastType;
+  type: StatusType;
 }
 
-interface ToastContextType {
-  showToast: (message: string, type?: ToastType) => void;
-}
+/**
+ * Hook for inline status display near buttons.
+ * Returns [status, showStatus] - render status near the triggering button.
+ * Auto-clears after a timeout (5s for errors, 3s for others).
+ */
+export function useInlineStatus() {
+  const [status, setStatus] = useState<InlineStatus | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-const ToastContext = createContext<ToastContextType>({
-  showToast: () => {},
-});
-
-export function useToast() {
-  return useContext(ToastContext);
-}
-
-let toastIdCounter = 0;
-
-export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const [toasts, setToasts] = useState<Toast[]>([]);
-
-  const showToast = useCallback((message: string, type: ToastType = "info") => {
-    const id = ++toastIdCounter;
-    setToasts((prev) => [...prev, { id, message, type }]);
-    // Auto-dismiss
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, type === "error" ? 5000 : 3000);
+  const showStatus = useCallback((message: string, type: StatusType = "info") => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setStatus({ message, type });
+    const ms = type === "error" ? 5000 : 3000;
+    timerRef.current = setTimeout(() => setStatus(null), ms);
   }, []);
 
-  const dismiss = useCallback((id: number) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+  const clearStatus = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setStatus(null);
   }, []);
 
+  return { status, showStatus, clearStatus };
+}
+
+/** Small inline status indicator component */
+export function StatusIndicator({ status }: { status: InlineStatus | null }) {
+  if (!status) return null;
   return (
-    <ToastContext.Provider value={{ showToast }}>
-      {children}
-      <div className="toast-container">
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className={`toast toast-${toast.type}`}
-            onClick={() => dismiss(toast.id)}
-          >
-            <span className="toast-icon">
-              {toast.type === "success" && "✓"}
-              {toast.type === "error" && "✗"}
-              {toast.type === "warning" && "⚠"}
-              {toast.type === "info" && "ℹ"}
-            </span>
-            <span className="toast-message">{toast.message}</span>
-          </div>
-        ))}
-      </div>
-    </ToastContext.Provider>
+    <span className={`inline-status inline-status-${status.type}`}>
+      <span className="inline-status-icon">
+        {status.type === "success" && "✓"}
+        {status.type === "error" && "✗"}
+        {status.type === "warning" && "⚠"}
+        {status.type === "info" && "…"}
+      </span>
+      <span className="inline-status-text">{status.message}</span>
+    </span>
   );
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import * as api from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
-import { useToast } from "@/components/Toast";
+import { useInlineStatus, StatusIndicator } from "@/components/Toast";
 
 interface ProjectNode {
   project_id: string;
@@ -53,7 +53,8 @@ export function ProjectTree({
   onPauseRun,
 }: Props) {
   const { t } = useI18n();
-  const { showToast } = useToast();
+  const { status: treeStatus, showStatus } = useInlineStatus();
+  const [deletePopup, setDeletePopup] = useState<{ projectId: string; displayName: string; x: number; y: number } | null>(null);
   const [newId, setNewId] = useState("");
   const [creating, setCreating] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -108,6 +109,16 @@ export function ProjectTree({
     }
   }, [activeProject, projectTree]);
 
+  // Close delete popup on Escape
+  useEffect(() => {
+    if (!deletePopup) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDeletePopup(null);
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [deletePopup]);
+
   // Close context menu on click outside
   useEffect(() => {
     const handleClick = () => setContextMenu((prev) => ({ ...prev, visible: false }));
@@ -128,7 +139,7 @@ export function ProjectTree({
         for (const n of projectTree) nm.set(n.project_id, n);
         const node = nm.get(activeProject);
         if (node) {
-          handleDelete(activeProject, node.display_name);
+          handleDeleteRequest(activeProject, node.display_name, e);
         }
       }
     };
@@ -170,25 +181,25 @@ export function ProjectTree({
 
   const handleInstallOpenClaw = async () => {
     setOpenclawStatus("installing");
-    showToast("OpenClaw をインストール中...", "info");
+    showStatus("OpenClaw をインストール中...", "info");
     try {
       const result = await api.installOpenClaw();
       if (result.status === "already_installed" || result.status === "installed") {
         setOpenclawStatus("installed");
         setOpenclawVersion(result.version || null);
-        showToast("OpenClaw インストール完了", "success");
+        showStatus("OpenClaw インストール完了", "success");
       } else {
         const isInstalled = await recheckOpenClaw();
         if (!isInstalled) {
           setOpenclawStatus("error");
-          showToast("OpenClaw インストール失敗", "error");
+          showStatus("OpenClaw インストール失敗", "error");
         }
       }
     } catch {
       const isInstalled = await recheckOpenClaw();
       if (!isInstalled) {
         setOpenclawStatus("error");
-        showToast("OpenClaw インストールエラー", "error");
+        showStatus("OpenClaw インストールエラー", "error");
       }
     }
   };
@@ -221,12 +232,12 @@ export function ProjectTree({
 
     const unsafeChars = /[/\\:*?"<>|]/;
     if (unsafeChars.test(id)) {
-      showToast("プロジェクトIDに無効な文字が含まれています", "error");
+      showStatus("プロジェクトIDに無効な文字が含まれています", "error");
       return;
     }
 
     setCreating(true);
-    showToast("プロジェクト作成中...", "info");
+    showStatus("プロジェクト作成中...", "info");
     try {
       const result = await api.createProject(id, "", parentId || undefined);
       const actualId = result.project_id || id;
@@ -239,9 +250,9 @@ export function ProjectTree({
       }
       onRefresh();
       onSelect(actualId);
-      showToast(`プロジェクト「${id}」を作成しました`, "success");
+      showStatus(`プロジェクト「${id}」を作成しました`, "success");
     } catch (e: any) {
-      showToast(`作成エラー: ${e?.message || "不明なエラー"}`, "error");
+      showStatus(`作成エラー: ${e?.message || "不明なエラー"}`, "error");
     } finally {
       setCreating(false);
     }
@@ -258,9 +269,9 @@ export function ProjectTree({
       setRenamingId(null);
       onRefresh();
       if (activeProject === oldId) onSelect(trimmed);
-      showToast(`「${oldId}」→「${trimmed}」に名前変更`, "success");
+      showStatus(`「${oldId}」→「${trimmed}」に名前変更`, "success");
     } catch (e: any) {
-      showToast(`名前変更エラー: ${e.message}`, "error");
+      showStatus(`名前変更エラー: ${e.message}`, "error");
     }
   };
 
@@ -271,43 +282,58 @@ export function ProjectTree({
     try {
       await api.updateProjectConfig(projectId, { status: newStatus });
       onRefresh();
-      showToast(
+      showStatus(
         newStatus === "archived"
           ? `「${node.display_name || projectId}」をアーカイブ`
           : `「${node.display_name || projectId}」のアーカイブ解除`,
         "success"
       );
     } catch (e: any) {
-      showToast(`エラー: ${e.message}`, "error");
+      showStatus(`エラー: ${e.message}`, "error");
     }
   };
 
-  const handleDelete = async (projectId: string, displayName?: string) => {
+  // Show popup near the project item for delete confirmation
+  const handleDeleteRequest = (projectId: string, displayName?: string, event?: React.MouseEvent | KeyboardEvent) => {
     const name = displayName || projectId;
-    const ok = window.confirm(`「${name}」${t("confirmDelete")}`);
-    if (!ok) return;
-    showToast(`「${name}」を削除中...`, "info");
+    let x = 100, y = 200;
+    if (event && "clientX" in event) {
+      x = event.clientX;
+      y = event.clientY;
+    } else if (treeRef.current) {
+      const rect = treeRef.current.getBoundingClientRect();
+      x = rect.left + rect.width / 2;
+      y = rect.top + rect.height / 2;
+    }
+    setDeletePopup({ projectId, displayName: name, x, y });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletePopup) return;
+    const { projectId, displayName: name } = deletePopup;
+    setDeletePopup(null);
+    showStatus(`「${name}」を削除中…`, "info");
     try {
       await api.deleteProject(projectId);
       onRefresh();
       if (activeProject === projectId) onSelect("");
-      showToast(`「${name}」を削除しました`, "success");
+      showStatus(`「${name}」を削除しました`, "success");
     } catch (e: any) {
-      showToast(`削除エラー: ${e.message || "不明なエラー"}`, "error");
+      showStatus(`削除エラー: ${e.message || "不明なエラー"}`, "error");
     }
   };
 
   const handleFolderSave = async () => {
     if (!folderPath.trim()) return;
     setSaving(true);
-    showToast("フォルダ設定を保存中...", "info");
+    showStatus("フォルダ設定を保存中...", "info");
     try {
       const data = await api.setProjectsRoot(folderPath.trim());
       setSavedPath(data.projects_root);
       setFolderPath(data.projects_root);
       setShowFolderSettings(false);
       onRefresh();
-      showToast("フォルダ設定を保存しました", "success");
+      showStatus("フォルダ設定を保存しました", "success");
       setOpenclawStatus("checking");
       api.checkOpenClaw()
         .then((d) => {
@@ -316,7 +342,7 @@ export function ProjectTree({
         })
         .catch(() => setOpenclawStatus("not_installed"));
     } catch (e: any) {
-      showToast(`フォルダ設定エラー: ${e.message}`, "error");
+      showStatus(`フォルダ設定エラー: ${e.message}`, "error");
     } finally {
       setSaving(false);
     }
@@ -641,6 +667,45 @@ export function ProjectTree({
         {t("refresh")}
       </button>
 
+      {/* Inline status for tree operations */}
+      {treeStatus && (
+        <div className="tree-inline-status">
+          <StatusIndicator status={treeStatus} />
+        </div>
+      )}
+
+      {/* Delete confirmation popup (near project) */}
+      {deletePopup && (
+        <div
+          className="delete-popup-overlay"
+          onClick={() => setDeletePopup(null)}
+        >
+          <div
+            className="delete-popup"
+            style={{ left: deletePopup.x, top: deletePopup.y }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="delete-popup-text">
+              「{deletePopup.displayName}」を削除しますか？
+            </p>
+            <div className="delete-popup-actions">
+              <button
+                className="btn btn-danger delete-popup-confirm"
+                onClick={handleDeleteConfirm}
+              >
+                {t("deleteProject")}
+              </button>
+              <button
+                className="delete-popup-cancel"
+                onClick={() => setDeletePopup(null)}
+              >
+                {t("cancel")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Right-click context menu */}
       {contextMenu.visible && (
         <div
@@ -682,9 +747,9 @@ export function ProjectTree({
           <div className="context-menu-separator" />
           <button
             className="context-menu-item context-menu-item-danger"
-            onClick={() => {
+            onClick={(e) => {
               setContextMenu((prev) => ({ ...prev, visible: false }));
-              handleDelete(contextMenu.projectId, contextMenu.displayName);
+              handleDeleteRequest(contextMenu.projectId, contextMenu.displayName, e);
             }}
           >
             🗑 {t("deleteProject")}

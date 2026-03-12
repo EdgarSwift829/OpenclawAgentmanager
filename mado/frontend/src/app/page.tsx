@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import * as api from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
-import { useToast } from "@/components/Toast";
+import { useInlineStatus, StatusIndicator } from "@/components/Toast";
 import { ProjectTree } from "@/components/ProjectTree";
 import { AgentGrid } from "@/components/AgentGrid";
 import { RunControl } from "@/components/RunControl";
@@ -56,7 +56,7 @@ function saveProjectState(id: string, state: ProjectState) {
 // ---------------------------------------------------------------------------
 export default function Dashboard() {
   const { t } = useI18n();
-  const { showToast } = useToast();
+  const { status: treeOpStatus, showStatus: showTreeStatus } = useInlineStatus();
   const [projects, setProjects] = useState<string[]>([]);
   const [projectTree, setProjectTree] = useState<any[]>([]);
   const [activeProject, setActiveProject] = useState<string | null>(null);
@@ -189,6 +189,7 @@ export default function Dashboard() {
           </button>
         </div>
         {sidebarOpen && (
+          <>
           <ProjectTree
             projectTree={projectTree}
             activeProject={activeProject}
@@ -199,14 +200,14 @@ export default function Dashboard() {
               const node = projectTree.find((n: any) => n.project_id === pid);
               const configGoal = node?.goal || "";
               const st = loadProjectState(pid);
-              showToast(`「${node?.display_name || pid}」を実行準備中...`, "info");
+              showTreeStatus(`「${node?.display_name || pid}」を実行準備中...`, "info");
               try {
                 await api.startRun(pid, configGoal, st.maxIter || maxIter);
                 loadAllRunStatuses();
                 if (pid === activeProject) loadRunStatus();
-                showToast(`「${node?.display_name || pid}」の実行を開始`, "success");
+                showTreeStatus(`「${node?.display_name || pid}」の実行を開始`, "success");
               } catch (e: any) {
-                showToast(`実行エラー: ${e.message}`, "error");
+                showTreeStatus(`実行エラー: ${e.message}`, "error");
               }
             }}
             onStopRun={async (pid) => {
@@ -214,9 +215,9 @@ export default function Dashboard() {
                 await api.stopRun(pid);
                 loadAllRunStatuses();
                 if (pid === activeProject) loadRunStatus();
-                showToast("実行を停止しました", "success");
+                showTreeStatus("実行を停止しました", "success");
               } catch (e: any) {
-                showToast(`停止エラー: ${e.message}`, "error");
+                showTreeStatus(`停止エラー: ${e.message}`, "error");
               }
             }}
             onPauseRun={async (pid) => {
@@ -224,12 +225,18 @@ export default function Dashboard() {
                 await api.pauseRun(pid);
                 loadAllRunStatuses();
                 if (pid === activeProject) loadRunStatus();
-                showToast("一時停止しました", "success");
+                showTreeStatus("一時停止しました", "success");
               } catch (e: any) {
-                showToast(`一時停止エラー: ${e.message}`, "error");
+                showTreeStatus(`一時停止エラー: ${e.message}`, "error");
               }
             }}
           />
+          {treeOpStatus && (
+            <div className="tree-inline-status">
+              <StatusIndicator status={treeOpStatus} />
+            </div>
+          )}
+          </>
         )}
       </aside>
 

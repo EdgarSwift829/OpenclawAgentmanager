@@ -1235,41 +1235,82 @@ input, select {
 .detail-rules-forbidden .detail-textarea { border-left: 3px solid #ef4444; }
 
 /* =========================================================================
-   Toast notifications
+   Inline status indicators (near buttons)
    ========================================================================= */
-.toast-container {
-  position: fixed;
-  bottom: 1rem;
-  right: 1rem;
-  z-index: 10000;
-  display: flex;
-  flex-direction: column-reverse;
-  gap: 0.5rem;
-  pointer-events: none;
-}
-.toast {
-  display: flex;
+.inline-status {
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  font-size: 0.8125rem;
-  color: white;
-  cursor: pointer;
-  pointer-events: auto;
-  animation: toast-in 0.3s ease-out;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  max-width: 400px;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 3px;
+  animation: status-in 0.2s ease-out;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
-.toast-success { background: #16a34a; }
-.toast-error { background: #dc2626; }
-.toast-warning { background: #d97706; }
-.toast-info { background: #2563eb; }
-.toast-icon { font-size: 1rem; flex-shrink: 0; }
-.toast-message { flex: 1; line-height: 1.3; }
-@keyframes toast-in {
-  from { opacity: 0; transform: translateY(1rem); }
-  to { opacity: 1; transform: translateY(0); }
+.inline-status-success { color: var(--success); background: rgba(34, 197, 94, 0.1); }
+.inline-status-error { color: var(--error); background: rgba(239, 68, 68, 0.1); }
+.inline-status-warning { color: var(--warning); background: rgba(234, 179, 8, 0.1); }
+.inline-status-info { color: var(--accent); background: rgba(59, 130, 246, 0.1); }
+.inline-status-icon { font-size: 0.75rem; flex-shrink: 0; }
+.inline-status-text { line-height: 1.3; }
+@keyframes status-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.tree-inline-status {
+  padding: 0.25rem 0.75rem;
+}
+
+/* =========================================================================
+   Delete confirmation popup (near project item)
+   ========================================================================= */
+.delete-popup-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: rgba(0, 0, 0, 0.3);
+}
+.delete-popup {
+  position: fixed;
+  z-index: 9999;
+  background: var(--bg-card);
+  border: 1px solid var(--error);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  padding: 0.75rem 1rem;
+  min-width: 200px;
+  max-width: 300px;
+  animation: ctx-in 0.15s ease-out;
+  transform: translate(-50%, -100%);
+}
+.delete-popup-text {
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+}
+.delete-popup-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+.delete-popup-confirm {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+}
+.delete-popup-cancel {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.delete-popup-cancel:hover {
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
 }
 
 /* =========================================================================
