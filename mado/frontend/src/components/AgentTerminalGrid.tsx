@@ -14,6 +14,8 @@ interface Props {
   events: any[];
   agentProfiles?: Record<string, AgentProfile>;
   assignments?: Record<string, string>;
+  activeProject?: string | null;
+  onSendOrder?: (order: string) => Promise<void>;
 }
 
 /* ─── Role metadata ────────────────────────────────────── */
@@ -300,8 +302,53 @@ function TaskFlowBar({ flow, loc }: { flow: TaskFlowItem[]; loc: Locale }) {
   );
 }
 
+/* ─── Command Input Bar ────────────────────────────────── */
+function CommandBar({ loc, onSend, activeProject }: {
+  loc: Locale;
+  onSend?: (order: string) => Promise<void>;
+  activeProject?: string | null;
+}) {
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!input.trim() || !onSend || sending) return;
+    setSending(true);
+    try {
+      await onSend(input.trim());
+      setInput("");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="terminal-command-bar">
+      <span className="terminal-command-prompt">
+        {activeProject ? `${activeProject}` : "mado"} $
+      </span>
+      <input
+        className="terminal-command-input"
+        type="text"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
+        placeholder={loc === "ja" ? "追加指示を入力..." : "Enter additional instruction..."}
+        disabled={sending || !activeProject}
+      />
+      <button
+        className="terminal-command-send"
+        onClick={handleSubmit}
+        disabled={!input.trim() || sending || !activeProject}
+      >
+        {sending ? "..." : (loc === "ja" ? "送信" : "Send")}
+      </button>
+    </div>
+  );
+}
+
 /* ─── Main Component ───────────────────────────────────── */
-export function AgentTerminalGrid({ events, agentProfiles = {} }: Props) {
+export function AgentTerminalGrid({ events, agentProfiles = {}, activeProject, onSendOrder }: Props) {
   const { t, locale } = useI18n();
   const loc = locale as Locale;
 
@@ -330,6 +377,7 @@ export function AgentTerminalGrid({ events, agentProfiles = {} }: Props) {
           <div>{t("waitingForAgents")}</div>
           <div className="terminal-grid-empty-sub">{t("startRunToSpawn")}</div>
         </div>
+        <CommandBar loc={loc} onSend={onSendOrder} activeProject={activeProject} />
       </div>
     );
   }
@@ -369,6 +417,9 @@ export function AgentTerminalGrid({ events, agentProfiles = {} }: Props) {
           );
         })}
       </div>
+
+      {/* Command input bar */}
+      <CommandBar loc={loc} onSend={onSendOrder} activeProject={activeProject} />
     </div>
   );
 }

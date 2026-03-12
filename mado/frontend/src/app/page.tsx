@@ -276,7 +276,16 @@ export default function Dashboard() {
             loadAllRunStatuses();
           }}
         />
-        <AgentTerminalGrid agents={agents} events={events} agentProfiles={activeAgentProfiles} />
+        <AgentTerminalGrid
+          agents={agents}
+          events={events}
+          agentProfiles={activeAgentProfiles}
+          activeProject={activeProject}
+          onSendOrder={async (order) => {
+            if (!activeProject) return;
+            await api.updateProjectConfig(activeProject, { additional_order: order });
+          }}
+        />
       </main>
 
       {/* ---- Right panel: Tabs (Timeline / Models / Tasks) ---- */}
@@ -330,7 +339,7 @@ export default function Dashboard() {
               }}
             />
           )}
-          {rightTab === "tasks" && <TaskGraph runStatus={runStatus} />}
+          {rightTab === "tasks" && <TaskGraph runStatus={runStatus} events={events} />}
         </div>
       </aside>
     </div>
