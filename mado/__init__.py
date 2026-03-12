@@ -1,1 +1,1 @@
-# Multi-Agent Dev Orchestrator (MADO)
+"""MADO - Multi-Agent Dev Orchestrator."""

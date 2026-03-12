@@ -3,15 +3,16 @@ fastapi>=0.115.0
 uvicorn[standard]>=0.32.0
 pydantic>=2.0.0
 
-# Optional: WebSocket communication with OpenClaw
+# WebSocket communication
 websockets>=13.0
 
-# Optional: YAML config parsing
+# YAML config parsing
 pyyaml>=6.0
 
-# Optional: Vector store (memory/vector_store.py)
-# numpy>=1.26.0
-# faiss-cpu>=1.7.4
+# Vector store (memory/vector_store.py)
+numpy>=1.26.0
+faiss-cpu>=1.7.4
+sentence-transformers>=3.0.0
 
 # Desktop UI (native window without browser)
 pywebview>=5.0

@@ -8,7 +8,6 @@ import { ProjectTree } from "@/components/ProjectTree";
 import { AgentGrid } from "@/components/AgentGrid";
 import { RunControl } from "@/components/RunControl";
 import { Timeline } from "@/components/Timeline";
-import { ModelPanel } from "@/components/ModelPanel";
 import { TaskGraph } from "@/components/TaskGraph";
 import { ProjectDetail } from "@/components/ProjectDetail";
 import { AgentPanel } from "@/components/AgentPanel";
@@ -66,7 +65,7 @@ export default function Dashboard() {
   const [events, setEvents] = useState<any[]>([]);
   const [maxIter, setMaxIter] = useState(30);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [rightTab, setRightTab] = useState<"timeline" | "agents" | "models" | "tasks">("timeline");
+  const [rightTab, setRightTab] = useState<"timeline" | "agents" | "tasks">("timeline");
   const [allRunStatuses, setAllRunStatuses] = useState<Record<string, string>>({});
 
   // --- load / save per-project state on switch ---
@@ -278,7 +277,7 @@ export default function Dashboard() {
         <AgentGrid agents={agents} events={events} agentProfiles={activeAgentProfiles} />
       </main>
 
-      {/* ---- Right panel: Tabs (Timeline / Models / Tasks) ---- */}
+      {/* ---- Right panel: Tabs (Timeline / Agents / Tasks) ---- */}
       <aside className="right-panel">
         <div className="right-tabs">
           <button
@@ -292,12 +291,6 @@ export default function Dashboard() {
             onClick={() => setRightTab("agents")}
           >
             {t("agentsTab")}
-          </button>
-          <button
-            className={`right-tab ${rightTab === "models" ? "right-tab-active" : ""}`}
-            onClick={() => setRightTab("models")}
-          >
-            {t("models")}
           </button>
           <button
             className={`right-tab ${rightTab === "tasks" ? "right-tab-active" : ""}`}
@@ -314,12 +307,6 @@ export default function Dashboard() {
               activeProject={activeProject}
               agentProfiles={activeAgentProfiles}
               runtimeAgents={agents}
-            />
-          )}
-          {rightTab === "models" && (
-            <ModelPanel
-              activeProject={activeProject}
-              agentProfiles={activeAgentProfiles}
               onProfilesChange={async (profiles) => {
                 if (!activeProject) return;
                 try {

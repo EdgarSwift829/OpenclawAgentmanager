@@ -2049,3 +2049,126 @@ input, select {
   gap: 0.25rem;
   margin-top: 0;
 }
+
+/* =========================================================================
+   Unified Agent Panel (Agents + Models merged)
+   ========================================================================= */
+.agents-unified-panel { display: flex; flex-direction: column; gap: 0.5rem; }
+.agents-unified-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.agents-unified-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.agents-unified-hint {
+  font-size: 0.625rem;
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+.agents-unified-empty {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  padding: 2rem 0.5rem;
+}
+.agents-unified-reload-btn {
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+.agents-unified-reload-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Expand/Close label next to chevron */
+.block-expand-label {
+  font-size: 0.5625rem;
+  color: var(--accent);
+  font-weight: 500;
+  flex-shrink: 0;
+  white-space: nowrap;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+.block-item:hover .block-expand-label {
+  opacity: 1;
+}
+
+/* Status badge in compact row */
+.block-status-badge {
+  font-size: 0.5625rem;
+  padding: 0 0.3rem;
+  border-radius: 9999px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.block-status-active {
+  background: var(--running);
+  color: white;
+}
+
+/* Expanded detail - wider, better organized */
+.block-detail-expanded {
+  padding: 0.625rem 0.75rem 0.75rem 2.5rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  animation: detail-slide-in 0.15s ease-out;
+}
+@keyframes detail-slide-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.block-detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1875rem;
+}
+
+/* Runtime info */
+.block-detail-runtime {
+  background: rgba(139, 92, 246, 0.08);
+  border-radius: 4px;
+  padding: 0.375rem;
+}
+.block-runtime-info {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.6875rem;
+}
+.block-runtime-stat {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.block-runtime-task {
+  width: 100%;
+  font-size: 0.625rem;
+  color: var(--text-secondary);
+  margin-top: 0.125rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Add agent description in menu */
+.agents-tab-add-desc {
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+  margin-left: auto;
+}
