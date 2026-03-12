@@ -142,7 +142,7 @@ async def get_project(project_id: str):
     if not config_path.exists():
         raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
 
-    config = json.loads(config_path.read_text())
+    config = json.loads(config_path.read_text(encoding="utf-8"))
     return config
 
 
@@ -223,7 +223,7 @@ async def rename_project(project_id: str, data: ProjectRename):
     if config_path.exists():
         config = json.loads(config_path.read_text(encoding="utf-8"))
         config["project_id"] = new_id
-        config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False))
+        config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8")
 
     # Update parent's children list
     parent_id = old_config.get("parent_id")

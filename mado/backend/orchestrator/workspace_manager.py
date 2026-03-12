@@ -90,7 +90,7 @@ class WorkspaceManager:
                 "parent_id": parent_id,
                 "children": [],
             }
-            config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False))
+            config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8")
 
         # Register as child in parent's config
         if parent_id:
@@ -99,7 +99,7 @@ class WorkspaceManager:
         # Initialize project memory
         memory_path = project_dir / "project_memory.md"
         if not memory_path.exists():
-            memory_path.write_text(f"# Project Memory: {project_id}\n\n## Goal\n\n## Architecture\n\n## Key Modules\n\n## Coding Rules\n\n")
+            memory_path.write_text(f"# Project Memory: {project_id}\n\n## Goal\n\n## Architecture\n\n## Key Modules\n\n## Coding Rules\n\n", encoding="utf-8")
 
         return str(workspace_dir)
 
@@ -116,7 +116,7 @@ class WorkspaceManager:
                 "goal": "",
             }
             config_path.parent.mkdir(parents=True, exist_ok=True)
-            config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False))
+            config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8")
             return
         config = json.loads(config_path.read_text(encoding="utf-8"))
         # Ensure children field exists
@@ -124,7 +124,7 @@ class WorkspaceManager:
             config["children"] = []
         if child_id not in config["children"]:
             config["children"].append(child_id)
-            config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False))
+            config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8")
 
     def _remove_child_from_parent(self, parent_id: str, child_id: str):
         """Remove a child project from the parent's config.json."""
@@ -136,7 +136,7 @@ class WorkspaceManager:
         if child_id in children:
             children.remove(child_id)
             config["children"] = children
-            config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False))
+            config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8")
 
     def get_project_config(self, project_id: str) -> dict:
         """Read a project's config.json, migrating old configs if needed."""
@@ -155,7 +155,7 @@ class WorkspaceManager:
                 config[key] = default
                 migrated = True
         if migrated:
-            config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False))
+            config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8")
         return config
 
     def update_project_config(self, project_id: str, updates: dict):
@@ -165,7 +165,7 @@ class WorkspaceManager:
             return
         config = json.loads(config_path.read_text(encoding="utf-8"))
         config.update(updates)
-        config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False))
+        config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8")
 
     def list_children(self, parent_id: str) -> list:
         """List child project IDs for a parent."""
@@ -272,7 +272,8 @@ class WorkspaceManager:
             "backup_name": backup_name,
         }
         (backup_dir / "backup_meta.json").write_text(
-            json.dumps(meta, indent=2, ensure_ascii=False)
+            json.dumps(meta, indent=2, ensure_ascii=False),
+            encoding="utf-8",
         )
 
         return str(backup_dir)
@@ -353,7 +354,8 @@ class WorkspaceManager:
                         "children": [],
                     }
                     config_path.write_text(
-                        json.dumps(config, indent=2, ensure_ascii=False)
+                        json.dumps(config, indent=2, ensure_ascii=False),
+                        encoding="utf-8",
                     )
                     # Also ensure workspace directory exists
                     (d / "workspace").mkdir(exist_ok=True)
