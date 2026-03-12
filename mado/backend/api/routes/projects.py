@@ -157,14 +157,14 @@ async def create_project(data: ProjectCreate):
 @router.get("/{project_id}")
 async def get_project(project_id: str):
     """Get project details."""
-    import json
     from pathlib import Path
+    from mado.backend.orchestrator.workspace_manager import _read_json
 
     config_path = Path(workspace_manager.projects_root) / project_id / "config.json"
     if not config_path.exists():
         raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
 
-    config = json.loads(config_path.read_text(encoding="utf-8"))
+    config = _read_json(config_path)
     return config
 
 
@@ -219,6 +219,7 @@ async def rename_project(project_id: str, data: ProjectRename):
     """Rename a project."""
     from pathlib import Path
     import json
+    from mado.backend.orchestrator.workspace_manager import _read_json
 
     logger = logging.getLogger(__name__)
 
@@ -244,14 +245,14 @@ async def rename_project(project_id: str, data: ProjectRename):
         old_config_path = old_path / "config.json"
         old_config = {}
         if old_config_path.exists():
-            old_config = json.loads(old_config_path.read_text(encoding="utf-8"))
+            old_config = _read_json(old_config_path)
 
         old_path.rename(new_path)
 
         # Update config.json (project_id + display_name)
         config_path = new_path / "config.json"
         if config_path.exists():
-            config = json.loads(config_path.read_text(encoding="utf-8"))
+            config = _read_json(config_path)
             config["project_id"] = new_id
             config["display_name"] = new_id
             config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8")

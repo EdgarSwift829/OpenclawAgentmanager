@@ -9,6 +9,48 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
+
+def _read_json(path: Path) -> dict:
+    """Read a JSON file with encoding fallback.
+
+    Tries UTF-8 first, then UTF-8 with BOM, then falls back to
+    reading raw bytes with replacement characters and re-writes
+    the file as proper UTF-8.
+    """
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except UnicodeDecodeError:
+        pass
+    # Try UTF-8 with BOM
+    try:
+        return json.loads(path.read_text(encoding="utf-8-sig"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        pass
+    # Last resort: read bytes, decode with replacement, fix file
+    logger.warning("Config file %s has encoding issues, attempting recovery", path)
+    raw = path.read_bytes()
+    # Try common encodings
+    for enc in ("cp932", "shift_jis", "euc-jp", "latin-1"):
+        try:
+            text = raw.decode(enc)
+            data = json.loads(text)
+            # Re-write as proper UTF-8
+            path.write_text(
+                json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
+            )
+            logger.info("Recovered and re-saved %s (was %s)", path, enc)
+            return data
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            continue
+    # Final fallback with replacement
+    text = raw.decode("utf-8", errors="replace")
+    data = json.loads(text)
+    path.write_text(
+        json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+    return data
+
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SETTINGS_PATH = REPO_ROOT / "config" / "settings.yaml"
 DEFAULT_PROJECTS_ROOT = REPO_ROOT / "projects"
@@ -118,7 +160,7 @@ class WorkspaceManager:
             config_path.parent.mkdir(parents=True, exist_ok=True)
             config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8")
             return
-        config = json.loads(config_path.read_text(encoding="utf-8"))
+        config = _read_json(config_path)
         # Ensure children field exists
         if "children" not in config:
             config["children"] = []
@@ -131,7 +173,7 @@ class WorkspaceManager:
         config_path = self.projects_root / parent_id / "config.json"
         if not config_path.exists():
             return
-        config = json.loads(config_path.read_text(encoding="utf-8"))
+        config = _read_json(config_path)
         children = config.get("children", [])
         if child_id in children:
             children.remove(child_id)
@@ -143,7 +185,7 @@ class WorkspaceManager:
         config_path = self.projects_root / project_id / "config.json"
         if not config_path.exists():
             return {}
-        config = json.loads(config_path.read_text(encoding="utf-8"))
+        config = _read_json(config_path)
         # Migrate old configs missing required fields
         migrated = False
         for key, default in [
@@ -163,7 +205,7 @@ class WorkspaceManager:
         config_path = self.projects_root / project_id / "config.json"
         if not config_path.exists():
             return
-        config = json.loads(config_path.read_text(encoding="utf-8"))
+        config = _read_json(config_path)
         config.update(updates)
         config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8")
 
@@ -308,7 +350,7 @@ class WorkspaceManager:
             if d.is_dir():
                 meta_path = d / "backup_meta.json"
                 if meta_path.exists():
-                    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+                    meta = _read_json(meta_path)
                     meta["path"] = str(d)
                     backups.append(meta)
                 else:
