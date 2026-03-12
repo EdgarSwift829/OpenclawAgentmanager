@@ -124,6 +124,35 @@ class Orchestrator:
             except Exception:
                 pass
 
+    def _load_parent_context(self, parent_id: str) -> None:
+        """Load parent project context for child runs (agent profiles + memory)."""
+        try:
+            parent_config = self.workspace_manager.get_project_config(parent_id)
+            if not parent_config:
+                return
+
+            # Merge parent agent_profiles as defaults (child overrides take priority)
+            parent_profiles = parent_config.get("agent_profiles", {})
+            child_profiles = self._project_config.get("agent_profiles", {})
+            if parent_profiles and not child_profiles:
+                self._project_config["agent_profiles"] = parent_profiles
+                logger.info(f"Child {self.project_id} inherited agent_profiles from parent {parent_id}")
+
+            # Load parent's project memory as additional context
+            parent_memory_path = self.workspace_manager.projects_root / parent_id / "project_memory.md"
+            if parent_memory_path.exists():
+                parent_memory = parent_memory_path.read_text(encoding="utf-8")
+                self._project_config["_parent_memory"] = parent_memory
+                logger.info(f"Child {self.project_id} loaded parent memory from {parent_id}")
+
+            # Inherit parent rules if child has none
+            for rule_key in ("rules_must", "rules_forbidden"):
+                if parent_config.get(rule_key) and not self._project_config.get(rule_key):
+                    self._project_config[rule_key] = parent_config[rule_key]
+
+        except Exception as e:
+            logger.warning(f"Failed to load parent context from {parent_id}: {e}")
+
     def _build_goal_with_children(self, goal: str) -> str:
         """If project has children, augment the goal with child project context."""
         config = self.workspace_manager.get_project_config(self.project_id)
@@ -169,6 +198,11 @@ class Orchestrator:
 
         # Load project config (includes rules_must, rules_forbidden, agent_profiles, etc.)
         self._project_config = self.workspace_manager.get_project_config(self.project_id)
+
+        # If child project, load parent's project memory as additional context
+        parent_id = self._project_config.get("parent_id")
+        if parent_id:
+            self._load_parent_context(parent_id)
 
         # Augment goal with child project context
         augmented_goal = self._build_goal_with_children(goal)

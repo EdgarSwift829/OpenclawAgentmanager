@@ -260,6 +260,19 @@ export default function Dashboard() {
           activeProject={activeProject}
           projectTree={projectTree}
           onRefresh={loadProjects}
+          allRunStatuses={allRunStatuses}
+          onDispatchChild={async (parentId, childId, instruction) => {
+            await api.dispatchChild(parentId, childId, instruction);
+            loadAllRunStatuses();
+          }}
+          onStopChild={async (childId) => {
+            await api.stopRun(childId);
+            loadAllRunStatuses();
+          }}
+          onDispatchAll={async (parentId) => {
+            await api.dispatchAllChildren(parentId);
+            loadAllRunStatuses();
+          }}
         />
         <AgentGrid agents={agents} events={events} agentProfiles={activeAgentProfiles} />
       </main>

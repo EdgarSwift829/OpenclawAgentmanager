@@ -60,6 +60,16 @@ export const getRunStatus = (projectId: string) => fetchJSON(`/orchestrator/run/
 export const stopRun = (projectId: string) =>
   fetchJSON(`/orchestrator/run/${projectId}/stop`, { method: "POST" });
 export const listRuns = () => fetchJSON("/orchestrator/runs");
+export const dispatchChild = (parent_id: string, child_id: string, instruction?: string) =>
+  fetchJSON("/orchestrator/dispatch-child", {
+    method: "POST",
+    body: JSON.stringify({ parent_id, child_id, instruction }),
+  });
+export const dispatchAllChildren = (parent_id: string) =>
+  fetchJSON("/orchestrator/dispatch-children", {
+    method: "POST",
+    body: JSON.stringify({ parent_id }),
+  });
 
 // Orchestrator - pause
 export const pauseRun = (projectId: string) =>

@@ -138,9 +138,13 @@ interface Props {
   activeProject: string | null;
   projectTree: ProjectNode[];
   onRefresh: () => void;
+  allRunStatuses?: Record<string, string>;
+  onDispatchChild?: (parentId: string, childId: string, instruction?: string) => Promise<void>;
+  onStopChild?: (childId: string) => Promise<void>;
+  onDispatchAll?: (parentId: string) => Promise<void>;
 }
 
-export function ProjectDetail({ activeProject, projectTree, onRefresh }: Props) {
+export function ProjectDetail({ activeProject, projectTree, onRefresh, allRunStatuses, onDispatchChild, onStopChild, onDispatchAll }: Props) {
   const { t, locale } = useI18n();
   const { status, showStatus } = useInlineStatus();
   const [saving, setSaving] = useState(false);
@@ -158,6 +162,8 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh }: Props) 
   const [rulesMust, setRulesMust] = useState("");
   const [rulesForbidden, setRulesForbidden] = useState("");
   const [agentProfiles, setAgentProfiles] = useState<Record<string, AgentProfile>>({});
+  const [childInstructions, setChildInstructions] = useState<Record<string, string>>({});
+  const [dispatchingChild, setDispatchingChild] = useState<string | null>(null);
 
   const node = projectTree.find((n) => n.project_id === activeProject);
   const isParent = node ? node.children.length > 0 || !node.parent_id : false;
@@ -416,6 +422,119 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh }: Props) 
             </div>
           </div>
         </>
+      )}
+
+      {/* Child Project Management - only for parent projects with children */}
+      {node.children.length > 0 && (
+        <div className="detail-field child-management">
+          <div className="child-management-header">
+            <label className="detail-label">{t("childProjectManagement")}</label>
+            {onDispatchAll && (
+              <div className="child-management-actions">
+                <button
+                  className="btn btn-sm btn-primary"
+                  onClick={async () => {
+                    if (!activeProject) return;
+                    try {
+                      await onDispatchAll(activeProject);
+                      showStatus("全子プロジェクトを開始", "success");
+                    } catch (e: any) {
+                      showStatus(`一括開始エラー: ${e.message}`, "error");
+                    }
+                  }}
+                >
+                  {t("dispatchAll")}
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="child-management-hint">
+            <span className="hint-badge hint-inherit">{t("inheritingProfiles")}</span>
+            <span className="hint-badge hint-memory">{t("inheritingMemory")}</span>
+          </div>
+          <div className="child-cards">
+            {node.children.map((childId) => {
+              const childNode = projectTree.find((n) => n.project_id === childId);
+              const childStatus = allRunStatuses?.[childId] || "idle";
+              const isRunning = childStatus === "running";
+              const instruction = childInstructions[childId] || "";
+              const isDispatching = dispatchingChild === childId;
+
+              return (
+                <div key={childId} className={`child-card ${isRunning ? "child-running" : ""}`}>
+                  <div className="child-card-top">
+                    <div className="child-card-info">
+                      <span className="child-card-name">
+                        {childNode?.display_name || childId}
+                      </span>
+                      <span className={`child-status-badge child-status-${childStatus}`}>
+                        {childStatus === "running" ? t("running") :
+                         childStatus === "completed" ? t("completed") :
+                         childStatus === "error" ? t("error") :
+                         childStatus === "paused" ? t("paused") :
+                         childStatus === "stopped" ? t("stopped") :
+                         t("initialized")}
+                      </span>
+                    </div>
+                    <div className="child-card-goal">
+                      {childNode?.goal ? childNode.goal.slice(0, 80) : "—"}
+                    </div>
+                  </div>
+                  <div className="child-card-bottom">
+                    <input
+                      className="child-instruction-input"
+                      placeholder={t("childInstruction")}
+                      value={instruction}
+                      onChange={(e) => setChildInstructions({
+                        ...childInstructions,
+                        [childId]: e.target.value,
+                      })}
+                      disabled={isRunning || isDispatching}
+                    />
+                    <div className="child-card-buttons">
+                      {!isRunning ? (
+                        <button
+                          className="btn btn-sm btn-primary"
+                          disabled={isDispatching}
+                          onClick={async () => {
+                            if (!activeProject || !onDispatchChild) return;
+                            setDispatchingChild(childId);
+                            try {
+                              await onDispatchChild(activeProject, childId, instruction || undefined);
+                              showStatus(`「${childNode?.display_name || childId}」を開始`, "success");
+                              setChildInstructions({ ...childInstructions, [childId]: "" });
+                            } catch (e: any) {
+                              showStatus(`開始エラー: ${e.message}`, "error");
+                            } finally {
+                              setDispatchingChild(null);
+                            }
+                          }}
+                        >
+                          {isDispatching ? "..." : t("dispatchChild")}
+                        </button>
+                      ) : (
+                        <button
+                          className="btn btn-sm btn-danger"
+                          onClick={async () => {
+                            if (!onStopChild) return;
+                            try {
+                              await onStopChild(childId);
+                              showStatus(`「${childNode?.display_name || childId}」を停止`, "success");
+                            } catch (e: any) {
+                              showStatus(`停止エラー: ${e.message}`, "error");
+                            }
+                          }}
+                        >
+                          {t("stopChild")}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {/* Agent Profiles */}

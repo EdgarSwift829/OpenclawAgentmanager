@@ -123,6 +123,22 @@ const dict = {
   agentTitlePlaceholder: { en: "Title (e.g. Top Engineer)", ja: "肩書き（例：トップエンジニア）" },
   agentPersonalityPlaceholder: { en: "Personality & strengths...", ja: "特徴・得意分野を入力..." },
 
+  // Child Project Management
+  childProjectManagement: { en: "Sub-project Control", ja: "子プロジェクト管理" },
+  dispatchChild: { en: "Start", ja: "開始" },
+  stopChild: { en: "Stop", ja: "停止" },
+  dispatchAll: { en: "Start All", ja: "一括開始" },
+  stopAll: { en: "Stop All", ja: "一括停止" },
+  childStatus: { en: "Status", ja: "ステータス" },
+  inheritingProfiles: { en: "Inheriting agent profiles from parent", ja: "親のエージェント設定を継承" },
+  inheritingMemory: { en: "Sharing parent project memory", ja: "親のプロジェクトメモリを共有" },
+  childInstruction: { en: "Instruction to child", ja: "子への指示" },
+  sendInstruction: { en: "Send & Start", ja: "指示して開始" },
+  noChildren: { en: "No sub-projects", ja: "子プロジェクトなし" },
+  initialized: { en: "Ready", ja: "準備完了" },
+  completed: { en: "Completed", ja: "完了" },
+  error: { en: "Error", ja: "エラー" },
+
   // TaskGraph
   taskGraph: { en: "Task Graph", ja: "タスクグラフ" },
   noActiveTasks: { en: "No active tasks", ja: "アクティブなタスクなし" },
