@@ -2,6 +2,7 @@
 
 import json
 import logging
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -27,12 +28,15 @@ class MADOLogger:
 
         # Structured log file
         self.structured_log = self.log_dir / "structured.jsonl"
+        self._write_lock = threading.Lock()
 
     def _write_structured(self, event: dict) -> None:
         event["timestamp"] = datetime.utcnow().isoformat()
         event["project_id"] = self.project_id
-        with open(self.structured_log, "a", encoding="utf-8") as f:
-            f.write(json.dumps(event, ensure_ascii=False) + "\n")
+        line = json.dumps(event, ensure_ascii=False) + "\n"
+        with self._write_lock:
+            with open(self.structured_log, "a", encoding="utf-8") as f:
+                f.write(line)
 
     def log_agent_message(self, role: str, message: str, direction: str = "output") -> None:
         """Log an agent message."""

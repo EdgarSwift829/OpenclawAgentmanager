@@ -79,12 +79,41 @@ export const pauseRun = (projectId: string) =>
 export const checkOpenClaw = () => fetchJSON("/openclaw/status");
 export const installOpenClaw = () => fetchJSON("/openclaw/install", { method: "POST" });
 
-// WebSocket
-export function connectWebSocket(projectId: string, onMessage: (data: any) => void): WebSocket {
+// WebSocket with auto-reconnect
+export function connectWebSocket(
+  projectId: string,
+  onMessage: (data: unknown) => void,
+): WebSocket {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const host = window.location.host;
   const encodedId = encodeURIComponent(projectId);
-  const ws = new WebSocket(`${protocol}//${host}/api/ws/${encodedId}`);
-  ws.onmessage = (event) => onMessage(JSON.parse(event.data));
-  return ws;
+  const url = `${protocol}//${host}/api/ws/${encodedId}`;
+
+  let reconnectDelay = 1000;
+  const MAX_RECONNECT_DELAY = 30000;
+  let stopped = false;
+
+  function create(): WebSocket {
+    const ws = new WebSocket(url);
+    ws.onmessage = (event) => onMessage(JSON.parse(event.data));
+    ws.onopen = () => {
+      reconnectDelay = 1000; // reset on successful connect
+    };
+    ws.onclose = (event) => {
+      if (stopped || event.code === 1000) return; // normal close — don't reconnect
+      setTimeout(() => {
+        if (!stopped) create();
+      }, reconnectDelay);
+      reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY);
+    };
+    // Expose a way to permanently close from the outside
+    const origClose = ws.close.bind(ws);
+    ws.close = (code?: number, reason?: string) => {
+      stopped = true;
+      origClose(code, reason);
+    };
+    return ws;
+  }
+
+  return create();
 }

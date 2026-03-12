@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import * as api from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
+import type { ProjectNode, RunStatus, AgentInfo, OrchestratorEvent } from "@/lib/types";
 import { useInlineStatus, StatusIndicator } from "@/components/Toast";
 import { ProjectTree } from "@/components/ProjectTree";
 import { AgentGrid } from "@/components/AgentGrid";
@@ -21,7 +22,7 @@ const STORAGE_KEY = "mado_project_states";
 
 interface ProjectState {
   maxIter: number;
-  events: any[];
+  events: OrchestratorEvent[];
 }
 
 function loadAllStates(): Record<string, ProjectState> {
@@ -59,11 +60,11 @@ export default function Dashboard() {
   const { t } = useI18n();
   const { status: treeOpStatus, showStatus: showTreeStatus } = useInlineStatus();
   const [projects, setProjects] = useState<string[]>([]);
-  const [projectTree, setProjectTree] = useState<any[]>([]);
+  const [projectTree, setProjectTree] = useState<ProjectNode[]>([]);
   const [activeProject, setActiveProject] = useState<string | null>(null);
-  const [runStatus, setRunStatus] = useState<any>(null);
-  const [agents, setAgents] = useState<any[]>([]);
-  const [events, setEvents] = useState<any[]>([]);
+  const [runStatus, setRunStatus] = useState<RunStatus | null>(null);
+  const [agents, setAgents] = useState<AgentInfo[]>([]);
+  const [events, setEvents] = useState<OrchestratorEvent[]>([]);
   const [maxIter, setMaxIter] = useState(30);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [rightTab, setRightTab] = useState<"timeline" | "agents" | "models" | "tasks">("timeline");
@@ -97,7 +98,7 @@ export default function Dashboard() {
   }, [activeProject, maxIter, events]);
 
   // Get goal from project config (saved by ProjectDetail)
-  const activeNode = projectTree.find((n: any) => n.project_id === activeProject);
+  const activeNode = projectTree.find((n) => n.project_id === activeProject);
   const activeGoal = activeNode?.goal || "";
   const activeAgentProfiles = activeNode?.agent_profiles || {};
 
@@ -135,7 +136,7 @@ export default function Dashboard() {
     try {
       const data = await api.listRuns();
       const statuses: Record<string, string> = {};
-      for (const [pid, info] of Object.entries(data.runs as Record<string, any>)) {
+      for (const [pid, info] of Object.entries(data.runs as Record<string, { status: string }>)) {
         statuses[pid] = info.status;
       }
       setAllRunStatuses(statuses);
@@ -198,7 +199,7 @@ export default function Dashboard() {
             onRefresh={loadProjects}
             runStatuses={allRunStatuses}
             onStartRun={async (pid) => {
-              const node = projectTree.find((n: any) => n.project_id === pid);
+              const node = projectTree.find((n) => n.project_id === pid);
               const configGoal = node?.goal || "";
               const st = loadProjectState(pid);
               showTreeStatus(`「${node?.display_name || pid}」を実行準備中...`, "info");
@@ -207,8 +208,8 @@ export default function Dashboard() {
                 loadAllRunStatuses();
                 if (pid === activeProject) loadRunStatus();
                 showTreeStatus(`「${node?.display_name || pid}」の実行を開始`, "success");
-              } catch (e: any) {
-                showTreeStatus(`実行エラー: ${e.message}`, "error");
+              } catch (e) {
+                showTreeStatus(`実行エラー: ${e instanceof Error ? e.message : String(e)}`, "error");
               }
             }}
             onStopRun={async (pid) => {
@@ -217,8 +218,8 @@ export default function Dashboard() {
                 loadAllRunStatuses();
                 if (pid === activeProject) loadRunStatus();
                 showTreeStatus("実行を停止しました", "success");
-              } catch (e: any) {
-                showTreeStatus(`停止エラー: ${e.message}`, "error");
+              } catch (e) {
+                showTreeStatus(`停止エラー: ${e instanceof Error ? e.message : String(e)}`, "error");
               }
             }}
             onPauseRun={async (pid) => {
@@ -227,8 +228,8 @@ export default function Dashboard() {
                 loadAllRunStatuses();
                 if (pid === activeProject) loadRunStatus();
                 showTreeStatus("一時停止しました", "success");
-              } catch (e: any) {
-                showTreeStatus(`一時停止エラー: ${e.message}`, "error");
+              } catch (e) {
+                showTreeStatus(`一時停止エラー: ${e instanceof Error ? e.message : String(e)}`, "error");
               }
             }}
           />
