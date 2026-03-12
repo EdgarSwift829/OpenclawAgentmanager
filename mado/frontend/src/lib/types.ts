@@ -1,5 +1,15 @@
 /** Shared type definitions for MADO frontend. */
 
+/** Task item within a project. */
+export interface TaskItem {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  deadline: string;
+  priority: string;
+}
+
 /** A node in the project tree returned by listProjects(). */
 export interface ProjectNode {
   project_id: string;
@@ -7,11 +17,13 @@ export interface ProjectNode {
   parent_id: string | null;
   children: string[];
   status: string;
-  goal?: string;
-  overview?: string;
-  policy?: string;
-  roadmap?: string;
-  description?: string;
+  goal: string;
+  overview: string;
+  policy: string;
+  roadmap: string;
+  description: string;
+  deadline: string | null;
+  tasks: TaskItem[];
   agent_profiles?: Record<string, AgentProfile>;
 }
 

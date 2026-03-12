@@ -26,3 +26,6 @@ config/models.yaml
 
 # Backend storage data
 mado/backend/storage/
+
+# E2E test screenshots (auto-generated)
+tests/e2e/screenshots/

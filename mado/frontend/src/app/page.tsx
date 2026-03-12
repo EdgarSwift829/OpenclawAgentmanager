@@ -170,7 +170,7 @@ export default function Dashboard() {
     let ws: WebSocket;
     try {
       ws = api.connectWebSocket(activeProject, (data) => {
-        setEvents((prev) => [...prev.slice(-200), data]);
+        setEvents((prev) => [...prev.slice(-200), data as OrchestratorEvent]);
       });
     } catch { /* WebSocket not available */ }
     return () => ws?.close();
