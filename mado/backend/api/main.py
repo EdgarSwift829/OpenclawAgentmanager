@@ -1,5 +1,7 @@
 """MADO FastAPI Application - Main entry point."""
 
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -11,9 +13,13 @@ app = FastAPI(
     version="0.1.0",
 )
 
+_DEFAULT_ORIGINS = ["http://localhost:3000", "http://localhost:3001"]
+_cors_origins = os.environ.get("MADO_CORS_ORIGINS", "").strip()
+_allowed_origins = [o.strip() for o in _cors_origins.split(",") if o.strip()] if _cors_origins else _DEFAULT_ORIGINS
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

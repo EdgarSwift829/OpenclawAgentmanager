@@ -5,10 +5,10 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 
-from mado.backend.orchestrator.workspace_manager import WorkspaceManager
+from mado.backend.orchestrator.workspace_manager import get_workspace_manager
 
 router = APIRouter()
-workspace_manager = WorkspaceManager()
+workspace_manager = get_workspace_manager()
 
 
 class ProjectCreate(BaseModel):

@@ -17,10 +17,11 @@ import logging
 import time
 from typing import Optional, Callable
 from mado.backend.orchestrator.agent_factory import AgentFactory
-from mado.backend.orchestrator.workspace_manager import WorkspaceManager
+from mado.backend.orchestrator.workspace_manager import get_workspace_manager
 from mado.backend.orchestrator.message_bus import MessageBus, Message
 from mado.backend.orchestrator.task_graph import TaskGraph
 from mado.backend.models.model_manager import ModelManager
+from mado.backend.safety.agent_limits import AgentLimits
 
 logger = logging.getLogger(__name__)
 
@@ -72,14 +73,15 @@ class Orchestrator:
 
     def __init__(self, project_id: str):
         self.project_id = project_id
-        self.workspace_manager = WorkspaceManager()
+        self.workspace_manager = get_workspace_manager()
         self.model_manager = ModelManager()
         self.agent_factory = AgentFactory(self.model_manager)
         self.agents: dict = {}
         self.agent_states: dict[str, AgentState] = {}
+        self.limits = AgentLimits()
         self.iteration = 0
-        self.max_iterations = 10
-        self.task_timeout = 300  # seconds per individual task
+        self.max_iterations = self.limits.limits["max_iterations"]
+        self.task_timeout = self.limits.get_timeout()
         self.message_bus = MessageBus()
         self._cancel_event = asyncio.Event()
         self._event_callback: Optional[Callable] = None
@@ -410,18 +412,20 @@ class Orchestrator:
         }
 
     def run(self, goal: str) -> dict:
-        """Synchronous wrapper for run_async (backward compatible)."""
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
+        """Synchronous wrapper for run_async (backward compatible).
 
-        if loop and loop.is_running():
+        If called from within a running event loop (e.g. from a sync context
+        in an async framework), delegates to a new event loop on a separate
+        thread. Otherwise uses asyncio.run() directly.
+        """
+        try:
+            asyncio.get_running_loop()
+            # Already inside an event loop — run on a new thread with its own loop.
             import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor() as pool:
-                future = pool.submit(asyncio.run, self.run_async(goal))
-                return future.result()
-        else:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                return pool.submit(lambda: asyncio.run(self.run_async(goal))).result()
+        except RuntimeError:
+            # No running loop — safe to use asyncio.run directly.
             return asyncio.run(self.run_async(goal))
 
     def _build_iteration_summary(self, results: list, plan: dict) -> dict:

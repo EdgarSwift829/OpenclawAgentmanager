@@ -14,8 +14,11 @@ def _read_json(path: Path) -> dict:
     """Read a JSON file with encoding fallback.
 
     Tries UTF-8 first, then UTF-8 with BOM, then falls back to
-    reading raw bytes with replacement characters and re-writes
-    the file as proper UTF-8.
+    reading raw bytes via common Japanese encodings.
+
+    When a non-UTF-8 encoding is detected the file is re-written as
+    proper UTF-8 so that subsequent reads are fast. A WARNING-level
+    log message is emitted for every re-write.
     """
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -38,11 +41,12 @@ def _read_json(path: Path) -> dict:
             path.write_text(
                 json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
             )
-            logger.info("Recovered and re-saved %s (was %s)", path, enc)
+            logger.warning("Re-wrote %s as UTF-8 (original encoding: %s)", path, enc)
             return data
         except (UnicodeDecodeError, json.JSONDecodeError):
             continue
-    # Final fallback with replacement
+    # Final fallback with replacement characters
+    logger.warning("All encoding attempts failed for %s, using lossy UTF-8 decode", path)
     text = raw.decode("utf-8", errors="replace")
     data = json.loads(text)
     path.write_text(
@@ -430,3 +434,22 @@ class WorkspaceManager:
                     # If we can't write config, skip this directory
                     pass
         return projects
+
+
+# ---------------------------------------------------------------------------
+# Shared singleton instance
+# ---------------------------------------------------------------------------
+_shared_instance: WorkspaceManager | None = None
+
+
+def get_workspace_manager() -> WorkspaceManager:
+    """Return a process-wide shared WorkspaceManager instance.
+
+    All modules that need a WorkspaceManager should call this function
+    instead of constructing their own instance, so that set_projects_root()
+    changes are visible everywhere.
+    """
+    global _shared_instance
+    if _shared_instance is None:
+        _shared_instance = WorkspaceManager()
+    return _shared_instance

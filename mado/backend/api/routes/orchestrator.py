@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import Optional
 
-from mado.backend.orchestrator.workspace_manager import WorkspaceManager
+from mado.backend.orchestrator.workspace_manager import get_workspace_manager
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ router = APIRouter()
 # Active orchestration runs and their orchestrator instances
 _runs: dict = {}
 _orchestrators: dict = {}
-_workspace_manager = WorkspaceManager()
+_workspace_manager = get_workspace_manager()
 
 
 class RunCreate(BaseModel):

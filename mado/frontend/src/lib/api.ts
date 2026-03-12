@@ -81,7 +81,10 @@ export const installOpenClaw = () => fetchJSON("/openclaw/install", { method: "P
 
 // WebSocket
 export function connectWebSocket(projectId: string, onMessage: (data: any) => void): WebSocket {
-  const ws = new WebSocket(`ws://localhost:8000/api/ws/${projectId}`);
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const host = window.location.host;
+  const encodedId = encodeURIComponent(projectId);
+  const ws = new WebSocket(`${protocol}//${host}/api/ws/${encodedId}`);
   ws.onmessage = (event) => onMessage(JSON.parse(event.data));
   return ws;
 }
