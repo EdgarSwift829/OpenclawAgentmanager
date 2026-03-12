@@ -6,7 +6,7 @@ import { useI18n } from "@/lib/i18n";
 import type { ProjectNode, RunStatus, AgentInfo, OrchestratorEvent } from "@/lib/types";
 import { useInlineStatus, StatusIndicator } from "@/components/Toast";
 import { ProjectTree } from "@/components/ProjectTree";
-import { AgentGrid } from "@/components/AgentGrid";
+import { AgentTerminalGrid } from "@/components/AgentTerminalGrid";
 import { RunControl } from "@/components/RunControl";
 import { Timeline } from "@/components/Timeline";
 import { ModelPanel } from "@/components/ModelPanel";
@@ -276,7 +276,7 @@ export default function Dashboard() {
             loadAllRunStatuses();
           }}
         />
-        <AgentGrid agents={agents} events={events} agentProfiles={activeAgentProfiles} />
+        <AgentTerminalGrid agents={agents} events={events} agentProfiles={activeAgentProfiles} />
       </main>
 
       {/* ---- Right panel: Tabs (Timeline / Models / Tasks) ---- */}

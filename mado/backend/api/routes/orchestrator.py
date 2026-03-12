@@ -394,3 +394,15 @@ async def get_run_state(project_id: str):
 async def list_runs():
     """List all orchestration runs."""
     return {"runs": {k: {"status": v["status"], "iteration": v["iteration"]} for k, v in _runs.items()}}
+
+
+@router.get("/run/{project_id}/tasks")
+async def get_task_states(project_id: str):
+    """Get all task states for a running project."""
+    orch = _orchestrators.get(project_id)
+    if orch:
+        return {
+            "project_id": project_id,
+            "tasks": {tid: ts.to_dict() for tid, ts in orch.task_states.items()},
+        }
+    return {"project_id": project_id, "tasks": {}}

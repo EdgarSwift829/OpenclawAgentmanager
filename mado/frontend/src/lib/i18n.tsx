@@ -152,6 +152,12 @@ const dict = {
   completed: { en: "Completed", ja: "完了" },
   error: { en: "Error", ja: "エラー" },
 
+  // TaskFlow
+  taskFlow: { en: "Task Flow", ja: "タスクフロー" },
+  rejected: { en: "Rejected", ja: "差し戻し" },
+  waitingReview: { en: "Awaiting Review", ja: "レビュー待ち" },
+  queued: { en: "Queued", ja: "待ち" },
+
   // TaskGraph
   taskGraph: { en: "Task Graph", ja: "タスクグラフ" },
   noActiveTasks: { en: "No active tasks", ja: "アクティブなタスクなし" },

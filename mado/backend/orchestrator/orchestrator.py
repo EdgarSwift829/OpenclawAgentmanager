@@ -31,28 +31,42 @@ class AgentState:
 
     def __init__(self, role: str):
         self.role = role
-        self.status = "idle"  # idle | active | done | error
+        self.status = "idle"  # idle | active | done | error | waiting_review | rejected
         self.tasks_completed = 0
         self.tasks_failed = 0
+        self.tasks_rejected = 0
         self.last_active: Optional[float] = None
         self.error: Optional[str] = None
         self.current_task: Optional[str] = None
+        self.current_task_id: Optional[str] = None
 
-    def activate(self, task_desc: str = ""):
+    def activate(self, task_desc: str = "", task_id: str = ""):
         self.status = "active"
         self.last_active = time.time()
         self.current_task = task_desc[:100] if task_desc else None
+        self.current_task_id = task_id or None
 
     def complete_task(self):
         self.tasks_completed += 1
         self.status = "idle"
         self.current_task = None
+        self.current_task_id = None
 
     def fail_task(self, error: str):
         self.tasks_failed += 1
         self.error = error
         self.status = "error"
         self.current_task = None
+        self.current_task_id = None
+
+    def reject_task(self):
+        self.tasks_rejected += 1
+        self.status = "rejected"
+        self.current_task = None
+        self.current_task_id = None
+
+    def waiting_review(self):
+        self.status = "waiting_review"
 
     def to_dict(self) -> dict:
         return {
@@ -60,8 +74,37 @@ class AgentState:
             "status": self.status,
             "tasks_completed": self.tasks_completed,
             "tasks_failed": self.tasks_failed,
+            "tasks_rejected": self.tasks_rejected,
             "error": self.error,
             "current_task": self.current_task,
+            "current_task_id": self.current_task_id,
+        }
+
+
+class TaskState:
+    """Track individual task lifecycle: queued -> running -> waiting_review -> completed/rejected/failed."""
+
+    def __init__(self, task_id: str, description: str, assigned_to: str, parent_task_id: str = ""):
+        self.task_id = task_id
+        self.description = description
+        self.assigned_to = assigned_to
+        self.parent_task_id = parent_task_id
+        self.status = "queued"  # queued | running | waiting_review | completed | failed | rejected | stopped
+        self.result: Optional[dict] = None
+        self.review_result: Optional[dict] = None
+        self.retry_count = 0
+        self.max_retries = 2
+        self.logs: list = []
+
+    def to_dict(self) -> dict:
+        return {
+            "task_id": self.task_id,
+            "description": self.description,
+            "assigned_to": self.assigned_to,
+            "parent_task_id": self.parent_task_id,
+            "status": self.status,
+            "retry_count": self.retry_count,
+            "log_count": len(self.logs),
         }
 
 
@@ -90,6 +133,7 @@ class Orchestrator:
         self._end_time: Optional[float] = None
         self._iteration_summaries: list = []  # context passed between iterations
         self._project_config: dict = {}
+        self.task_states: dict[str, TaskState] = {}  # task_id -> TaskState
 
     @property
     def status(self) -> str:
@@ -111,6 +155,7 @@ class Orchestrator:
             "max_iterations": self.max_iterations,
             "elapsed_seconds": self.elapsed_seconds,
             "agents": {role: s.to_dict() for role, s in self.agent_states.items()},
+            "tasks": {tid: ts.to_dict() for tid, ts in self.task_states.items()},
         }
 
     def on_event(self, callback: Callable) -> None:
@@ -351,6 +396,10 @@ class Orchestrator:
                         "score": score,
                         "issue_count": len(issues),
                         "feedback": feedback[:200],
+                        "issues": [
+                            {"severity": iss.get("severity", "info"), "description": iss.get("description", "")[:100]}
+                            for iss in issues[:5]
+                        ],
                         "message": (
                             f"レビュー: {'承認' if approved else '差し戻し'} "
                             f"(スコア: {score}/10, 問題: {len(issues)}件)"
@@ -358,11 +407,39 @@ class Orchestrator:
                     })
 
                     if approved:
+                        # Mark all waiting_review tasks as completed
+                        for ts in self.task_states.values():
+                            if ts.status == "waiting_review":
+                                ts.status = "completed"
                         await self._emit("iteration_approved", {
                             "iteration": self.iteration,
                             "message": f"イテレーション {self.iteration} が承認されました！",
                         })
                         break
+                    else:
+                        # Mark waiting_review tasks as rejected, emit rejection events
+                        rejected_roles = set()
+                        for ts in self.task_states.values():
+                            if ts.status == "waiting_review":
+                                ts.status = "rejected"
+                                ts.retry_count += 1
+                                rejected_roles.add(ts.assigned_to)
+                        for rejected_role in rejected_roles:
+                            agent_state = self.agent_states.get(rejected_role)
+                            if agent_state:
+                                agent_state.reject_task()
+                            await self._emit("task_rejected", {
+                                "role": rejected_role,
+                                "iteration": self.iteration,
+                                "reason": feedback[:200],
+                                "issues": [
+                                    iss.get("description", "")[:100]
+                                    for iss in issues[:3]
+                                ],
+                                "message": (
+                                    f"{rejected_role} ← Reviewer 差し戻し: {feedback[:80]}"
+                                ),
+                            })
 
                 # ── Build iteration summary for next iteration ──
                 iter_summary = self._build_iteration_summary(iteration_results, plan)
@@ -494,6 +571,7 @@ class Orchestrator:
         """Execute a single task via its assigned agent, with state tracking and timeout."""
         agent_role = task.get("assigned_to", "engineer")
         task_desc = task.get("description", "")
+        task_id = task.get("task_id", "")
 
         if agent_role not in self.agents:
             return {
@@ -503,14 +581,24 @@ class Orchestrator:
                 "error": True,
             }
 
+        # Register task state
+        if task_id and task_id not in self.task_states:
+            self.task_states[task_id] = TaskState(
+                task_id=task_id, description=task_desc,
+                assigned_to=agent_role,
+                parent_task_id=task.get("parent_task_id", ""),
+            )
+        if task_id and task_id in self.task_states:
+            self.task_states[task_id].status = "running"
+
         agent = self.agents[agent_role]
         state = self.agent_states.get(agent_role)
         if state:
-            state.activate(task_desc)
+            state.activate(task_desc, task_id)
 
         await self._emit("task_started", {
             "role": agent_role,
-            "task_id": task.get("task_id", ""),
+            "task_id": task_id,
             "task": task_desc[:200],
             "message": f"{agent_role}: {task_desc[:100]}",
         })
@@ -523,10 +611,15 @@ class Orchestrator:
             )
             if state:
                 state.complete_task()
+            if task_id and task_id in self.task_states:
+                self.task_states[task_id].status = "waiting_review"
+                self.task_states[task_id].result = result
         except asyncio.TimeoutError:
             error_msg = f"[Error] Task timed out after {self.task_timeout}s"
             if state:
                 state.fail_task(error_msg)
+            if task_id and task_id in self.task_states:
+                self.task_states[task_id].status = "failed"
             await self._emit("task_timeout", {
                 "role": agent_role,
                 "timeout": self.task_timeout,
@@ -537,6 +630,8 @@ class Orchestrator:
             error_msg = f"[Error] {e}"
             if state:
                 state.fail_task(error_msg)
+            if task_id and task_id in self.task_states:
+                self.task_states[task_id].status = "failed"
             await self._emit("task_error", {
                 "role": agent_role,
                 "error": str(e)[:200],
