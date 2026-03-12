@@ -1201,7 +1201,7 @@ input, select {
   color: var(--text-primary);
 }
 .agent-profile-input {
-  background: var(--bg-main);
+  background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: 3px;
   padding: 0.25rem 0.375rem;
@@ -1210,7 +1210,7 @@ input, select {
 }
 .agent-profile-input:focus { outline: none; border-color: var(--accent); }
 .agent-profile-textarea {
-  background: var(--bg-main);
+  background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: 3px;
   padding: 0.25rem 0.375rem;

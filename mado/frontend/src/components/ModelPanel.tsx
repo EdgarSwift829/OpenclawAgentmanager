@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import * as api from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
+import { useInlineStatus, StatusIndicator } from "@/components/Toast";
 
 const ROLE_META: Record<string, { icon: string; label: string; tier: string }> = {
   cto:        { icon: "\u{1F3D7}", label: "CTO",        tier: "high" },
@@ -28,6 +29,7 @@ export function ModelPanel() {
   const [roles, setRoles] = useState<string[]>([]);
   const [assignments, setAssignments] = useState<Record<string, string>>({});
   const [editingRole, setEditingRole] = useState<string | null>(null);
+  const { status, showStatus } = useInlineStatus();
 
   // Drag state
   const [dragIdx, setDragIdx] = useState<number | null>(null);
@@ -108,7 +110,7 @@ export function ModelPanel() {
       setAssignments((prev) => ({ ...prev, [role]: newModel }));
       setEditingRole(null);
     } catch (e: any) {
-      alert(e.message);
+      showStatus(`モデル切替エラー: ${e.message}`, "error");
     }
   };
 
@@ -120,6 +122,10 @@ export function ModelPanel() {
         <h2>{t("agentPipeline")}</h2>
         <span className="model-panel-hint">{t("dragToReorder")}</span>
       </div>
+
+      {status && (
+        <StatusIndicator status={status} />
+      )}
 
       {roles.length === 0 && (
         <div className="model-panel-empty">{t("noAgentConfig")}</div>

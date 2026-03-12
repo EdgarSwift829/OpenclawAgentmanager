@@ -106,7 +106,7 @@ export default function Dashboard() {
       const data = await api.listProjects();
       setProjects(data.projects);
       setProjectTree(data.tree || []);
-    } catch (e) { console.warn("[loadProjects] API error:", e); }
+    } catch { /* API not available */ }
   }, []);
 
   const loadRunStatus = useCallback(async () => {
