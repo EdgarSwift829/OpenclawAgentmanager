@@ -303,6 +303,20 @@ body {
 .tree-item-archived .tree-label {
   text-decoration: line-through;
 }
+/* Drag & Drop */
+.tree-item[draggable="true"] { cursor: grab; }
+.tree-item[draggable="true"]:active { cursor: grabbing; }
+.tree-item-drop-inside {
+  background: rgba(100, 149, 237, 0.2);
+  outline: 1px dashed var(--accent);
+  outline-offset: -1px;
+}
+.tree-drop-indicator {
+  height: 2px;
+  background: var(--accent);
+  border-radius: 1px;
+  margin: 0 0.5rem;
+}
 .tree-create-child {
   display: flex;
   gap: 0.25rem;

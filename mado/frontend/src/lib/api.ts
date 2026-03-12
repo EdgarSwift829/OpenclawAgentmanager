@@ -23,6 +23,10 @@ export const getProject = (id: string) => fetchJSON(`/projects/${id}`);
 export const renameProject = (id: string, new_id: string) =>
   fetchJSON(`/projects/${id}/rename`, { method: "PUT", body: JSON.stringify({ new_id }) });
 export const deleteProject = (id: string) => fetchJSON(`/projects/${id}`, { method: "DELETE" });
+export const moveProject = (id: string, new_parent_id: string | null) =>
+  fetchJSON(`/projects/${id}/move`, { method: "PUT", body: JSON.stringify({ new_parent_id }) });
+export const reorderProjects = (order: string[], parent_id?: string | null) =>
+  fetchJSON("/projects/reorder", { method: "PUT", body: JSON.stringify({ order, parent_id: parent_id || null }) });
 export const getProjectMemory = (id: string) => fetchJSON(`/projects/${id}/memory`);
 export const getProjectFiles = (id: string) => fetchJSON(`/projects/${id}/files`);
 export const listChildren = (id: string) => fetchJSON(`/projects/${id}/children`);

@@ -67,6 +67,26 @@ async def set_projects_root(data: ProjectsRootUpdate):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+class ReorderProjects(BaseModel):
+    order: List[str]  # ordered list of project IDs (within same parent)
+    parent_id: Optional[str] = None  # None = top-level reorder
+
+
+@router.put("/reorder")
+async def reorder_projects(data: ReorderProjects):
+    """Reorder children within a parent (or top-level projects)."""
+    if data.parent_id:
+        config = workspace_manager.get_project_config(data.parent_id)
+        if not config:
+            raise HTTPException(status_code=404, detail=f"Parent not found: {data.parent_id}")
+        # Update children order
+        workspace_manager.update_project_config(data.parent_id, {"children": data.order})
+    else:
+        # Save top-level order in settings
+        workspace_manager.update_top_level_order(data.order)
+    return {"status": "ok", "order": data.order}
+
+
 @router.post("/", response_model=ProjectResponse)
 async def create_project(data: ProjectCreate):
     """Create a new project workspace (optionally as a child of parent_id)."""
@@ -240,6 +260,61 @@ async def rename_project(project_id: str, data: ProjectRename):
     return {"old_id": project_id, "new_id": new_id}
 
 
+class MoveProject(BaseModel):
+    new_parent_id: Optional[str] = None  # None = promote to top-level
+
+
+@router.put("/{project_id}/move")
+async def move_project(project_id: str, data: MoveProject):
+    """Move a project to a new parent or promote to top-level."""
+    from pathlib import Path
+
+    project_path = Path(workspace_manager.projects_root) / project_id
+    if not project_path.exists():
+        raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
+
+    config = workspace_manager.get_project_config(project_id)
+    old_parent_id = config.get("parent_id")
+    new_parent_id = data.new_parent_id
+
+    # No change
+    if old_parent_id == new_parent_id:
+        return {"project_id": project_id, "parent_id": new_parent_id}
+
+    # Prevent making a project its own parent
+    if new_parent_id == project_id:
+        raise HTTPException(status_code=400, detail="Cannot make a project its own parent")
+
+    # Prevent circular: new_parent must not be a descendant of project_id
+    if new_parent_id:
+        new_parent_path = Path(workspace_manager.projects_root) / new_parent_id
+        if not new_parent_path.exists():
+            raise HTTPException(status_code=404, detail=f"Target parent not found: {new_parent_id}")
+        # Walk ancestors of new_parent to check for cycle
+        check_id = new_parent_id
+        while check_id:
+            if check_id == project_id:
+                raise HTTPException(status_code=400, detail="Circular parent-child relationship detected")
+            parent_config = workspace_manager.get_project_config(check_id)
+            check_id = parent_config.get("parent_id")
+
+    # Remove from old parent
+    if old_parent_id:
+        try:
+            workspace_manager._remove_child_from_parent(old_parent_id, project_id)
+        except Exception:
+            pass
+
+    # Add to new parent
+    if new_parent_id:
+        workspace_manager._add_child_to_parent(new_parent_id, project_id)
+
+    # Update project's own config
+    workspace_manager.update_project_config(project_id, {"parent_id": new_parent_id})
+
+    return {"project_id": project_id, "parent_id": new_parent_id}
+
+
 @router.delete("/{project_id}")
 async def delete_project(project_id: str):
     """Delete a project (removes workspace). Unlinks from parent if applicable."""
@@ -247,53 +322,58 @@ async def delete_project(project_id: str):
     from pathlib import Path
 
     logger = logging.getLogger(__name__)
-    project_path = Path(workspace_manager.projects_root) / project_id
-    if not project_path.exists():
-        raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
-
-    # Stop running orchestration if active
-    try:
-        from mado.backend.api.routes.orchestrator import _runs, _orchestrators
-        run = _runs.get(project_id)
-        if run and run.get("status") == "running":
-            orch = _orchestrators.get(project_id)
-            if orch:
-                orch.cancel()
-            run["status"] = "stopped"
-        _runs.pop(project_id, None)
-        _orchestrators.pop(project_id, None)
-    except Exception as e:
-        logger.warning("Failed to clean up orchestrator state for %s: %s", project_id, e)
-
-    # Remove from parent's children list
-    config = workspace_manager.get_project_config(project_id)
-    parent_id = config.get("parent_id")
-    if parent_id:
-        try:
-            workspace_manager._remove_child_from_parent(parent_id, project_id)
-        except Exception as e:
-            logger.warning("Failed to unlink from parent %s: %s", parent_id, e)
-
-    # Orphan children (set their parent_id to None)
-    for child_id in config.get("children", []):
-        try:
-            workspace_manager.update_project_config(child_id, {"parent_id": None})
-        except Exception as e:
-            logger.warning("Failed to orphan child %s: %s", child_id, e)
 
     try:
+        project_path = Path(workspace_manager.projects_root) / project_id
+        if not project_path.exists():
+            raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
+
+        # Stop running orchestration if active
+        try:
+            from mado.backend.api.routes.orchestrator import _runs, _orchestrators
+            run = _runs.get(project_id)
+            if run and run.get("status") == "running":
+                orch = _orchestrators.get(project_id)
+                if orch:
+                    orch.cancel()
+                run["status"] = "stopped"
+            _runs.pop(project_id, None)
+            _orchestrators.pop(project_id, None)
+        except Exception as e:
+            logger.warning("Failed to clean up orchestrator state for %s: %s", project_id, e)
+
+        # Remove from parent's children list
+        config = workspace_manager.get_project_config(project_id)
+        parent_id = config.get("parent_id")
+        if parent_id:
+            try:
+                workspace_manager._remove_child_from_parent(parent_id, project_id)
+            except Exception as e:
+                logger.warning("Failed to unlink from parent %s: %s", parent_id, e)
+
+        # Orphan children (set their parent_id to None)
+        for child_id in config.get("children", []):
+            try:
+                workspace_manager.update_project_config(child_id, {"parent_id": None})
+            except Exception as e:
+                logger.warning("Failed to orphan child %s: %s", child_id, e)
+
         shutil.rmtree(project_path)
+        return {"deleted": project_id}
+
+    except HTTPException:
+        raise
     except PermissionError as e:
         raise HTTPException(
             status_code=409,
-            detail=f"プロジェクトのファイルがロックされています。実行中のプロセスを停止してから再試行してください: {e}",
+            detail=f"ファイルがロックされています: {e}",
         )
-    except OSError as e:
+    except Exception as e:
+        logger.error("delete_project failed for '%s': %s", project_id, e, exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail=f"プロジェクトの削除に失敗しました: {e}",
+            detail=f"削除に失敗しました: {type(e).__name__}: {e}",
         )
-    return {"deleted": project_id}
 
 
 @router.get("/{project_id}/memory")

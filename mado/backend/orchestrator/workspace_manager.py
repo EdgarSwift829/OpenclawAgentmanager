@@ -172,9 +172,29 @@ class WorkspaceManager:
         config = self.get_project_config(parent_id)
         return config.get("children", [])
 
+    def update_top_level_order(self, order: list):
+        """Save the display order for top-level projects."""
+        order_path = self.projects_root / ".project_order.json"
+        order_path.write_text(json.dumps(order, ensure_ascii=False), encoding="utf-8")
+
+    def get_top_level_order(self) -> list:
+        """Load the saved display order for top-level projects."""
+        order_path = self.projects_root / ".project_order.json"
+        if order_path.exists():
+            try:
+                return json.loads(order_path.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+        return []
+
     def get_project_tree(self) -> list:
         """Return hierarchical project list with full config data."""
         all_projects = self.list_projects()
+        # Apply saved top-level order
+        saved_order = self.get_top_level_order()
+        if saved_order:
+            order_map = {pid: i for i, pid in enumerate(saved_order)}
+            all_projects.sort(key=lambda pid: order_map.get(pid, len(saved_order)))
         logger.info("list_projects returned %d projects from %s: %s",
                      len(all_projects), self.projects_root, all_projects)
         tree = []

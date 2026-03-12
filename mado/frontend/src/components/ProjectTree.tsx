@@ -73,6 +73,8 @@ export function ProjectTree({
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({
     visible: false, x: 0, y: 0, projectId: "", displayName: "", isArchived: false, hasChildren: false,
   });
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ id: string; position: "before" | "inside" | "after" } | null>(null);
   const treeRef = useRef<HTMLDivElement>(null);
 
   // Auto-expand: when activeProject changes, expand its ancestors + itself if it has children
@@ -363,6 +365,124 @@ export function ProjectTree({
     });
   };
 
+  // --- Drag & Drop handlers ---
+  const handleDragStart = (e: React.DragEvent, projectId: string) => {
+    setDragId(projectId);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", projectId);
+  };
+
+  const handleDragOver = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    if (!dragId || dragId === targetId) return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const h = rect.height;
+    let position: "before" | "inside" | "after";
+    if (y < h * 0.25) position = "before";
+    else if (y > h * 0.75) position = "after";
+    else position = "inside";
+    setDropTarget({ id: targetId, position });
+  };
+
+  const handleDragLeave = () => {
+    setDropTarget(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!dragId || !dropTarget) {
+      setDragId(null);
+      setDropTarget(null);
+      return;
+    }
+
+    const { id: targetId, position } = dropTarget;
+    setDragId(null);
+    setDropTarget(null);
+
+    if (dragId === targetId) return;
+
+    const targetNode = nodeMap.get(targetId);
+    const dragNode = nodeMap.get(dragId);
+    if (!targetNode || !dragNode) return;
+
+    // Check for circular: target is descendant of drag
+    const isDescendant = (parentId: string, checkId: string): boolean => {
+      const node = nodeMap.get(parentId);
+      if (!node) return false;
+      for (const cid of node.children) {
+        if (cid === checkId) return true;
+        if (isDescendant(cid, checkId)) return true;
+      }
+      return false;
+    };
+    if (isDescendant(dragId, targetId)) return;
+
+    try {
+      if (position === "inside") {
+        // Make drag a child of target
+        await api.moveProject(dragId, targetId);
+        showStatus(`「${dragNode.display_name || dragId}」を「${targetNode.display_name || targetId}」の子に移動`, "success");
+      } else {
+        // Move to same parent as target, reorder
+        const newParentId = targetNode.parent_id;
+        if (dragNode.parent_id !== newParentId) {
+          await api.moveProject(dragId, newParentId);
+        }
+        // Reorder siblings
+        const siblings = newParentId
+          ? (nodeMap.get(newParentId)?.children || []).filter((id) => id !== dragId)
+          : topLevel.map((n) => n.project_id).filter((id) => id !== dragId);
+        const targetIdx = siblings.indexOf(targetId);
+        const insertIdx = position === "before" ? targetIdx : targetIdx + 1;
+        siblings.splice(insertIdx, 0, dragId);
+        await api.reorderProjects(siblings, newParentId);
+        showStatus(`並び替え完了`, "success");
+      }
+      onRefresh();
+    } catch (e: any) {
+      showStatus(`移動エラー: ${e.message || "不明なエラー"}`, "error");
+    }
+  };
+
+  // Promote: move child to top-level (or parent's parent)
+  const handlePromote = async (projectId: string) => {
+    const node = nodeMap.get(projectId);
+    if (!node || !node.parent_id) return;
+    const parent = nodeMap.get(node.parent_id);
+    const newParentId = parent?.parent_id || null;
+    try {
+      await api.moveProject(projectId, newParentId);
+      onRefresh();
+      showStatus(`「${node.display_name || projectId}」を昇格しました`, "success");
+    } catch (e: any) {
+      showStatus(`昇格エラー: ${e.message || "不明なエラー"}`, "error");
+    }
+  };
+
+  // Demote: make project a child of its previous sibling
+  const handleDemote = async (projectId: string) => {
+    const node = nodeMap.get(projectId);
+    if (!node) return;
+    const siblings = node.parent_id
+      ? (nodeMap.get(node.parent_id)?.children || [])
+      : topLevel.map((n) => n.project_id);
+    const idx = siblings.indexOf(projectId);
+    if (idx <= 0) {
+      showStatus("降格先がありません（前のプロジェクトが必要）", "error");
+      return;
+    }
+    const newParentId = siblings[idx - 1];
+    try {
+      await api.moveProject(projectId, newParentId);
+      onRefresh();
+      showStatus(`「${node.display_name || projectId}」を「${nodeMap.get(newParentId)?.display_name || newParentId}」の子に降格`, "success");
+    } catch (e: any) {
+      showStatus(`降格エラー: ${e.message || "不明なエラー"}`, "error");
+    }
+  };
+
   const isParentRunning = (node: ProjectNode): boolean => {
     if (!node.parent_id) return true;
     return runStatuses[node.parent_id] === "running";
@@ -382,11 +502,23 @@ export function ProjectTree({
       .map((cid) => nodeMap.get(cid))
       .filter(Boolean) as ProjectNode[];
 
+    const isDragOver = dropTarget?.id === p;
+    const dropPos = dropTarget?.position;
+
     return (
       <div key={p} className="tree-node-group">
+        {isDragOver && dropPos === "before" && (
+          <div className="tree-drop-indicator" style={{ marginLeft: `${0.5 + depth * 0.75}rem` }} />
+        )}
         <div
-          className={`tree-item ${isActive ? "tree-item-active" : ""} ${isArchived ? "tree-item-archived" : ""}`}
+          className={`tree-item ${isActive ? "tree-item-active" : ""} ${isArchived ? "tree-item-archived" : ""} ${isDragOver && dropPos === "inside" ? "tree-item-drop-inside" : ""}`}
           style={{ paddingLeft: `${0.5 + depth * 0.75}rem` }}
+          draggable={!isRenaming}
+          onDragStart={(e) => handleDragStart(e, p)}
+          onDragOver={(e) => handleDragOver(e, p)}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onDragEnd={() => { setDragId(null); setDropTarget(null); }}
           onClick={() => !isRenaming && onSelect(p)}
           onDoubleClick={() => {
             setRenamingId(p);
@@ -531,6 +663,9 @@ export function ProjectTree({
 
         {/* Children */}
         {isExpanded && childNodes.map((child) => renderNode(child, depth + 1))}
+        {isDragOver && dropPos === "after" && (
+          <div className="tree-drop-indicator" style={{ marginLeft: `${0.5 + depth * 0.75}rem` }} />
+        )}
       </div>
     );
   };
@@ -733,6 +868,40 @@ export function ProjectTree({
           >
             ➕ {t("addSubProject")}
           </button>
+          <div className="context-menu-separator" />
+          {/* Promote: only show if project has a parent */}
+          {nodeMap.get(contextMenu.projectId)?.parent_id && (
+            <button
+              className="context-menu-item"
+              onClick={() => {
+                setContextMenu((prev) => ({ ...prev, visible: false }));
+                handlePromote(contextMenu.projectId);
+              }}
+            >
+              ⬆ {t("promoteProject")}
+            </button>
+          )}
+          {/* Demote: only show if project has a previous sibling */}
+          {(() => {
+            const node = nodeMap.get(contextMenu.projectId);
+            if (!node) return null;
+            const siblings = node.parent_id
+              ? (nodeMap.get(node.parent_id)?.children || [])
+              : topLevel.map((n) => n.project_id);
+            const idx = siblings.indexOf(contextMenu.projectId);
+            if (idx <= 0) return null;
+            return (
+              <button
+                className="context-menu-item"
+                onClick={() => {
+                  setContextMenu((prev) => ({ ...prev, visible: false }));
+                  handleDemote(contextMenu.projectId);
+                }}
+              >
+                ⬇ {t("demoteProject")}
+              </button>
+            );
+          })()}
           <div className="context-menu-separator" />
           <button
             className="context-menu-item"
