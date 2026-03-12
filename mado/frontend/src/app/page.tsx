@@ -289,7 +289,19 @@ export default function Dashboard() {
         </div>
         <div className="right-content">
           {rightTab === "timeline" && <Timeline events={events} />}
-          {rightTab === "models" && <ModelPanel />}
+          {rightTab === "models" && (
+            <ModelPanel
+              activeProject={activeProject}
+              agentProfiles={activeAgentProfiles}
+              onProfilesChange={async (profiles) => {
+                if (!activeProject) return;
+                try {
+                  await api.updateProjectConfig(activeProject, { agent_profiles: profiles });
+                  loadProjects();
+                } catch { /* ignore */ }
+              }}
+            />
+          )}
           {rightTab === "tasks" && <TaskGraph runStatus={runStatus} />}
         </div>
       </aside>

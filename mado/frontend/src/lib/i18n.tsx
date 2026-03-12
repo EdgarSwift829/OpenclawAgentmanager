@@ -11,7 +11,7 @@ const dict = {
 
   // Tabs
   timeline: { en: "Timeline", ja: "タイムライン" },
-  models: { en: "Models", ja: "モデル" },
+  models: { en: "Agents", ja: "エージェント" },
   tasks: { en: "Tasks", ja: "タスク" },
 
   // ProjectTree
