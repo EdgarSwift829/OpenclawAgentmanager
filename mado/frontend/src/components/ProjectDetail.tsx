@@ -203,10 +203,21 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh, allRunSta
         </div>
       </div>
 
-      {/* ── Goal: click to expand, save to collapse ── */}
+      {/* ── Goal: click to expand, save/close to collapse ── */}
       <div className="detail-goal-section">
         {goalEditing ? (
-          <div className="detail-field">
+          <div className="detail-goal-editing">
+            <div className="detail-goal-editing-header">
+              <span className="detail-goal-label">{t("goalPlaceholder").replace("...", "")}</span>
+              <div className="detail-goal-actions">
+                <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={saving}>
+                  {saving ? t("saving") : t("save")}
+                </button>
+                <button className="btn btn-sm btn-ghost" onClick={() => setGoalEditing(false)}>
+                  {t("cancel")}
+                </button>
+              </div>
+            </div>
             <textarea
               className="detail-textarea detail-goal-textarea"
               rows={3}
@@ -218,14 +229,6 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh, allRunSta
                 if (e.key === "Escape") { setGoalEditing(false); }
               }}
             />
-            <div className="detail-goal-actions">
-              <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={saving}>
-                {saving ? t("saving") : t("save")}
-              </button>
-              <button className="btn btn-sm btn-ghost" onClick={() => setGoalEditing(false)}>
-                {t("cancel")}
-              </button>
-            </div>
           </div>
         ) : (
           <div

@@ -65,7 +65,7 @@ export default function Dashboard() {
   const [events, setEvents] = useState<any[]>([]);
   const [maxIter, setMaxIter] = useState(30);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [rightTab, setRightTab] = useState<"timeline" | "models" | "tasks">("timeline");
+  const [rightTab, setRightTab] = useState<"timeline" | "agents" | "models" | "tasks">("timeline");
   const [allRunStatuses, setAllRunStatuses] = useState<Record<string, string>>({});
 
   // --- load / save per-project state on switch ---
@@ -287,6 +287,12 @@ export default function Dashboard() {
             {t("timeline")}
           </button>
           <button
+            className={`right-tab ${rightTab === "agents" ? "right-tab-active" : ""}`}
+            onClick={() => setRightTab("agents")}
+          >
+            {t("agentsTab")}
+          </button>
+          <button
             className={`right-tab ${rightTab === "models" ? "right-tab-active" : ""}`}
             onClick={() => setRightTab("models")}
           >
@@ -302,6 +308,41 @@ export default function Dashboard() {
         </div>
         <div className="right-content">
           {rightTab === "timeline" && <Timeline events={events} />}
+          {rightTab === "agents" && (
+            <div className="agents-tab-content">
+              <h3 className="agents-tab-title">{t("agentsTab")}</h3>
+              {agents.length === 0 ? (
+                <div className="agents-tab-empty">
+                  <p>{t("noAgentsYet")}</p>
+                </div>
+              ) : (
+                <div className="agents-tab-list">
+                  {agents.map((agent: any) => {
+                    const profile = activeAgentProfiles[agent.role];
+                    return (
+                      <div key={agent.role || agent.id} className="agents-tab-card">
+                        <div className="agents-tab-card-header">
+                          <span className="agents-tab-card-icon">{agent.icon || "\uD83E\uDD16"}</span>
+                          <div className="agents-tab-card-info">
+                            <span className="agents-tab-card-role">{profile?.title || agent.display_name || agent.role}</span>
+                            <span className="agents-tab-card-model">{agent.model || "\u2014"}</span>
+                          </div>
+                          <span className={`agents-tab-card-status agents-tab-status-${agent.status || "idle"}`}>
+                            {agent.status === "active" ? (t("running")) :
+                             agent.status === "idle" ? (t("initialized")) :
+                             agent.status || t("initialized")}
+                          </span>
+                        </div>
+                        {profile?.personality && (
+                          <div className="agents-tab-card-desc">{profile.personality}</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
           {rightTab === "models" && (
             <ModelPanel
               activeProject={activeProject}

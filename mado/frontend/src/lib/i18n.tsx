@@ -11,8 +11,12 @@ const dict = {
 
   // Tabs
   timeline: { en: "Timeline", ja: "タイムライン" },
-  models: { en: "Agents", ja: "エージェント" },
+  agentsTab: { en: "Agents", ja: "エージェント" },
+  models: { en: "Models", ja: "モデル" },
   tasks: { en: "Tasks", ja: "タスク" },
+
+  // Agents Tab
+  noAgentsYet: { en: "No agents active yet. Start a run to spawn agents.", ja: "まだエージェントがいません。実行を開始するとエージェントが起動します。" },
 
   // ProjectTree
   projects: { en: "PROJECTS", ja: "プロジェクト" },

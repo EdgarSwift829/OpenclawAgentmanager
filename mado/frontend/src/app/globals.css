@@ -1852,3 +1852,137 @@ input, select {
   background: var(--border);
   margin: 0.25rem 0;
 }
+
+/* =========================================================================
+   Agent Filter Bar (in AgentGrid)
+   ========================================================================= */
+.agent-filter-bar {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.375rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+.agent-filter-bar::-webkit-scrollbar { height: 2px; }
+.agent-filter-bar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 1px; }
+.agent-filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.6875rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.agent-filter-btn:hover {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+}
+.agent-filter-active {
+  border-color: var(--agent-color, var(--accent));
+  color: var(--agent-color, var(--accent));
+  background: rgba(59, 130, 246, 0.08);
+}
+.agent-filter-icon { font-size: 0.75rem; }
+.agent-filter-name { font-weight: 500; }
+.agent-filter-count {
+  font-size: 0.5625rem;
+  background: var(--border);
+  color: var(--text-secondary);
+  border-radius: 8px;
+  padding: 0 0.3rem;
+  min-width: 1rem;
+  text-align: center;
+}
+
+/* =========================================================================
+   Agents Tab (Right Panel)
+   ========================================================================= */
+.agents-tab-content { display: flex; flex-direction: column; gap: 0.5rem; }
+.agents-tab-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+.agents-tab-empty {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  padding: 2rem 0.5rem;
+}
+.agents-tab-list { display: flex; flex-direction: column; gap: 0.375rem; }
+.agents-tab-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem;
+}
+.agents-tab-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+.agents-tab-card-icon { font-size: 1.125rem; flex-shrink: 0; }
+.agents-tab-card-info { flex: 1; min-width: 0; }
+.agents-tab-card-role {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.agents-tab-card-model {
+  display: block;
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+}
+.agents-tab-card-status {
+  font-size: 0.625rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 9999px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.agents-tab-status-active { background: var(--running); color: white; }
+.agents-tab-status-idle { background: var(--border); color: var(--text-secondary); }
+.agents-tab-card-desc {
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+  line-height: 1.4;
+}
+
+/* =========================================================================
+   Goal Editing Header (save/cancel always visible at top)
+   ========================================================================= */
+.detail-goal-editing {
+  background: var(--bg-secondary);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 0.375rem 0.5rem;
+}
+.detail-goal-editing-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.375rem;
+}
+.detail-goal-editing-header .detail-goal-label {
+  margin-bottom: 0;
+}
+.detail-goal-editing-header .detail-goal-actions {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 0;
+}
