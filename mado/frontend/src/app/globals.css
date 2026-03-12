@@ -684,10 +684,13 @@ input, select {
   font-size: 0.75rem;
   padding: 0.375rem 0;
   border-bottom: 1px solid var(--border);
-  flex-wrap: wrap;
+  align-items: flex-start;
+  line-height: 1.4;
 }
-.timeline-time { color: var(--text-secondary); white-space: nowrap; min-width: 4.5rem; }
-.timeline-role { color: var(--accent); font-weight: 500; min-width: 4rem; }
+.timeline-time { color: var(--text-secondary); white-space: nowrap; min-width: 4.5rem; flex-shrink: 0; }
+.timeline-icon { flex-shrink: 0; font-size: 0.8125rem; }
+.timeline-role { font-weight: 600; min-width: 3.5rem; flex-shrink: 0; text-transform: capitalize; }
+.timeline-message { color: var(--text-primary); word-break: break-word; flex: 1; }
 
 /* Agent grid (legacy small cards) */
 .agent-grid {
