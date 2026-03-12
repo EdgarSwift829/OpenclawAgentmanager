@@ -286,7 +286,11 @@ class WorkspaceManager:
         """Ensure target_path is within the project workspace (sandbox enforcement)."""
         workspace = Path(self.get_workspace_path(project_id)).resolve()
         target = Path(target_path).resolve()
-        return str(target).startswith(str(workspace))
+        try:
+            target.relative_to(workspace)
+            return True
+        except ValueError:
+            return False
 
     def backup_project(self, project_id: str, reason: str = "manual") -> str:
         """Create a timestamped backup of a project's workspace and config.

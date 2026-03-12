@@ -1,10 +1,12 @@
 """Execution Tools - run_python, run_tests, install_package (sandboxed)."""
 
+import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 ALLOWED_COMMANDS = {"python", "pytest", "pip"}
-BLOCKED_COMMANDS = {"rm", "sudo", "chmod", "chown", "kill", "shutdown", "reboot"}
+BLOCKED_COMMANDS = {"rm", "sudo", "chmod", "chown", "kill", "shutdown", "reboot", "mkfs", "dd"}
 
 
 class ExecTools:
@@ -20,15 +22,31 @@ class ExecTools:
         if base_cmd not in ALLOWED_COMMANDS:
             raise PermissionError(f"Command not allowed: {base_cmd}. Allowed: {ALLOWED_COMMANDS}")
 
+    @staticmethod
+    def _resolve_executable(name: str) -> str:
+        """Resolve executable path, preferring the current Python environment."""
+        if name == "python":
+            return sys.executable
+        found = shutil.which(name)
+        if found:
+            return found
+        return name
+
+    def _validate_path_in_workspace(self, path: Path) -> None:
+        """Ensure a resolved path is within the workspace."""
+        try:
+            path.relative_to(self.workspace)
+        except ValueError:
+            raise PermissionError(f"Path outside workspace: {path}")
+
     def run_python(self, script_path: str, timeout: int = 60) -> dict:
         """Run a Python script inside the workspace."""
         full_path = (self.workspace / script_path).resolve()
-        if not str(full_path).startswith(str(self.workspace)):
-            raise PermissionError("Script outside workspace")
-        cmd = f"python {full_path}"
+        self._validate_path_in_workspace(full_path)
         self._check_command("python")
         result = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True,
+            [self._resolve_executable("python"), str(full_path)],
+            capture_output=True, text=True,
             timeout=timeout, cwd=str(self.workspace),
         )
         return {"stdout": result.stdout, "stderr": result.stderr, "returncode": result.returncode}
@@ -36,8 +54,11 @@ class ExecTools:
     def run_tests(self, test_path: str = ".", timeout: int = 120) -> dict:
         """Run pytest inside the workspace."""
         self._check_command("pytest")
+        resolved_test = (self.workspace / test_path).resolve()
+        self._validate_path_in_workspace(resolved_test)
         result = subprocess.run(
-            f"pytest {test_path}", shell=True, capture_output=True, text=True,
+            [self._resolve_executable("pytest"), str(resolved_test)],
+            capture_output=True, text=True,
             timeout=timeout, cwd=str(self.workspace),
         )
         return {"stdout": result.stdout, "stderr": result.stderr, "returncode": result.returncode}
@@ -46,7 +67,8 @@ class ExecTools:
         """Install a Python package via pip."""
         self._check_command("pip")
         result = subprocess.run(
-            f"pip install {package}", shell=True, capture_output=True, text=True,
+            [self._resolve_executable("pip"), "install", package],
+            capture_output=True, text=True,
             timeout=timeout, cwd=str(self.workspace),
         )
         return {"stdout": result.stdout, "stderr": result.stderr, "returncode": result.returncode}

@@ -424,7 +424,7 @@ class BaseAgent(ABC):
         from pathlib import Path
         prompt_path = Path(__file__).resolve().parents[3] / "prompts" / f"{self.role}.txt"
         if prompt_path.exists():
-            return prompt_path.read_text()
+            return prompt_path.read_text(encoding="utf-8")
         return ""
 
     def attach_tools(self, tools: list) -> None:

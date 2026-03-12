@@ -1,14 +1,25 @@
-"""Sandbox - Isolated execution environment for agent code execution."""
+"""Sandbox - Thin wrapper around ExecTools for backward compatibility.
 
+The actual sandboxed execution logic (allowed/blocked commands, shell=False,
+workspace isolation) lives in mado.backend.tools.exec_tools.ExecTools.
+This module re-exports ExecTools constants and provides a simple Sandbox
+facade for any code that imports from here.
+"""
+
+import shlex
+import shutil
 import subprocess
 from pathlib import Path
 
-ALLOWED_COMMANDS = {"python", "pytest", "pip"}
-BLOCKED_COMMANDS = {"rm", "sudo", "chmod", "chown", "kill", "shutdown", "reboot", "mkfs", "dd"}
+# Re-export the canonical allowlist/blocklist from ExecTools
+from mado.backend.tools.exec_tools import ALLOWED_COMMANDS, BLOCKED_COMMANDS
 
 
 class Sandbox:
-    """Enforce sandboxed execution: only allowed commands, within workspace."""
+    """Enforce sandboxed execution: only allowed commands, within workspace.
+
+    For new code, prefer using ExecTools directly.
+    """
 
     def __init__(self, workspace_path: str):
         self.workspace = Path(workspace_path).resolve()
@@ -28,8 +39,11 @@ class Sandbox:
             return {"error": f"Command not allowed: {command}", "returncode": -1}
 
         try:
+            parts = shlex.split(command)
+            executable = shutil.which(parts[0]) or parts[0]
+            parts[0] = executable
             result = subprocess.run(
-                command, shell=True, capture_output=True, text=True,
+                parts, capture_output=True, text=True,
                 timeout=timeout, cwd=str(self.workspace),
             )
             return {

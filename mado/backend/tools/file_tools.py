@@ -12,7 +12,9 @@ class FileTools:
 
     def _validate(self, path: str) -> Path:
         target = (self.workspace / path).resolve()
-        if not str(target).startswith(str(self.workspace)):
+        try:
+            target.relative_to(self.workspace)
+        except ValueError:
             raise PermissionError(f"Access denied: {path} is outside workspace")
         return target
 

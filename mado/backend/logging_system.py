@@ -20,7 +20,7 @@ class MADOLogger:
         self.logger = logging.getLogger(f"mado.{project_id}")
         self.logger.setLevel(logging.DEBUG)
 
-        handler = logging.FileHandler(self.log_dir / "mado.log")
+        handler = logging.FileHandler(self.log_dir / "mado.log", encoding="utf-8")
         handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
         if not self.logger.handlers:
             self.logger.addHandler(handler)
@@ -31,8 +31,8 @@ class MADOLogger:
     def _write_structured(self, event: dict) -> None:
         event["timestamp"] = datetime.utcnow().isoformat()
         event["project_id"] = self.project_id
-        with open(self.structured_log, "a") as f:
-            f.write(json.dumps(event) + "\n")
+        with open(self.structured_log, "a", encoding="utf-8") as f:
+            f.write(json.dumps(event, ensure_ascii=False) + "\n")
 
     def log_agent_message(self, role: str, message: str, direction: str = "output") -> None:
         """Log an agent message."""
@@ -78,7 +78,7 @@ class MADOLogger:
         if not self.structured_log.exists():
             return []
         logs = []
-        with open(self.structured_log) as f:
+        with open(self.structured_log, encoding="utf-8") as f:
             for line in f:
                 entry = json.loads(line.strip())
                 if log_type is None or entry.get("type") == log_type:

@@ -234,7 +234,7 @@ class Orchestrator:
     async def run_async(self, goal: str) -> dict:
         """Execute the main orchestration loop with parallel task execution and lifecycle management."""
         self._start_time = time.time()
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, self.initialize_project, goal)
         self._status = "running"
 
@@ -511,7 +511,7 @@ class Orchestrator:
             "message": f"{agent_role}: {task_desc[:100]}",
         })
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             result = await asyncio.wait_for(
                 loop.run_in_executor(None, agent.execute, task),
