@@ -123,6 +123,15 @@ const dict = {
   agentTitlePlaceholder: { en: "Title (e.g. Top Engineer)", ja: "肩書き（例：トップエンジニア）" },
   agentPersonalityPlaceholder: { en: "Personality & strengths...", ja: "特徴・得意分野を入力..." },
 
+  // Compact ProjectDetail
+  additionalOrder: { en: "Additional Order", ja: "追加オーダー" },
+  additionalOrderPlaceholder: { en: "Enter additional instructions...", ja: "追加の指示を入力..." },
+  sendOrder: { en: "Send", ja: "送信" },
+  taskStatusSummary: { en: "Task Status", ja: "タスク状況" },
+  noTasks: { en: "No tasks", ja: "タスクなし" },
+  detailSettings: { en: "Detail Settings", ja: "詳細設定" },
+  editGoal: { en: "Click to edit", ja: "クリックして編集" },
+
   // Child Project Management
   childProjectManagement: { en: "Sub-project Control", ja: "子プロジェクト管理" },
   dispatchChild: { en: "Start", ja: "開始" },
