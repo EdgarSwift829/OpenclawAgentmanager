@@ -11,6 +11,7 @@ import { Timeline } from "@/components/Timeline";
 import { ModelPanel } from "@/components/ModelPanel";
 import { TaskGraph } from "@/components/TaskGraph";
 import { ProjectDetail } from "@/components/ProjectDetail";
+import { AgentPanel } from "@/components/AgentPanel";
 import { LangSwitcher } from "@/components/LangSwitcher";
 
 // ---------------------------------------------------------------------------
@@ -309,39 +310,11 @@ export default function Dashboard() {
         <div className="right-content">
           {rightTab === "timeline" && <Timeline events={events} />}
           {rightTab === "agents" && (
-            <div className="agents-tab-content">
-              <h3 className="agents-tab-title">{t("agentsTab")}</h3>
-              {agents.length === 0 ? (
-                <div className="agents-tab-empty">
-                  <p>{t("noAgentsYet")}</p>
-                </div>
-              ) : (
-                <div className="agents-tab-list">
-                  {agents.map((agent: any) => {
-                    const profile = activeAgentProfiles[agent.role];
-                    return (
-                      <div key={agent.role || agent.id} className="agents-tab-card">
-                        <div className="agents-tab-card-header">
-                          <span className="agents-tab-card-icon">{agent.icon || "\uD83E\uDD16"}</span>
-                          <div className="agents-tab-card-info">
-                            <span className="agents-tab-card-role">{profile?.title || agent.display_name || agent.role}</span>
-                            <span className="agents-tab-card-model">{agent.model || "\u2014"}</span>
-                          </div>
-                          <span className={`agents-tab-card-status agents-tab-status-${agent.status || "idle"}`}>
-                            {agent.status === "active" ? (t("running")) :
-                             agent.status === "idle" ? (t("initialized")) :
-                             agent.status || t("initialized")}
-                          </span>
-                        </div>
-                        {profile?.personality && (
-                          <div className="agents-tab-card-desc">{profile.personality}</div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            <AgentPanel
+              activeProject={activeProject}
+              agentProfiles={activeAgentProfiles}
+              runtimeAgents={agents}
+            />
           )}
           {rightTab === "models" && (
             <ModelPanel

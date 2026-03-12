@@ -1905,13 +1905,18 @@ input, select {
    Agents Tab (Right Panel)
    ========================================================================= */
 .agents-tab-content { display: flex; flex-direction: column; gap: 0.5rem; }
+.agents-tab-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
 .agents-tab-title {
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin-bottom: 0.25rem;
 }
 .agents-tab-empty {
   text-align: center;
@@ -1925,6 +1930,10 @@ input, select {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 0.5rem;
+  transition: border-color 0.2s;
+}
+.agents-tab-card-active {
+  border-color: var(--running);
 }
 .agents-tab-card-header {
   display: flex;
@@ -1961,6 +1970,60 @@ input, select {
   color: var(--text-secondary);
   margin-top: 0.25rem;
   line-height: 1.4;
+}
+
+/* Add agent section */
+.agents-tab-add-section {
+  margin-top: 0.25rem;
+  position: relative;
+}
+.agents-tab-add-btn {
+  width: 100%;
+  padding: 0.375rem;
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.agents-tab-add-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.agents-tab-add-menu {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  margin-bottom: 0.25rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  padding: 0.25rem;
+  z-index: 10;
+  max-height: 200px;
+  overflow-y: auto;
+  animation: ctx-in 0.1s ease-out;
+}
+.agents-tab-add-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.375rem 0.5rem;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  border-radius: 4px;
+  text-align: left;
+}
+.agents-tab-add-item:hover {
+  background: var(--bg-secondary);
 }
 
 /* =========================================================================
