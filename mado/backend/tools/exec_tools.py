@@ -16,7 +16,9 @@ class ExecTools:
         self.workspace = Path(workspace_path).resolve()
 
     def _check_command(self, cmd: str) -> None:
-        base_cmd = cmd.split()[0] if cmd else ""
+        if not cmd or not cmd.strip():
+            raise PermissionError("Command cannot be empty")
+        base_cmd = cmd.split()[0]
         if base_cmd in BLOCKED_COMMANDS:
             raise PermissionError(f"Blocked command: {base_cmd}")
         if base_cmd not in ALLOWED_COMMANDS:
@@ -36,8 +38,8 @@ class ExecTools:
         """Ensure a resolved path is within the workspace."""
         try:
             path.relative_to(self.workspace)
-        except ValueError:
-            raise PermissionError(f"Path outside workspace: {path}")
+        except ValueError as e:
+            raise PermissionError(f"Path outside workspace: {path}") from e
 
     def run_python(self, script_path: str, timeout: int = 60) -> dict:
         """Run a Python script inside the workspace."""

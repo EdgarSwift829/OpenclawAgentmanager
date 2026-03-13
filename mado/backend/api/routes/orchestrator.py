@@ -100,8 +100,8 @@ async def _execute_run(project_id: str, goal: str, max_iterations: int):
         async def ws_event_handler(event: dict):
             try:
                 await broadcaster.broadcast(project_id, event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Failed to broadcast event for {project_id}: {e}")
             if event.get("type") == "iteration_started":
                 _runs[project_id]["iteration"] = event.get("iteration", 0)
 
