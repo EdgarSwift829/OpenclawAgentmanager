@@ -27,6 +27,10 @@ config/models.yaml
 # Backend storage data
 mado/backend/storage/
 
+# Coverage
+.coverage
+htmlcov/
+
 # TypeScript build cache
 *.tsbuildinfo
 
