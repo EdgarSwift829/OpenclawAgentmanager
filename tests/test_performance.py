@@ -211,3 +211,155 @@ class TestOrchestratorConcurrency:
         assert execution_order[0] == {"a"}
         assert execution_order[1] == {"b", "c"}
         assert execution_order[2] == {"d"}
+
+
+class TestLargeScaleLoad:
+    """Stress tests with 1000+ tasks to verify scalability."""
+
+    def test_1000_independent_tasks(self):
+        """1000 independent tasks should produce 1 layer in < 2s."""
+        graph = TaskGraph()
+        tasks = [
+            {"task_id": f"t{i}", "assigned_to": "engineer", "depends_on": []}
+            for i in range(1000)
+        ]
+
+        start = time.monotonic()
+        graph.add_tasks(tasks)
+        errors = graph.validate()
+        layers = graph.get_execution_layers()
+        elapsed = time.monotonic() - start
+
+        assert errors == []
+        assert len(layers) == 1
+        assert len(layers[0]) == 1000
+        assert elapsed < 2.0, f"1000-task graph took {elapsed:.2f}s"
+
+    def test_500_deep_chain(self):
+        """500-deep dependency chain should produce 500 layers in < 3s."""
+        graph = TaskGraph()
+        tasks = []
+        for i in range(500):
+            tasks.append({
+                "task_id": f"chain{i}",
+                "assigned_to": "engineer",
+                "depends_on": [f"chain{i-1}"] if i > 0 else [],
+            })
+
+        start = time.monotonic()
+        graph.add_tasks(tasks)
+        errors = graph.validate()
+        layers = graph.get_execution_layers()
+        elapsed = time.monotonic() - start
+
+        assert errors == []
+        assert len(layers) == 500
+        assert elapsed < 3.0, f"500-chain took {elapsed:.2f}s"
+
+    def test_1000_diamond_pattern(self):
+        """Diamond with 1000 parallel middle tasks."""
+        graph = TaskGraph()
+        roles = ["engineer", "tester", "researcher", "optimizer"]
+        tasks = [{"task_id": "root", "assigned_to": "cto", "depends_on": []}]
+        for i in range(1000):
+            tasks.append({
+                "task_id": f"work{i}",
+                "assigned_to": roles[i % len(roles)],
+                "depends_on": ["root"],
+            })
+        tasks.append({
+            "task_id": "final",
+            "assigned_to": "reviewer",
+            "depends_on": [f"work{i}" for i in range(1000)],
+        })
+
+        start = time.monotonic()
+        graph.add_tasks(tasks)
+        errors = graph.validate()
+        layers = graph.get_execution_layers()
+        elapsed = time.monotonic() - start
+
+        assert errors == []
+        assert len(layers) == 3
+        assert len(layers[1]) == 1000
+        assert elapsed < 3.0, f"1000-diamond took {elapsed:.2f}s"
+
+    def test_mixed_dag_500_tasks(self):
+        """Complex DAG with mixed dependencies (500 tasks)."""
+        graph = TaskGraph()
+        tasks = []
+        # 10 independent roots
+        for i in range(10):
+            tasks.append({
+                "task_id": f"root{i}",
+                "assigned_to": "researcher",
+                "depends_on": [],
+            })
+        # 490 tasks each depending on 1-3 predecessors
+        for i in range(10, 500):
+            deps = [f"root{i % 10}"]
+            if i > 20:
+                deps.append(f"root{(i + 3) % 10}")
+            tasks.append({
+                "task_id": f"task{i}",
+                "assigned_to": "engineer",
+                "depends_on": deps,
+            })
+
+        start = time.monotonic()
+        graph.add_tasks(tasks)
+        errors = graph.validate()
+        layers = graph.get_execution_layers()
+        elapsed = time.monotonic() - start
+
+        assert errors == []
+        assert len(layers) >= 2
+        total_tasks = sum(len(layer) for layer in layers)
+        assert total_tasks == 500
+        assert elapsed < 3.0, f"500-mixed DAG took {elapsed:.2f}s"
+
+    def test_100_projects_creation(self, api_client):
+        """Create 100 projects sequentially in < 10s."""
+        client, wm = api_client
+
+        start = time.monotonic()
+        for i in range(100):
+            resp = client.post("/api/projects/", json={"project_id": f"load-{i}"})
+            assert resp.status_code == 200
+        elapsed = time.monotonic() - start
+
+        assert elapsed < 10, f"Creating 100 projects took {elapsed:.1f}s"
+
+    def test_100_projects_tree_build(self, api_client):
+        """Building tree with 100 projects should be < 1s average."""
+        client, wm = api_client
+        for i in range(100):
+            wm.create_workspace(f"tree-load-{i}")
+
+        start = time.monotonic()
+        for _ in range(5):
+            tree = wm.get_project_tree()
+            assert len(tree) >= 100
+        elapsed = time.monotonic() - start
+
+        avg_ms = (elapsed / 5) * 1000
+        assert avg_ms < 1000, f"Tree build with 100 projects: {avg_ms:.0f}ms avg"
+
+    @pytest.mark.asyncio
+    async def test_100_concurrent_tasks(self):
+        """Simulate 100 concurrent task executions."""
+        results = []
+
+        async def simulate_task(task_id: str, duration: float):
+            await asyncio.sleep(duration)
+            results.append(task_id)
+
+        start = time.monotonic()
+        await asyncio.gather(*[
+            simulate_task(f"conc-{i}", 0.05) for i in range(100)
+        ])
+        elapsed = time.monotonic() - start
+
+        assert len(results) == 100
+        # 100 parallel tasks at 50ms each should be ~50ms, not 5s
+        assert elapsed < 1.0, f"100 concurrent tasks took {elapsed:.2f}s"

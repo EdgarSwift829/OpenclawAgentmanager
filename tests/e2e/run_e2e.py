@@ -339,6 +339,65 @@ def test_websocket_endpoint(suite: TestSuite):
         suite.add(TestResult("WebSocket Endpoint", False, str(e)))
 
 
+def test_project_crud(suite: TestSuite):
+    """Test 9: Create, read, and delete a project via API."""
+    import urllib.request
+    proj_id = "e2e-crud-test"
+    try:
+        # Create
+        req = urllib.request.Request(
+            f"{BACKEND_URL}/api/projects/",
+            data=json.dumps({"project_id": proj_id}).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read())
+            assert data.get("project_id") == proj_id, f"Create failed: {data}"
+
+        # Read
+        with urllib.request.urlopen(f"{BACKEND_URL}/api/projects/{proj_id}", timeout=10) as resp:
+            data = json.loads(resp.read())
+            assert data.get("project_id") == proj_id, f"Read failed: {data}"
+
+        # Delete
+        req = urllib.request.Request(
+            f"{BACKEND_URL}/api/projects/{proj_id}",
+            method="DELETE",
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            assert resp.status == 200
+
+        suite.add(TestResult("Project CRUD", True, "create+read+delete ok"))
+    except Exception as e:
+        suite.add(TestResult("Project CRUD", False, str(e)))
+
+
+def test_metrics_endpoint(suite: TestSuite):
+    """Test 10: /api/models/metrics returns LLM metrics."""
+    import urllib.request
+    try:
+        with urllib.request.urlopen(f"{BACKEND_URL}/api/models/metrics", timeout=10) as resp:
+            data = json.loads(resp.read())
+            assert "total_calls" in data, f"Missing total_calls: {data.keys()}"
+            assert "successful_calls" in data, f"Missing successful_calls"
+            suite.add(TestResult("Metrics API", True, f"total_calls={data['total_calls']}"))
+    except Exception as e:
+        suite.add(TestResult("Metrics API", False, str(e)))
+
+
+def test_health_includes_auth(suite: TestSuite):
+    """Test 11: Health endpoint reports auth status."""
+    import urllib.request
+    try:
+        with urllib.request.urlopen(f"{BACKEND_URL}/api/health", timeout=5) as resp:
+            data = json.loads(resp.read())
+            assert "auth_enabled" in data, f"Missing auth_enabled: {data.keys()}"
+            suite.add(TestResult("Health Auth Info", True, f"auth_enabled={data['auth_enabled']}"))
+    except Exception as e:
+        suite.add(TestResult("Health Auth Info", False, str(e)))
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -364,8 +423,11 @@ def main():
         # --- API-only tests (no browser needed) ---
         print("\n--- API Tests ---")
         test_health_api(suite)
+        test_health_includes_auth(suite)
         test_projects_api(suite)
+        test_project_crud(suite)
         test_models_api(suite)
+        test_metrics_endpoint(suite)
         test_websocket_endpoint(suite)
 
         # --- Browser tests ---
