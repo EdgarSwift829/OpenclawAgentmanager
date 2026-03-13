@@ -126,13 +126,48 @@ export function AgentPanel({ activeProject, agentProfiles, runtimeAgents, onProf
 
   const startEdit = (profile: GlobalProfile) => {
     setEditingProfile(profile.id);
-    setEditName(profile.name);
+    setEditName(profile.is_preset ? "" : profile.name);
     setEditPrompt(profile.additional_prompt);
     setCreating(null);
   };
 
   const handleSaveEdit = async (role: string) => {
     if (!editingProfile) return;
+    const editingTarget = (globalProfiles[role] || []).find(p => p.id === editingProfile);
+    if (!editName.trim()) {
+      showStatus(
+        loc === "ja" ? "名前を入力してください" : "Name is required",
+        "error",
+      );
+      return;
+    }
+
+    // Preset: cannot overwrite, must save as new profile with a different name
+    if (editingTarget?.is_preset) {
+      if (editName.trim() === editingTarget.name) {
+        showStatus(
+          loc === "ja"
+            ? "プリセットと同じ名前では保存できません。別の名前を付けてください。"
+            : "Cannot use the same name as the preset. Please rename.",
+          "error",
+        );
+        return;
+      }
+      setSaving(true);
+      try {
+        await api.createProfile(role, editName.trim(), editPrompt, editingProfile);
+        showStatus(loc === "ja" ? "新しいプロフィールとして保存しました" : "Saved as new profile", "success");
+        setEditingProfile(null);
+        await loadProfiles();
+      } catch (e: any) {
+        showStatus(`Error: ${e.message}`, "error");
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
+    // Non-preset: normal update
     setSaving(true);
     try {
       await api.updateProfile(role, editingProfile, {
@@ -209,20 +244,17 @@ export function AgentPanel({ activeProject, agentProfiles, runtimeAgents, onProf
                 {/* Expanded: profiles list */}
                 {isExpanded && (
                   <div className="agents-tab-profiles">
-                    {/* Preset (always first, read-only) */}
+                    {/* Preset note */}
                     <div className="agents-tab-preset">
-                      <div className="agents-tab-preset-label">
-                        {loc === "ja" ? "プリセット（編集不可）" : "Preset (read-only)"}
-                      </div>
                       <div className="agents-tab-preset-text">
                         {loc === "ja"
-                          ? "このロールの基本プロンプトは固定です。追加のカスタマイズはプロフィールを作成してください。"
-                          : "Base prompt is fixed. Create a profile for additional customization."
+                          ? "プリセットは編集可能ですが上書き保存はできません。編集後は別名で新しいプロフィールとして保存されます。"
+                          : "Presets can be edited but not overwritten. Edits are saved as a new profile with a different name."
                         }
                       </div>
                     </div>
 
-                    {/* Custom profiles */}
+                    {/* Profiles list (preset + custom) */}
                     {roleProfiles.map((profile) => {
                       const isSelected = selectedId === profile.id;
                       const isEditingThis = editingProfile === profile.id;
@@ -232,11 +264,19 @@ export function AgentPanel({ activeProject, agentProfiles, runtimeAgents, onProf
                           {isEditingThis ? (
                             /* Edit form */
                             <div className="agents-tab-editor">
+                              {profile.is_preset && (
+                                <div className="agents-tab-editor-hint">
+                                  {loc === "ja"
+                                    ? "プリセットを編集中 - 別名で新しいプロフィールとして保存されます"
+                                    : "Editing preset - will be saved as a new profile with a different name"
+                                  }
+                                </div>
+                              )}
                               <input
                                 className="agents-tab-editor-input"
                                 value={editName}
                                 onChange={(e) => setEditName(e.target.value)}
-                                placeholder={loc === "ja" ? "プロフィール名" : "Profile name"}
+                                placeholder={loc === "ja" ? "新しいプロフィール名を入力" : "Enter new profile name"}
                               />
                               <textarea
                                 className="agents-tab-editor-textarea"
@@ -253,7 +293,10 @@ export function AgentPanel({ activeProject, agentProfiles, runtimeAgents, onProf
                                   {loc === "ja" ? "キャンセル" : "Cancel"}
                                 </button>
                                 <button className="agents-tab-editor-save" onClick={() => handleSaveEdit(role)} disabled={saving}>
-                                  {saving ? "..." : (loc === "ja" ? "保存" : "Save")}
+                                  {saving ? "..." : (profile.is_preset
+                                    ? (loc === "ja" ? "別名で保存" : "Save as new")
+                                    : (loc === "ja" ? "保存" : "Save")
+                                  )}
                                 </button>
                               </div>
                             </div>
@@ -262,14 +305,17 @@ export function AgentPanel({ activeProject, agentProfiles, runtimeAgents, onProf
                             <div className="agents-tab-profile-row">
                               <div className="agents-tab-profile-info" onClick={() => handleSelectProfile(role, profile.id)}>
                                 <span className={`agents-tab-profile-radio ${isSelected ? "agents-tab-profile-radio-on" : ""}`} />
-                                <span className="agents-tab-profile-name">{profile.name}</span>
+                                <span className="agents-tab-profile-name">
+                                  {profile.name}
+                                  {profile.is_preset && <span className="agents-tab-preset-tag">PRESET</span>}
+                                </span>
                               </div>
                               <div className="agents-tab-profile-actions">
+                                <button className="agents-tab-btn-sm" onClick={() => startEdit(profile)} title={loc === "ja" ? "編集" : "Edit"}>
+                                  {"\u270E"}
+                                </button>
                                 {!profile.is_preset && (
                                   <>
-                                    <button className="agents-tab-btn-sm" onClick={() => startEdit(profile)} title={loc === "ja" ? "編集" : "Edit"}>
-                                      {"\u270E"}
-                                    </button>
                                     <button className="agents-tab-btn-sm" onClick={() => startCreate(role, "clone", profile.id)} title={loc === "ja" ? "コピーして作成" : "Clone"}>
                                       {"\u2398"}
                                     </button>
@@ -277,11 +323,6 @@ export function AgentPanel({ activeProject, agentProfiles, runtimeAgents, onProf
                                       {"\u2715"}
                                     </button>
                                   </>
-                                )}
-                                {profile.is_preset && (
-                                  <button className="agents-tab-btn-sm" onClick={() => startCreate(role, "clone", profile.id)} title={loc === "ja" ? "コピーして作成" : "Clone"}>
-                                    {"\u2398"}
-                                  </button>
                                 )}
                               </div>
                             </div>
