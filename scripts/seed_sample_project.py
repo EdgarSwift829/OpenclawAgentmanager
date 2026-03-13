@@ -92,6 +92,30 @@ SAMPLE_CONFIG = {
         },
         {
             "id": "task-5",
+            "title": "技術リサーチ: SQLite vs PostgreSQL比較",
+            "description": "小規模Todoアプリに最適なDB選定。パフォーマンス・運用コスト・スケーラビリティを調査",
+            "status": "pending",
+            "deadline": "2026-03-17",
+            "priority": "high",
+        },
+        {
+            "id": "task-6",
+            "title": "パフォーマンス最適化",
+            "description": "APIレスポンスタイム計測、N+1クエリ検出、フロントバンドルサイズ最適化",
+            "status": "pending",
+            "deadline": "2026-03-29",
+            "priority": "medium",
+        },
+        {
+            "id": "task-7",
+            "title": "API仕様書・README作成",
+            "description": "OpenAPI仕様書の自動生成設定、セットアップ手順・アーキテクチャ図を含むREADME作成",
+            "status": "pending",
+            "deadline": "2026-03-30",
+            "priority": "medium",
+        },
+        {
+            "id": "task-8",
             "title": "Docker Compose構成",
             "description": "frontend + backend + db の docker-compose.yml を作成",
             "status": "pending",
@@ -99,7 +123,7 @@ SAMPLE_CONFIG = {
             "priority": "low",
         },
     ],
-    "agents": ["cto", "manager", "engineer", "reviewer", "tester"],
+    "agents": ["cto", "manager", "researcher", "engineer", "reviewer", "tester", "optimizer", "documenter"],
 }
 
 # ──────────────────────────────────────────────────
