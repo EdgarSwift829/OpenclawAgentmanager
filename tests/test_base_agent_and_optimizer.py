@@ -93,6 +93,90 @@ class TestBaseAgentExtractJSON:
         assert BaseAgent.extract_json(text) is None
 
 
+class TestExtractJsonBracketMatching:
+    """Tests for the bracket-matching JSON extraction algorithm."""
+
+    def test_nested_json_objects(self):
+        text = 'Result: {"outer": {"inner": {"deep": 1}}, "key": "val"}'
+        result = BaseAgent.extract_json(text)
+        assert result == {"outer": {"inner": {"deep": 1}}, "key": "val"}
+
+    def test_json_with_escaped_quotes(self):
+        text = r'Output: {"message": "He said \"hello\"", "count": 3}'
+        result = BaseAgent.extract_json(text)
+        assert result["count"] == 3
+        assert "hello" in result["message"]
+
+    def test_json_with_braces_in_strings(self):
+        text = '{"code": "if (x) { return {}; }", "valid": true}'
+        result = BaseAgent.extract_json(text)
+        assert result["valid"] is True
+        assert "{" in result["code"]
+
+    def test_nested_arrays(self):
+        text = 'Data: [["a", "b"], [1, 2], [{"x": 1}]]'
+        result = BaseAgent.extract_json(text)
+        assert result == [["a", "b"], [1, 2], [{"x": 1}]]
+
+    def test_mixed_text_before_and_after(self):
+        text = 'Here is the plan:\n{"tasks": ["build", "test"]}\nEnd of response.'
+        result = BaseAgent.extract_json(text)
+        assert result == {"tasks": ["build", "test"]}
+
+    def test_prefers_fenced_block_over_raw(self):
+        text = '{"wrong": true}\n```json\n{"correct": true}\n```'
+        result = BaseAgent.extract_json(text)
+        assert result == {"correct": True}
+
+    def test_whole_text_fallback(self):
+        text = '{"simple": true}'
+        result = BaseAgent.extract_json(text)
+        assert result == {"simple": True}
+
+    def test_invalid_json_returns_none(self):
+        text = '{key: no quotes}'
+        result = BaseAgent.extract_json(text)
+        assert result is None
+
+
+class TestGetToolByClass:
+    """Tests for class-reference based tool lookup with caching."""
+
+    def test_get_tool_by_class_reference(self, agent):
+        mock_tool = MagicMock()
+        type(mock_tool).__name__ = "FileTools"
+        agent.tools = [mock_tool]
+        from mado.backend.tools.file_tools import FileTools
+        assert agent.get_tool(FileTools) is mock_tool
+
+    def test_get_tool_cache_works(self, agent):
+        mock_tool = MagicMock()
+        type(mock_tool).__name__ = "FileTools"
+        agent.tools = [mock_tool]
+        # First call populates cache
+        result1 = agent.get_tool("FileTools")
+        # Second call uses cache
+        result2 = agent.get_tool("FileTools")
+        assert result1 is result2 is mock_tool
+
+    def test_get_tool_cache_none_for_missing(self, agent):
+        agent.tools = []
+        result = agent.get_tool("NonExistent")
+        assert result is None
+        # Cached None
+        assert "NonExistent" in agent._tool_cache
+        assert agent._tool_cache["NonExistent"] is None
+
+    def test_tool_properties_use_class_reference(self, agent):
+        mock_ft = MagicMock()
+        type(mock_ft).__name__ = "FileTools"
+        mock_et = MagicMock()
+        type(mock_et).__name__ = "ExecTools"
+        agent.tools = [mock_ft, mock_et]
+        assert agent.file_tools is mock_ft
+        assert agent.exec_tools is mock_et
+
+
 class TestBaseAgentExtractList:
     def test_extract_list_json(self):
         text = '["engineer", "tester"]'

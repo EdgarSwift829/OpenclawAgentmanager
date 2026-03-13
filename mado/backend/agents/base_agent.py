@@ -164,28 +164,50 @@ class BaseAgent(ABC):
 
     # ── Tool dispatch ──────────────────────────────────────────────
 
-    def get_tool(self, tool_class_name: str):
-        """Get an attached tool by class name (e.g. 'FileTools', 'ExecTools')."""
+    # Registry mapping tool class references to cached instances (populated lazily)
+    _tool_cache: dict
+
+    def get_tool(self, tool_class):
+        """Get an attached tool by class or class name.
+
+        Accepts either a class (preferred, type-safe) or a string name (legacy).
+        Uses a cache to avoid repeated iteration over the tools list.
+        """
+        if not hasattr(self, '_tool_cache'):
+            self._tool_cache = {}
+
+        # Accept string for backward compatibility
+        key = tool_class if isinstance(tool_class, str) else tool_class.__name__
+        if key in self._tool_cache:
+            return self._tool_cache[key]
+
         for tool in self.tools:
-            if type(tool).__name__ == tool_class_name:
+            if type(tool).__name__ == key:
+                self._tool_cache[key] = tool
                 return tool
+
+        self._tool_cache[key] = None
         return None
 
     @property
     def file_tools(self):
-        return self.get_tool("FileTools")
+        from mado.backend.tools.file_tools import FileTools
+        return self.get_tool(FileTools)
 
     @property
     def exec_tools(self):
-        return self.get_tool("ExecTools")
+        from mado.backend.tools.exec_tools import ExecTools
+        return self.get_tool(ExecTools)
 
     @property
     def web_tools(self):
-        return self.get_tool("WebTools")
+        from mado.backend.tools.web_tools import WebTools
+        return self.get_tool(WebTools)
 
     @property
     def memory_tools(self):
-        return self.get_tool("MemoryTools")
+        from mado.backend.tools.memory_tools import MemoryTools
+        return self.get_tool(MemoryTools)
 
     def read_file(self, path: str) -> str:
         """Read a file from workspace. Returns content or error string."""
@@ -416,7 +438,13 @@ class BaseAgent(ABC):
 
     @staticmethod
     def extract_json(text: str) -> Any:
-        """Extract JSON from LLM response. Handles ```json blocks and raw JSON."""
+        """Extract JSON from LLM response. Handles ```json blocks and raw JSON.
+
+        Strategy (ordered by reliability):
+        1. Parse ```json ... ``` fenced blocks
+        2. Find outermost { ... } or [ ... ] by bracket matching
+        3. Try parsing the entire text as JSON
+        """
         if not text:
             return None
 
@@ -428,14 +456,51 @@ class BaseAgent(ABC):
             except json.JSONDecodeError:
                 continue
 
-        # Try raw JSON (object or array)
-        for pattern in [r'\{.*\}', r'\[.*\]']:
-            matches = re.findall(pattern, text, re.DOTALL)
-            for match in matches:
-                try:
-                    return json.loads(match)
-                except json.JSONDecodeError:
+        # Find outermost JSON by bracket matching (handles nested structures)
+        # Try whichever bracket appears first in text
+        candidates = []
+        for pair in [('{', '}'), ('[', ']')]:
+            pos = text.find(pair[0])
+            if pos != -1:
+                candidates.append((pos, pair))
+        candidates.sort(key=lambda x: x[0])
+
+        for _, (open_char, close_char) in candidates:
+            start = text.find(open_char)
+            if start == -1:
+                continue
+            depth = 0
+            in_string = False
+            escape = False
+            for i in range(start, len(text)):
+                c = text[i]
+                if escape:
+                    escape = False
                     continue
+                if c == '\\' and in_string:
+                    escape = True
+                    continue
+                if c == '"' and not escape:
+                    in_string = not in_string
+                    continue
+                if in_string:
+                    continue
+                if c == open_char:
+                    depth += 1
+                elif c == close_char:
+                    depth -= 1
+                    if depth == 0:
+                        candidate = text[start:i + 1]
+                        try:
+                            return json.loads(candidate)
+                        except json.JSONDecodeError:
+                            break  # Try next pattern
+
+        # Last resort: try the whole text
+        try:
+            return json.loads(text.strip())
+        except json.JSONDecodeError:
+            pass
 
         return None
 

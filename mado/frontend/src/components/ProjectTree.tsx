@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import * as api from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { useInlineStatus, StatusIndicator } from "@/components/Toast";
+import { DeleteConfirmPopup } from "@/components/DeleteConfirmPopup";
+import { ProjectContextMenu } from "@/components/ProjectContextMenu";
+import { FolderSettings } from "@/components/FolderSettings";
 
 interface ProjectNode {
   project_id: string;
@@ -679,70 +682,27 @@ export function ProjectTree({
           )}
 
           {showFolderSettings && (
-            <div className="tree-folder-settings">
-              <input
-                className="tree-input tree-folder-input"
-                placeholder={t("folderPath")}
-                value={folderPath}
-                onChange={(e) => setFolderPath(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleFolderSave()}
-              />
-              <div className="tree-folder-actions">
-                <button
-                  className="tree-add-btn"
-                  onClick={handleFolderSave}
-                  disabled={saving || folderPath.trim() === savedPath}
-                  title={t("apply")}
-                >
-                  {"\u2714"}
-                </button>
-                <button
-                  className="tree-folder-cancel"
-                  onClick={() => {
-                    setFolderPath(savedPath);
-                    setShowFolderSettings(false);
-                  }}
-                  title={t("cancel")}
-                >
-                  {"\u2716"}
-                </button>
-              </div>
-              <div className="tree-openclaw-status">
-                <span className="tree-openclaw-label">{t("openclawStatus")}:</span>
-                {openclawStatus === "checking" && (
-                  <span className="tree-openclaw-checking">...</span>
-                )}
-                {openclawStatus === "installed" && (
-                  <span className="tree-openclaw-ok">
-                    {t("openclawInstalled")} {openclawVersion && `(${openclawVersion})`}
-                  </span>
-                )}
-                {openclawStatus === "not_installed" && (
-                  <button className="tree-openclaw-install-btn" onClick={handleInstallOpenClaw}>
-                    {t("openclawInstallBtn")}
-                  </button>
-                )}
-                {openclawStatus === "installing" && (
-                  <span className="tree-openclaw-installing">{t("openclawInstalling")}</span>
-                )}
-                {openclawStatus === "error" && (
-                  <span className="tree-openclaw-error">
-                    {t("openclawCheckFailed")}
-                    <button
-                      className="tree-openclaw-retry-btn"
-                      onClick={() => {
-                        setOpenclawStatus("checking");
-                        recheckOpenClaw().then((ok) => {
-                          if (!ok) setOpenclawStatus("not_installed");
-                        });
-                      }}
-                    >
-                      {t("refresh")}
-                    </button>
-                  </span>
-                )}
-              </div>
-            </div>
+            <FolderSettings
+              folderPath={folderPath}
+              savedPath={savedPath}
+              saving={saving}
+              openclawStatus={openclawStatus}
+              openclawVersion={openclawVersion}
+              onFolderPathChange={setFolderPath}
+              onSave={handleFolderSave}
+              onCancel={() => {
+                setFolderPath(savedPath);
+                setShowFolderSettings(false);
+              }}
+              onInstallOpenClaw={handleInstallOpenClaw}
+              onRetryOpenClaw={() => {
+                setOpenclawStatus("checking");
+                recheckOpenClaw().then((ok) => {
+                  if (!ok) setOpenclawStatus("not_installed");
+                });
+              }}
+              t={t}
+            />
           )}
 
           <div className="tree-create">
@@ -796,86 +756,25 @@ export function ProjectTree({
 
       {/* Delete confirmation popup (near project) */}
       {deletePopup && (
-        <div
-          className="delete-popup-overlay"
-          onClick={() => setDeletePopup(null)}
-        >
-          <div
-            className="delete-popup"
-            style={{ left: deletePopup.x, top: deletePopup.y }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <p className="delete-popup-text">
-              「{deletePopup.displayName}」を削除しますか？
-            </p>
-            <div className="delete-popup-actions">
-              <button
-                className="btn btn-danger delete-popup-confirm"
-                onClick={handleDeleteConfirm}
-              >
-                {t("deleteProject")}
-              </button>
-              <button
-                className="delete-popup-cancel"
-                onClick={() => setDeletePopup(null)}
-              >
-                {t("cancel")}
-              </button>
-            </div>
-          </div>
-        </div>
+        <DeleteConfirmPopup
+          popup={deletePopup}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeletePopup(null)}
+          deleteLabel={t("deleteProject")}
+          cancelLabel={t("cancel")}
+        />
       )}
 
       {/* Right-click context menu */}
-      {contextMenu.visible && (
-        <div
-          className="context-menu"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            className="context-menu-item"
-            onClick={() => {
-              setContextMenu((prev) => ({ ...prev, visible: false }));
-              setRenamingId(contextMenu.projectId);
-              setRenameValue(contextMenu.projectId);
-            }}
-          >
-            ✏️ {t("renameProject")}
-          </button>
-          <button
-            className="context-menu-item"
-            onClick={() => {
-              setContextMenu((prev) => ({ ...prev, visible: false }));
-              setAddingChildTo(contextMenu.projectId);
-              setChildNewId("");
-            }}
-          >
-            ➕ {t("addSubProject")}
-          </button>
-          <div className="context-menu-separator" />
-          <button
-            className="context-menu-item"
-            onClick={() => {
-              setContextMenu((prev) => ({ ...prev, visible: false }));
-              handleArchiveToggle(contextMenu.projectId);
-            }}
-          >
-            {contextMenu.isArchived ? "↩ " : "📦 "}
-            {contextMenu.isArchived ? t("unarchive") : t("archive")}
-          </button>
-          <div className="context-menu-separator" />
-          <button
-            className="context-menu-item context-menu-item-danger"
-            onClick={(e) => {
-              setContextMenu((prev) => ({ ...prev, visible: false }));
-              handleDeleteRequest(contextMenu.projectId, contextMenu.displayName, e);
-            }}
-          >
-            🗑 {t("deleteProject")}
-          </button>
-        </div>
-      )}
+      <ProjectContextMenu
+        menu={contextMenu}
+        onClose={() => setContextMenu((prev) => ({ ...prev, visible: false }))}
+        onRename={(id) => { setRenamingId(id); setRenameValue(id); }}
+        onAddChild={(id) => { setAddingChildTo(id); setChildNewId(""); }}
+        onArchiveToggle={handleArchiveToggle}
+        onDelete={handleDeleteRequest}
+        t={t}
+      />
     </div>
   );
 }
