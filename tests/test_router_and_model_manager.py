@@ -19,7 +19,7 @@ from mado.backend.models.router import (
 class TestRouteInference:
     @patch("mado.backend.models.router._call_with_retry")
     def test_success_primary(self, mock_retry):
-        mock_retry.return_value = "Generated text"
+        mock_retry.return_value = ("Generated text", 0)
         result = route_inference(
             model={"name": "test-model", "provider": "ollama"},
             prompt="Hello",
@@ -30,8 +30,8 @@ class TestRouteInference:
     @patch("mado.backend.models.router._call_with_retry")
     def test_fallback_on_primary_failure(self, mock_retry):
         mock_retry.side_effect = [
-            "[LLM Error] connection refused",  # primary fails
-            "Fallback response",                # fallback succeeds
+            ("[LLM Error] connection refused", 3),  # primary fails
+            ("Fallback response", 0),                # fallback succeeds
         ]
         result = route_inference(
             model={
@@ -46,7 +46,7 @@ class TestRouteInference:
 
     @patch("mado.backend.models.router._call_with_retry")
     def test_no_fallback_returns_error(self, mock_retry):
-        mock_retry.return_value = "[LLM Error] failed"
+        mock_retry.return_value = ("[LLM Error] failed", 3)
         result = route_inference(
             model={"name": "test", "provider": "ollama"},
             prompt="Hello",
@@ -54,7 +54,7 @@ class TestRouteInference:
         assert "[LLM Error]" in result
 
     def test_unknown_provider(self):
-        result = _call_with_retry("unknown_provider", "model", "prompt", None, 1, 10)
+        result, retries = _call_with_retry("unknown_provider", "model", "prompt", None, 1, 10)
         assert "[LLM Error]" in result
         assert "Unknown provider" in result
 
@@ -63,8 +63,9 @@ class TestCallWithRetry:
     @patch("mado.backend.models.router._call_ollama")
     def test_success_first_try(self, mock_ollama):
         mock_ollama.return_value = "response"
-        result = _call_with_retry("ollama", "model", "prompt", None, 3, 60)
+        result, retries = _call_with_retry("ollama", "model", "prompt", None, 3, 60)
         assert result == "response"
+        assert retries == 0
         assert mock_ollama.call_count == 1
 
     @patch("mado.backend.models.router.time.sleep")
@@ -74,8 +75,9 @@ class TestCallWithRetry:
             ConnectionError("refused"),
             "success",
         ]
-        result = _call_with_retry("ollama", "model", "prompt", None, 3, 60)
+        result, retries = _call_with_retry("ollama", "model", "prompt", None, 3, 60)
         assert result == "success"
+        assert retries == 1
         assert mock_ollama.call_count == 2
         mock_sleep.assert_called_once()
 
@@ -83,7 +85,7 @@ class TestCallWithRetry:
     @patch("mado.backend.models.router._call_ollama")
     def test_all_retries_exhausted(self, mock_ollama, mock_sleep):
         mock_ollama.side_effect = ConnectionError("refused")
-        result = _call_with_retry("ollama", "model", "prompt", None, 3, 60)
+        result, retries = _call_with_retry("ollama", "model", "prompt", None, 3, 60)
         assert "[LLM Error]" in result
         assert "3 attempts failed" in result
         assert mock_ollama.call_count == 3

@@ -346,11 +346,11 @@ class Orchestrator:
                 "error": str(e),
                 "message": f"エラー発生: {str(e)[:200]}",
             })
-            raise
-        finally:
             self._end_time = time.time()
             await self._cleanup()
+            raise
 
+        self._end_time = time.time()
         await self._emit("run_complete", {
             "iterations": self.iteration,
             "total_results": len(results),
@@ -361,6 +361,7 @@ class Orchestrator:
                 f"{self.elapsed_seconds}秒"
             ),
         })
+        await self._cleanup()
         return {
             "project_id": self.project_id,
             "iterations": self.iteration,
@@ -756,6 +757,15 @@ class Orchestrator:
             f"Cleanup: project={self.project_id} status={self._status} "
             f"elapsed={self.elapsed_seconds}s"
         )
+        # Reset all active agent states
         for state in self.agent_states.values():
             if state.status == "active":
                 state.status = "idle"
+
+        # Mark any remaining running tasks as cancelled
+        for ts in self.task_states.values():
+            if ts.status in ("running", "waiting_review"):
+                ts.status = "cancelled"
+
+        # Clear event callback to release references
+        self._event_callback = None

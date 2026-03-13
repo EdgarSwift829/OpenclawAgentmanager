@@ -75,6 +75,19 @@ class EventBroadcaster:
             return {project_id: len(_connections.get(project_id, set()))}
         return {pid: len(clients) for pid, clients in _connections.items()}
 
+    @staticmethod
+    def clear_history(project_id: str) -> None:
+        """Clear event history for a project to free memory."""
+        _event_history.pop(project_id, None)
+
+    @staticmethod
+    def cleanup_stale_projects(active_project_ids: set[str]) -> int:
+        """Remove history for projects that are no longer active. Returns count removed."""
+        stale = [pid for pid in _event_history if pid not in active_project_ids]
+        for pid in stale:
+            del _event_history[pid]
+        return len(stale)
+
 
 broadcaster = EventBroadcaster()
 

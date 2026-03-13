@@ -83,3 +83,10 @@ async def reload_models():
     """Reload models from config files."""
     model_manager.reload_models()
     return {"status": "reloaded"}
+
+
+@router.get("/metrics")
+async def get_llm_metrics():
+    """Get LLM call metrics for monitoring."""
+    from mado.backend.models.router import metrics
+    return {"metrics": metrics.to_dict()}

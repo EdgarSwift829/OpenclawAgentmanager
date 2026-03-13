@@ -233,9 +233,10 @@ class TestRouterRetry:
             return "success"
 
         with patch("mado.backend.models.router._call_ollama", side_effect=mock_ollama):
-            result = _call_with_retry("ollama", "test-model", "hello", None, 3, 120)
+            result, retries = _call_with_retry("ollama", "test-model", "hello", None, 3, 120)
 
         assert result == "success"
+        assert retries == 2  # succeeded on 3rd attempt (index 2)
         assert call_count == 3
 
     def test_retry_exhausted(self):
@@ -245,7 +246,7 @@ class TestRouterRetry:
 
         with patch("mado.backend.models.router._call_ollama", side_effect=always_fail):
             with patch("mado.backend.models.router.DEFAULT_BASE_DELAY", 0.01):
-                result = _call_with_retry("ollama", "m", "p", None, 2, 10)
+                result, retries = _call_with_retry("ollama", "m", "p", None, 2, 10)
 
         assert result.startswith("[LLM Error]")
         assert "2 attempts" in result

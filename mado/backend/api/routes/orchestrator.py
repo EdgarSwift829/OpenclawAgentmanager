@@ -1,10 +1,11 @@
 """Orchestrator API routes - Start/stop/monitor orchestration runs."""
 
 import logging
+import re
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from mado.backend.orchestrator.workspace_manager import get_workspace_manager
 
@@ -17,11 +18,42 @@ _runs: dict = {}
 _orchestrators: dict = {}
 _workspace_manager = get_workspace_manager()
 
+# Safe project ID pattern
+_SAFE_ID_RE = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9_\-]{0,99}$')
+
+# Input limits
+MAX_GOAL_LENGTH = 5000
+MAX_INSTRUCTION_LENGTH = 5000
+MAX_ITERATIONS_LIMIT = 100
+
 
 class RunCreate(BaseModel):
     project_id: str
     goal: str
     max_iterations: Optional[int] = 30
+
+    @field_validator("project_id")
+    @classmethod
+    def validate_project_id(cls, v):
+        if not _SAFE_ID_RE.match(v):
+            raise ValueError("Invalid project_id: must be alphanumeric with hyphens/underscores, max 100 chars")
+        return v
+
+    @field_validator("goal")
+    @classmethod
+    def validate_goal(cls, v):
+        if not v or not v.strip():
+            raise ValueError("Goal cannot be empty")
+        if len(v) > MAX_GOAL_LENGTH:
+            raise ValueError(f"Goal too long: max {MAX_GOAL_LENGTH} chars")
+        return v.strip()
+
+    @field_validator("max_iterations")
+    @classmethod
+    def validate_max_iterations(cls, v):
+        if v is not None and (v < 1 or v > MAX_ITERATIONS_LIMIT):
+            raise ValueError(f"max_iterations must be between 1 and {MAX_ITERATIONS_LIMIT}")
+        return v
 
 
 class DispatchChild(BaseModel):
@@ -29,9 +61,30 @@ class DispatchChild(BaseModel):
     child_id: str
     instruction: Optional[str] = None
 
+    @field_validator("parent_id", "child_id")
+    @classmethod
+    def validate_ids(cls, v):
+        if not _SAFE_ID_RE.match(v):
+            raise ValueError("Invalid ID: must be alphanumeric with hyphens/underscores")
+        return v
+
+    @field_validator("instruction")
+    @classmethod
+    def validate_instruction(cls, v):
+        if v and len(v) > MAX_INSTRUCTION_LENGTH:
+            raise ValueError(f"Instruction too long: max {MAX_INSTRUCTION_LENGTH} chars")
+        return v
+
 
 class DispatchAllChildren(BaseModel):
     parent_id: str
+
+    @field_validator("parent_id")
+    @classmethod
+    def validate_parent_id(cls, v):
+        if not _SAFE_ID_RE.match(v):
+            raise ValueError("Invalid parent_id")
+        return v
 
 
 class RunStatus(BaseModel):
