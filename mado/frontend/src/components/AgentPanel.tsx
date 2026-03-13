@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import * as api from "@/lib/api";
 import { useI18n, type Locale } from "@/lib/i18n";
 import { useInlineStatus, StatusIndicator } from "@/components/Toast";
+import { ROLE_META } from "@/lib/constants";
 
 interface AgentProfile {
   title: string;
@@ -15,18 +16,6 @@ interface Props {
   agentProfiles: Record<string, AgentProfile>;
   runtimeAgents: any[]; // agents from listAgents (active session)
 }
-
-const ROLE_META: Record<string, { icon: string; label: { en: string; ja: string } }> = {
-  cto: { icon: "\uD83C\uDFD7", label: { en: "CTO", ja: "CTO" } },
-  manager: { icon: "\uD83D\uDCCB", label: { en: "PM", ja: "PM" } },
-  researcher: { icon: "\uD83D\uDD0D", label: { en: "Researcher", ja: "リサーチャー" } },
-  engineer: { icon: "\u2699\uFE0F", label: { en: "Engineer", ja: "エンジニア" } },
-  reviewer: { icon: "\uD83D\uDCDD", label: { en: "Reviewer", ja: "レビュアー" } },
-  tester: { icon: "\uD83E\uDDEA", label: { en: "Tester", ja: "テスター" } },
-  optimizer: { icon: "\u26A1", label: { en: "Optimizer", ja: "オプティマイザー" } },
-  documenter: { icon: "\uD83D\uDCD6", label: { en: "Documenter", ja: "ドキュメンター" } },
-  marketer: { icon: "\uD83D\uDCE2", label: { en: "Marketer", ja: "マーケター" } },
-};
 
 // Roles available for adding
 const ADDABLE_ROLES = Object.keys(ROLE_META);
