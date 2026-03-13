@@ -27,5 +27,8 @@ config/models.yaml
 # Backend storage data
 mado/backend/storage/
 
+# TypeScript build cache
+*.tsbuildinfo
+
 # E2E test screenshots (auto-generated)
 tests/e2e/screenshots/
