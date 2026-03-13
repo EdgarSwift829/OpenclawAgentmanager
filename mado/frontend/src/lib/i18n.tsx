@@ -167,6 +167,13 @@ const dict = {
   implementation: { en: "Implementation", ja: "実装" },
   codeReview: { en: "Code Review", ja: "コードレビュー" },
   testing: { en: "Testing", ja: "テスト" },
+  planFree: { en: "Free Plan", ja: "無料プラン" },
+  planPro: { en: "Pro Plan", ja: "Proプラン" },
+  planTeam: { en: "Team Plan", ja: "Teamプラン" },
+  planEnterprise: { en: "Enterprise Plan", ja: "Enterpriseプラン" },
+  projectUsage: { en: "Projects", ja: "プロジェクト" },
+  limitReached: { en: "Limit reached", ja: "上限に達しました" },
+  upgrade: { en: "Upgrade", ja: "アップグレード" },
 } as const;
 
 export type TKey = keyof typeof dict;

@@ -51,13 +51,22 @@ class ProjectsRootUpdate(BaseModel):
 @router.get("/")
 async def list_projects():
     """List all projects with hierarchy info."""
+    from mado.backend.safety.plan_limits import get_plan_info
+
     tree = workspace_manager.get_project_tree()
     # Also return flat list for backward compatibility
     projects = [p["project_id"] for p in tree]
+    top_level_count = sum(1 for p in tree if not p.get("parent_id"))
+    plan_info = get_plan_info()
     return {
         "projects": projects,
         "tree": tree,
         "projects_root": workspace_manager.get_projects_root(),
+        "usage": {
+            "projects": top_level_count,
+            "max_projects": plan_info["limits"]["max_projects"],
+        },
+        "plan": plan_info,
     }
 
 
@@ -113,6 +122,8 @@ async def create_project(data: ProjectCreate):
     """Create a new project workspace (optionally as a child of parent_id)."""
     from pathlib import Path
 
+    from mado.backend.safety.plan_limits import PlanLimitError, get_max_projects
+
     # Validate project_id
     display_name = data.project_id.strip()
     if not display_name:
@@ -122,6 +133,17 @@ async def create_project(data: ProjectCreate):
     unsafe_chars = set('/\\:*?"<>|')
     if any(c in unsafe_chars for c in display_name):
         raise HTTPException(status_code=400, detail=f"Project ID contains invalid characters: {display_name}")
+
+    # Check project count limit (plan-based)
+    if not data.parent_id:  # Only count top-level projects
+        tree = workspace_manager.get_project_tree()
+        top_level_count = sum(1 for p in tree if not p.get("parent_id"))
+        max_projects = get_max_projects()
+        if top_level_count >= max_projects:
+            raise HTTPException(
+                status_code=403,
+                detail=f"プロジェクト数上限に達しました ({top_level_count}/{max_projects})。プランをアップグレードしてください。",
+            )
 
     # Ensure projects root exists and is writable
     projects_root = Path(workspace_manager.projects_root)

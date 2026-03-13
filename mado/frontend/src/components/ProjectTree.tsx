@@ -16,6 +16,12 @@ interface ProjectNode {
   status: string;
 }
 
+interface PlanUsage {
+  projects: number;
+  max_projects: number;
+  plan: string;
+}
+
 interface Props {
   projectTree: ProjectNode[];
   activeProject: string | null;
@@ -25,6 +31,7 @@ interface Props {
   onStartRun?: (projectId: string) => void;
   onStopRun?: (projectId: string) => void;
   onPauseRun?: (projectId: string) => void;
+  planUsage?: PlanUsage | null;
 }
 
 const STATUS_ICONS: Record<string, string> = {
@@ -54,6 +61,7 @@ export function ProjectTree({
   onStartRun,
   onStopRun,
   onPauseRun,
+  planUsage,
 }: Props) {
   const { t } = useI18n();
   const { status: treeStatus, showStatus } = useInlineStatus();
@@ -758,6 +766,22 @@ export function ProjectTree({
       >
         {t("refresh")}
       </button>
+
+      {/* Plan usage indicator */}
+      {planUsage && (
+        <div className="tree-plan-usage">
+          <div className="tree-plan-bar">
+            <div
+              className={`tree-plan-fill ${planUsage.projects >= planUsage.max_projects ? "tree-plan-full" : ""}`}
+              style={{ width: `${Math.min(100, (planUsage.projects / planUsage.max_projects) * 100)}%` }}
+            />
+          </div>
+          <span className="tree-plan-text">
+            {planUsage.projects}/{planUsage.max_projects} {t("projectUsage")}
+            <span className="tree-plan-name">{planUsage.plan}</span>
+          </span>
+        </div>
+      )}
 
       {/* Inline status for tree operations */}
       {treeStatus && (

@@ -70,6 +70,7 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [rightTab, setRightTab] = useState<"timeline" | "agents" | "models" | "tasks">("timeline");
   const [allRunStatuses, setAllRunStatuses] = useState<Record<string, string>>({});
+  const [planUsage, setPlanUsage] = useState<{ projects: number; max_projects: number; plan: string } | null>(null);
 
   // --- load / save per-project state on switch ---
   const switchProject = useCallback(
@@ -109,6 +110,13 @@ export default function Dashboard() {
       const data = await api.listProjects();
       setProjects(data.projects);
       setProjectTree(data.tree || []);
+      if (data.usage) {
+        setPlanUsage({
+          projects: data.usage.projects,
+          max_projects: data.usage.max_projects,
+          plan: data.plan?.display_name || data.plan?.plan || "Free",
+        });
+      }
     } catch { /* API not available */ }
   }, []);
 
@@ -204,6 +212,7 @@ export default function Dashboard() {
             onSelect={switchProject}
             onRefresh={loadProjects}
             runStatuses={allRunStatuses}
+            planUsage={planUsage}
             onStartRun={async (pid) => {
               const node = projectTree.find((n) => n.project_id === pid);
               const configGoal = node?.goal || "";

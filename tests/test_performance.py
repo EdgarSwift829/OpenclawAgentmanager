@@ -34,8 +34,9 @@ class TestAPIPerformance:
         avg_ms = (elapsed / 20) * 1000
         assert avg_ms < 200, f"Average response time {avg_ms:.1f}ms exceeds 200ms"
 
-    def test_project_create_throughput(self, api_client):
+    def test_project_create_throughput(self, api_client, monkeypatch):
         """Create 20 projects sequentially in < 5 seconds."""
+        monkeypatch.setenv("MADO_MAX_PROJECTS", "10000")
         client, wm = api_client
 
         start = time.monotonic()
@@ -318,8 +319,9 @@ class TestLargeScaleLoad:
         assert total_tasks == 500
         assert elapsed < 3.0, f"500-mixed DAG took {elapsed:.2f}s"
 
-    def test_100_projects_creation(self, api_client):
+    def test_100_projects_creation(self, api_client, monkeypatch):
         """Create 100 projects sequentially in < 10s."""
+        monkeypatch.setenv("MADO_MAX_PROJECTS", "10000")
         client, wm = api_client
 
         start = time.monotonic()
