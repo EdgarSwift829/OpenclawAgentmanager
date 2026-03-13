@@ -9,6 +9,7 @@ The Optimizer:
 import logging
 
 from mado.backend.agents.base_agent import BaseAgent
+from mado.backend.safety.prompt_sanitizer import sanitize_description
 
 logger = logging.getLogger(__name__)
 
@@ -33,9 +34,10 @@ class OptimizerAgent(BaseAgent):
             if not content.startswith("[Error"):
                 code_context.append(f"### {fpath}\n```\n{content[:2000]}\n```")
 
+        safe_desc = sanitize_description(description)
         prompt = (
             f"You are a performance optimizer. Analyze and optimize.\n\n"
-            f"## Task\n{description}\n\n"
+            f"## Task\n{safe_desc}\n\n"
         )
 
         if code_context:

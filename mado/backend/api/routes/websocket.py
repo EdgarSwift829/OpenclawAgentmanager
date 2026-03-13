@@ -14,6 +14,8 @@ from typing import Dict, Optional, Set
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from mado.backend.safety.auth import validate_ws_token
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -86,6 +88,11 @@ async def websocket_endpoint(websocket: WebSocket, project_id: str):
       {"type": "get_history", "since_seq": N}   -> replay missed events
       {"type": "stop"}                          -> request orchestration stop
     """
+    # Validate authentication token before accepting
+    if not await validate_ws_token(websocket):
+        await websocket.close(code=1008, reason="Authentication required")
+        return
+
     await websocket.accept()
 
     if project_id not in _connections:

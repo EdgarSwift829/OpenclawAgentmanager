@@ -10,6 +10,7 @@ The Reviewer:
 import logging
 
 from mado.backend.agents.base_agent import BaseAgent
+from mado.backend.safety.prompt_sanitizer import sanitize_description
 
 logger = logging.getLogger(__name__)
 
@@ -131,8 +132,9 @@ class ReviewerAgent(BaseAgent):
             if not content.startswith("[Error"):
                 file_contents.append(f"### {fpath}\n```\n{content[:2000]}\n```")
 
+        safe_desc = sanitize_description(description)
         prompt = (
-            f"Review the following:\n{description}\n\n"
+            f"Review the following:\n{safe_desc}\n\n"
         )
         if file_contents:
             prompt += f"## Code to Review\n{''.join(file_contents)}\n\n"

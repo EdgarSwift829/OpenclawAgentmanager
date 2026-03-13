@@ -11,6 +11,7 @@ The Engineer:
 import logging
 
 from mado.backend.agents.base_agent import BaseAgent
+from mado.backend.safety.prompt_sanitizer import sanitize_description
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +35,10 @@ class EngineerAgent(BaseAgent):
             results = self.search_code(kw)
             relevant_code.extend(results[:5])
 
+        safe_desc = sanitize_description(description)
         prompt = (
             f"You are a software engineer. Implement the following task.\n\n"
-            f"## Task\n{description}\n\n"
+            f"## Task\n{safe_desc}\n\n"
             f"## Workspace Files\n{files[:30]}\n\n"
         )
 

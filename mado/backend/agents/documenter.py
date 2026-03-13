@@ -9,6 +9,7 @@ The Documenter:
 import logging
 
 from mado.backend.agents.base_agent import BaseAgent
+from mado.backend.safety.prompt_sanitizer import sanitize_description
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +33,10 @@ class DocumenterAgent(BaseAgent):
                 if not content.startswith("[Error") and len(content) < 3000:
                     code_context.append(f"### {fpath}\n```\n{content[:1500]}\n```")
 
+        safe_desc = sanitize_description(description)
         prompt = (
             f"You are a technical writer. Create documentation.\n\n"
-            f"## Task\n{description}\n\n"
+            f"## Task\n{safe_desc}\n\n"
             f"## Project Files\n{files[:20]}\n\n"
         )
 

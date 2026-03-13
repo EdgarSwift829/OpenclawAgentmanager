@@ -307,8 +307,6 @@ class Orchestrator:
                     break
 
                 self.iteration += 1
-
-                # Update iteration context for all agents
                 for agent in self.agents.values():
                     agent.iteration_context = list(self._iteration_summaries)
 
@@ -317,137 +315,17 @@ class Orchestrator:
                     "message": f"イテレーション {self.iteration}/{self.max_iterations} 開始",
                 })
 
-                # ── Phase 1: CTO Planning ──
-                await self._emit("agent_activity", {
-                    "role": "cto",
-                    "activity": "planning",
-                    "message": f"CTO がイテレーション {self.iteration} の計画を作成中...",
-                })
+                plan = await self._phase_planning(augmented_goal)
+                tasks = await self._phase_decomposition(plan)
+                iteration_results = await self._phase_execution(tasks)
+                approved = await self._phase_review(iteration_results)
 
-                plan = await loop.run_in_executor(
-                    None, self.agents["cto"].plan, augmented_goal, self.iteration
-                )
+                if approved:
+                    break
 
-                plan_summary = ""
-                if isinstance(plan, dict):
-                    plan_summary = plan.get("plan_summary", "")
-
-                await self._emit("plan_created", {
-                    "iteration": self.iteration,
-                    "plan_summary": plan_summary[:300],
-                    "message": f"計画: {plan_summary[:150]}" if plan_summary else "計画作成完了",
-                })
-
-                await self.message_bus.send(Message(
-                    sender="cto", recipient="*", msg_type="plan", payload=plan,
-                ))
-
-                # ── Phase 2: Manager Task Breakdown ──
-                if "manager" in self.agents:
-                    await self._emit("agent_activity", {
-                        "role": "manager",
-                        "activity": "decomposing",
-                        "message": "Manager がタスクを分解中...",
-                    })
-                    tasks = await loop.run_in_executor(
-                        None, self.agents["manager"].decompose, plan
-                    )
-                    await self._emit("tasks_decomposed", {
-                        "iteration": self.iteration,
-                        "task_count": len(tasks),
-                        "tasks": [
-                            {"id": t.get("task_id", ""), "role": t.get("assigned_to", ""), "desc": t.get("description", "")[:80]}
-                            for t in tasks[:10]
-                        ],
-                        "message": f"Manager: {len(tasks)}個のタスクに分解",
-                    })
-                else:
-                    tasks = [plan]
-
-                # ── Phase 3: Execute Tasks via DAG ──
-                iteration_results = await self._execute_task_graph(tasks)
-
-                # Share results between agents for this iteration
-                self._inject_shared_context(iteration_results)
-
-                # Broadcast results via message bus
-                await self.message_bus.send(Message(
-                    sender="orchestrator", recipient="*",
-                    msg_type="results", payload=iteration_results,
-                ))
-
-                # ── Phase 4: Review ──
-                if "reviewer" in self.agents:
-                    await self._emit("agent_activity", {
-                        "role": "reviewer",
-                        "activity": "reviewing",
-                        "message": "Reviewer が成果物をレビュー中...",
-                    })
-                    review = await loop.run_in_executor(
-                        None, self.agents["reviewer"].review, iteration_results
-                    )
-
-                    approved = review.get("approved", False)
-                    score = review.get("score", "?")
-                    feedback = review.get("feedback", "")
-                    issues = review.get("issues", [])
-
-                    await self._emit("review_complete", {
-                        "iteration": self.iteration,
-                        "approved": approved,
-                        "score": score,
-                        "issue_count": len(issues),
-                        "feedback": feedback[:200],
-                        "issues": [
-                            {"severity": iss.get("severity", "info"), "description": iss.get("description", "")[:100]}
-                            for iss in issues[:5]
-                        ],
-                        "message": (
-                            f"レビュー: {'承認' if approved else '差し戻し'} "
-                            f"(スコア: {score}/10, 問題: {len(issues)}件)"
-                        ),
-                    })
-
-                    if approved:
-                        # Mark all waiting_review tasks as completed
-                        for ts in self.task_states.values():
-                            if ts.status == "waiting_review":
-                                ts.status = "completed"
-                        await self._emit("iteration_approved", {
-                            "iteration": self.iteration,
-                            "message": f"イテレーション {self.iteration} が承認されました！",
-                        })
-                        break
-                    else:
-                        # Mark waiting_review tasks as rejected, emit rejection events
-                        rejected_roles = set()
-                        for ts in self.task_states.values():
-                            if ts.status == "waiting_review":
-                                ts.status = "rejected"
-                                ts.retry_count += 1
-                                rejected_roles.add(ts.assigned_to)
-                        for rejected_role in rejected_roles:
-                            agent_state = self.agent_states.get(rejected_role)
-                            if agent_state:
-                                agent_state.reject_task()
-                            await self._emit("task_rejected", {
-                                "role": rejected_role,
-                                "iteration": self.iteration,
-                                "reason": feedback[:200],
-                                "issues": [
-                                    iss.get("description", "")[:100]
-                                    for iss in issues[:3]
-                                ],
-                                "message": (
-                                    f"{rejected_role} ← Reviewer 差し戻し: {feedback[:80]}"
-                                ),
-                            })
-
-                # ── Build iteration summary for next iteration ──
+                # Build iteration summary for next iteration
                 iter_summary = self._build_iteration_summary(iteration_results, plan)
                 self._iteration_summaries.append(iter_summary)
-
-                # Save summary to project memory
                 self._save_iteration_memory(iter_summary)
 
                 results.extend(iteration_results)
@@ -489,6 +367,138 @@ class Orchestrator:
             "results": results,
             "elapsed_seconds": self.elapsed_seconds,
         }
+
+    # ── Phase methods (extracted from run_async for readability) ──
+
+    async def _phase_planning(self, goal: str) -> dict:
+        """Phase 1: CTO creates a structured development plan."""
+        loop = asyncio.get_running_loop()
+        await self._emit("agent_activity", {
+            "role": "cto", "activity": "planning",
+            "message": f"CTO がイテレーション {self.iteration} の計画を作成中...",
+        })
+
+        plan = await loop.run_in_executor(
+            None, self.agents["cto"].plan, goal, self.iteration
+        )
+
+        plan_summary = ""
+        if isinstance(plan, dict):
+            plan_summary = plan.get("plan_summary", "")
+
+        await self._emit("plan_created", {
+            "iteration": self.iteration,
+            "plan_summary": plan_summary[:300],
+            "message": f"計画: {plan_summary[:150]}" if plan_summary else "計画作成完了",
+        })
+
+        await self.message_bus.send(Message(
+            sender="cto", recipient="*", msg_type="plan", payload=plan,
+        ))
+        return plan
+
+    async def _phase_decomposition(self, plan: dict) -> list:
+        """Phase 2: Manager decomposes plan into executable task DAG."""
+        loop = asyncio.get_running_loop()
+        if "manager" in self.agents:
+            await self._emit("agent_activity", {
+                "role": "manager", "activity": "decomposing",
+                "message": "Manager がタスクを分解中...",
+            })
+            tasks = await loop.run_in_executor(
+                None, self.agents["manager"].decompose, plan
+            )
+            await self._emit("tasks_decomposed", {
+                "iteration": self.iteration,
+                "task_count": len(tasks),
+                "tasks": [
+                    {"id": t.get("task_id", ""), "role": t.get("assigned_to", ""), "desc": t.get("description", "")[:80]}
+                    for t in tasks[:10]
+                ],
+                "message": f"Manager: {len(tasks)}個のタスクに分解",
+            })
+            return tasks
+        return [plan]
+
+    async def _phase_execution(self, tasks: list) -> list:
+        """Phase 3: Execute tasks via DAG with parallel support."""
+        iteration_results = await self._execute_task_graph(tasks)
+
+        self._inject_shared_context(iteration_results)
+
+        await self.message_bus.send(Message(
+            sender="orchestrator", recipient="*",
+            msg_type="results", payload=iteration_results,
+        ))
+        return iteration_results
+
+    async def _phase_review(self, iteration_results: list) -> bool:
+        """Phase 4: Reviewer evaluates results. Returns True if approved."""
+        if "reviewer" not in self.agents:
+            return False
+
+        loop = asyncio.get_running_loop()
+        await self._emit("agent_activity", {
+            "role": "reviewer", "activity": "reviewing",
+            "message": "Reviewer が成果物をレビュー中...",
+        })
+        review = await loop.run_in_executor(
+            None, self.agents["reviewer"].review, iteration_results
+        )
+
+        approved = review.get("approved", False)
+        score = review.get("score", "?")
+        feedback = review.get("feedback", "")
+        issues = review.get("issues", [])
+
+        await self._emit("review_complete", {
+            "iteration": self.iteration,
+            "approved": approved,
+            "score": score,
+            "issue_count": len(issues),
+            "feedback": feedback[:200],
+            "issues": [
+                {"severity": iss.get("severity", "info"), "description": iss.get("description", "")[:100]}
+                for iss in issues[:5]
+            ],
+            "message": (
+                f"レビュー: {'承認' if approved else '差し戻し'} "
+                f"(スコア: {score}/10, 問題: {len(issues)}件)"
+            ),
+        })
+
+        if approved:
+            for ts in self.task_states.values():
+                if ts.status == "waiting_review":
+                    ts.status = "completed"
+            await self._emit("iteration_approved", {
+                "iteration": self.iteration,
+                "message": f"イテレーション {self.iteration} が承認されました！",
+            })
+            return True
+
+        # Rejected: mark tasks and notify
+        rejected_roles = set()
+        for ts in self.task_states.values():
+            if ts.status == "waiting_review":
+                ts.status = "rejected"
+                ts.retry_count += 1
+                rejected_roles.add(ts.assigned_to)
+        for rejected_role in rejected_roles:
+            agent_state = self.agent_states.get(rejected_role)
+            if agent_state:
+                agent_state.reject_task()
+            await self._emit("task_rejected", {
+                "role": rejected_role,
+                "iteration": self.iteration,
+                "reason": feedback[:200],
+                "issues": [
+                    iss.get("description", "")[:100]
+                    for iss in issues[:3]
+                ],
+                "message": f"{rejected_role} ← Reviewer 差し戻し: {feedback[:80]}",
+            })
+        return False
 
     def run(self, goal: str) -> dict:
         """Synchronous wrapper for run_async (backward compatible).

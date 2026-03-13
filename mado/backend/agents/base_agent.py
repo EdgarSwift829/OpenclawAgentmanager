@@ -320,14 +320,15 @@ class BaseAgent(ABC):
             if rules_forbidden:
                 parts.append(f"### FORBIDDEN (NEVER do these):\n{rules_forbidden}")
 
-        # Project goal & overview
+        # Project goal & overview (wrapped to mitigate prompt injection)
+        from mado.backend.safety.prompt_sanitizer import wrap_user_content
         goal = self.project_config.get("goal", "")
         if goal:
-            parts.append(f"\n## Project Goal\n{goal}")
+            parts.append(f"\n## Project Goal\n{wrap_user_content(goal, 'GOAL')}")
 
         overview = self.project_config.get("overview", "")
         if overview:
-            parts.append(f"\n## Project Overview\n{overview}")
+            parts.append(f"\n## Project Overview\n{wrap_user_content(overview, 'OVERVIEW')}")
 
         # Extra instructions (role-specific)
         if extra_instructions:

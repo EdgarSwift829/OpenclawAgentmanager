@@ -10,6 +10,7 @@ The Manager:
 import logging
 
 from mado.backend.agents.base_agent import BaseAgent
+from mado.backend.safety.prompt_sanitizer import sanitize_description
 
 logger = logging.getLogger(__name__)
 
@@ -126,8 +127,9 @@ class ManagerAgent(BaseAgent):
         """Execute a management task (progress tracking, coordination)."""
         description = task.get("description", "")
 
+        safe_desc = sanitize_description(description)
         prompt = (
-            f"As the project manager, handle this task:\n{description}\n\n"
+            f"As the project manager, handle this task:\n{safe_desc}\n\n"
             f"Return JSON:\n"
             f"```json\n"
             f'{{"action": "what you did", "status_update": "status", '

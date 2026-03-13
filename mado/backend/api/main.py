@@ -2,10 +2,15 @@
 
 import os
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from mado.backend.api.routes import agents, logs, models, openclaw, orchestrator, profiles, projects, websocket
+from mado.backend.logging_config import setup_logging
+from mado.backend.safety.auth import is_auth_enabled, require_auth
+
+# Initialize structured logging before anything else
+setup_logging()
 
 app = FastAPI(
     title="MADO - Multi-Agent Dev Orchestrator",
@@ -25,16 +30,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(projects.router, prefix="/api/projects", tags=["projects"])
-app.include_router(agents.router, prefix="/api/agents", tags=["agents"])
-app.include_router(models.router, prefix="/api/models", tags=["models"])
-app.include_router(orchestrator.router, prefix="/api/orchestrator", tags=["orchestrator"])
-app.include_router(websocket.router, prefix="/api/ws", tags=["websocket"])
-app.include_router(logs.router, prefix="/api/logs", tags=["logs"])
-app.include_router(openclaw.router, prefix="/api/openclaw", tags=["openclaw"])
-app.include_router(profiles.router, prefix="/api/profiles", tags=["profiles"])
+# Apply auth dependency to all protected routes when MADO_API_KEY is set
+_auth_deps = [Depends(require_auth)] if is_auth_enabled() else []
+
+app.include_router(projects.router, prefix="/api/projects", tags=["projects"], dependencies=_auth_deps)
+app.include_router(agents.router, prefix="/api/agents", tags=["agents"], dependencies=_auth_deps)
+app.include_router(models.router, prefix="/api/models", tags=["models"], dependencies=_auth_deps)
+app.include_router(orchestrator.router, prefix="/api/orchestrator", tags=["orchestrator"], dependencies=_auth_deps)
+app.include_router(websocket.router, prefix="/api/ws", tags=["websocket"])  # WS auth handled in endpoint
+app.include_router(logs.router, prefix="/api/logs", tags=["logs"], dependencies=_auth_deps)
+app.include_router(openclaw.router, prefix="/api/openclaw", tags=["openclaw"], dependencies=_auth_deps)
+app.include_router(profiles.router, prefix="/api/profiles", tags=["profiles"], dependencies=_auth_deps)
 
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "service": "mado"}
+    return {"status": "ok", "service": "mado", "auth_enabled": is_auth_enabled()}

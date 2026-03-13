@@ -10,6 +10,7 @@ The Tester:
 import logging
 
 from mado.backend.agents.base_agent import BaseAgent
+from mado.backend.safety.prompt_sanitizer import sanitize_description
 
 logger = logging.getLogger(__name__)
 
@@ -38,9 +39,10 @@ class TesterAgent(BaseAgent):
         all_files = self.list_files()
         test_files = [f for f in all_files if "test" in f.lower()]
 
+        safe_desc = sanitize_description(description)
         prompt = (
             f"You are a test engineer. Create and run tests.\n\n"
-            f"## Task\n{description}\n\n"
+            f"## Task\n{safe_desc}\n\n"
         )
 
         if code_context:

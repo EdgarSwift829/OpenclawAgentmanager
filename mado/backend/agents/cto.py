@@ -10,6 +10,7 @@ The CTO is the strategic leader:
 import logging
 
 from mado.backend.agents.base_agent import BaseAgent
+from mado.backend.safety.prompt_sanitizer import sanitize_goal, sanitize_description
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +27,10 @@ class CTOAgent(BaseAgent):
 
     def analyze_and_plan(self, goal: str) -> list:
         """Analyze the project goal and return required agent roles."""
+        safe_goal = sanitize_goal(goal)
         prompt = (
             f"You are a CTO assembling a development team.\n\n"
-            f"Project Goal:\n{goal}\n\n"
+            f"Project Goal:\n{safe_goal}\n\n"
             f"Available roles: {', '.join(AVAILABLE_ROLES)}\n\n"
             f"Based on the goal, select which roles are needed.\n"
             f"Consider:\n"
@@ -61,10 +63,11 @@ class CTOAgent(BaseAgent):
         """Create a structured development plan for the current iteration."""
         iteration_ctx = self.build_iteration_context()
         shared_ctx = self.build_shared_context()
+        safe_goal = sanitize_goal(goal)
 
         prompt = (
             f"You are the CTO. Create a development plan for iteration {iteration}.\n\n"
-            f"## Project Goal\n{goal}\n\n"
+            f"## Project Goal\n{safe_goal}\n\n"
         )
 
         if iteration_ctx:
@@ -117,7 +120,7 @@ class CTOAgent(BaseAgent):
                     "tasks": [
                         {
                             "task_id": "research_1",
-                            "description": f"Research requirements for: {goal[:200]}",
+                            "description": f"Research requirements for: {goal[:200]}",  # noqa: safe in task metadata
                             "assigned_to": "researcher",
                             "depends_on": [],
                             "priority": "high",
@@ -152,10 +155,11 @@ class CTOAgent(BaseAgent):
     def execute(self, task: dict) -> dict:
         """Execute a CTO-level task (architecture decisions, technical guidance)."""
         description = task.get("description", "")
+        safe_desc = sanitize_description(description)
         files = self.list_files()
 
         prompt = (
-            f"As the CTO, execute this task:\n{description}\n\n"
+            f"As the CTO, execute this task:\n{safe_desc}\n\n"
             f"Current workspace files: {files[:20]}\n\n"
             f"Provide architectural guidance and decisions.\n"
             f"Return JSON:\n"

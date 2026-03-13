@@ -9,6 +9,7 @@ The Marketer:
 import logging
 
 from mado.backend.agents.base_agent import BaseAgent
+from mado.backend.safety.prompt_sanitizer import sanitize_description
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +32,10 @@ class MarketerAgent(BaseAgent):
 
         shared_ctx = self.build_shared_context()
 
+        safe_desc = sanitize_description(description)
         prompt = (
             f"You are a marketing specialist. Execute this task.\n\n"
-            f"## Task\n{description}\n\n"
+            f"## Task\n{safe_desc}\n\n"
         )
 
         if web_context:

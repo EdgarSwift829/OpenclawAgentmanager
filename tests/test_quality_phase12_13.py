@@ -100,9 +100,21 @@ class TestExecToolsSubprocessErrors:
     def test_install_package_dry_run(self, tmp_path):
         """install_package invokes pip (just verify structure)."""
         et = ExecTools(str(tmp_path))
-        # Use --help to avoid actual install
-        result = et.install_package("--help", timeout=30)
+        # Use a valid package name that pip won't find (dry run)
+        result = et.install_package("nonexistent-package-xyz-12345", timeout=30)
         assert "returncode" in result
+
+    def test_install_package_rejects_flags(self, tmp_path):
+        """install_package rejects flag-like arguments."""
+        et = ExecTools(str(tmp_path))
+        with pytest.raises(PermissionError, match="Invalid package name"):
+            et.install_package("--help")
+
+    def test_install_package_rejects_blocked(self, tmp_path):
+        """install_package rejects blocked packages."""
+        et = ExecTools(str(tmp_path))
+        with pytest.raises(PermissionError, match="Blocked package"):
+            et.install_package("keylogger")
 
     def test_validate_path_exception_chain(self, tmp_path):
         """Ensure PermissionError chains from ValueError."""

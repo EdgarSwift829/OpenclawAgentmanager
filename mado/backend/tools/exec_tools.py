@@ -1,12 +1,28 @@
 """Execution Tools - run_python, run_tests, install_package (sandboxed)."""
 
+import logging
+import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
+logger = logging.getLogger(__name__)
+
 ALLOWED_COMMANDS = {"python", "pytest", "pip"}
 BLOCKED_COMMANDS = {"rm", "sudo", "chmod", "chown", "kill", "shutdown", "reboot", "mkfs", "dd"}
+
+# Allowlist for pip install: only these packages can be installed by agents.
+# Set to None to allow all packages (not recommended for production).
+ALLOWED_PACKAGES: set[str] | None = None
+
+# Blocked pip packages: packages that should never be installed
+BLOCKED_PACKAGES = {
+    "os-sys", "python-binance", "cryptominer", "keylogger",
+}
+
+# Pattern for valid package names (PEP 508 compatible)
+_VALID_PACKAGE_RE = re.compile(r'^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?(\[.+\])?([><=!~].+)?$')
 
 
 class ExecTools:
@@ -65,9 +81,28 @@ class ExecTools:
         )
         return {"stdout": result.stdout, "stderr": result.stderr, "returncode": result.returncode}
 
+    @staticmethod
+    def _validate_package(package: str) -> None:
+        """Validate package name against allowlist and blocklist."""
+        # Extract base package name (strip version specifiers)
+        base_name = re.split(r'[><=!~\[]', package)[0].strip().lower()
+        if not base_name:
+            raise PermissionError("Package name cannot be empty")
+        if not _VALID_PACKAGE_RE.match(package):
+            raise PermissionError(f"Invalid package name format: {package}")
+        if base_name in BLOCKED_PACKAGES:
+            raise PermissionError(f"Blocked package: {base_name}")
+        if ALLOWED_PACKAGES is not None and base_name not in ALLOWED_PACKAGES:
+            raise PermissionError(
+                f"Package '{base_name}' not in allowlist. "
+                f"Allowed: {ALLOWED_PACKAGES}"
+            )
+
     def install_package(self, package: str, timeout: int = 120) -> dict:
-        """Install a Python package via pip."""
+        """Install a Python package via pip with validation."""
         self._check_command("pip")
+        self._validate_package(package)
+        logger.info(f"Installing package: {package} (workspace: {self.workspace})")
         result = subprocess.run(
             [self._resolve_executable("pip"), "install", package],
             capture_output=True, text=True,
