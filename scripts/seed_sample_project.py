@@ -124,6 +124,19 @@ SAMPLE_CONFIG = {
         },
     ],
     "agents": ["cto", "manager", "researcher", "engineer", "reviewer", "tester", "optimizer", "documenter"],
+    # Agent profiles: per-role profile assignment.
+    # profile_id "preset" = use the built-in preset.
+    # additional_prompt adds project-specific context on top of the preset.
+    "agent_profiles": {
+        "cto": {"profile_id": "preset", "additional_prompt": ""},
+        "manager": {"profile_id": "preset", "additional_prompt": ""},
+        "researcher": {"profile_id": "preset", "additional_prompt": ""},
+        "engineer": {"profile_id": "preset", "additional_prompt": ""},
+        "reviewer": {"profile_id": "preset", "additional_prompt": ""},
+        "tester": {"profile_id": "preset", "additional_prompt": ""},
+        "optimizer": {"profile_id": "preset", "additional_prompt": ""},
+        "documenter": {"profile_id": "preset", "additional_prompt": ""},
+    },
 }
 
 # ──────────────────────────────────────────────────

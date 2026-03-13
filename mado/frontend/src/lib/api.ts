@@ -41,6 +41,19 @@ export const restoreBackup = (id: string, backup_name: string) =>
 export const listAgents = (projectId: string) => fetchJSON(`/agents/${projectId}`);
 export const getAgent = (projectId: string, role: string) => fetchJSON(`/agents/${projectId}/${role}`);
 
+// Agent Profiles (global, cross-project)
+export const listAllProfiles = () => fetchJSON("/profiles/");
+export const listRoleProfiles = (role: string) => fetchJSON(`/profiles/${role}`);
+export const createProfile = (role: string, name: string, additional_prompt: string, clone_from?: string) =>
+  fetchJSON(`/profiles/${role}`, {
+    method: "POST",
+    body: JSON.stringify({ name, additional_prompt, clone_from: clone_from || null }),
+  });
+export const updateProfile = (role: string, profileId: string, updates: { name?: string; additional_prompt?: string }) =>
+  fetchJSON(`/profiles/${role}/${profileId}`, { method: "PUT", body: JSON.stringify(updates) });
+export const deleteProfile = (role: string, profileId: string) =>
+  fetchJSON(`/profiles/${role}/${profileId}`, { method: "DELETE" });
+
 // Models
 export const listModels = () => fetchJSON("/models/");
 export const getAssignments = () => fetchJSON("/models/assignments");

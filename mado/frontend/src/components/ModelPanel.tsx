@@ -6,8 +6,10 @@ import { useI18n, type Locale } from "@/lib/i18n";
 import { useInlineStatus, StatusIndicator } from "@/components/Toast";
 
 interface AgentProfile {
-  title: string;
-  personality: string;
+  title?: string;
+  personality?: string;
+  profile_id?: string;
+  additional_prompt?: string;
 }
 
 interface Props {

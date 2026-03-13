@@ -3,7 +3,7 @@
 import logging
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 from mado.backend.orchestrator.workspace_manager import get_workspace_manager
 
@@ -177,6 +177,12 @@ class TaskItem(BaseModel):
     priority: Optional[str] = "medium"  # low | medium | high
 
 
+class AgentProfileAssignment(BaseModel):
+    """Per-role profile assignment in a project."""
+    profile_id: Optional[str] = None
+    additional_prompt: Optional[str] = None
+
+
 class ProjectConfigUpdate(BaseModel):
     status: Optional[str] = None
     goal: Optional[str] = None
@@ -188,6 +194,8 @@ class ProjectConfigUpdate(BaseModel):
     description: Optional[str] = None
     deadline: Optional[str] = None
     tasks: Optional[List[TaskItem]] = None
+    # Agent profiles: per-role assignment { role: { profile_id, additional_prompt } }
+    agent_profiles: Optional[Dict[str, AgentProfileAssignment]] = None
 
 
 @router.put("/{project_id}/config")

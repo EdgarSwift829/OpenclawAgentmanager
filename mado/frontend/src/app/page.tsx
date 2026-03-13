@@ -100,7 +100,7 @@ export default function Dashboard() {
   // Get goal from project config (saved by ProjectDetail)
   const activeNode = projectTree.find((n) => n.project_id === activeProject);
   const activeGoal = activeNode?.goal || "";
-  const activeAgentProfiles = activeNode?.agent_profiles || {};
+  const activeAgentProfiles: Record<string, any> = activeNode?.agent_profiles || {};
 
   // --- data fetching ---
   const loadProjects = useCallback(async () => {
@@ -325,6 +325,7 @@ export default function Dashboard() {
               activeProject={activeProject}
               agentProfiles={activeAgentProfiles}
               runtimeAgents={agents}
+              onProfilesChanged={loadProjects}
             />
           )}
           {rightTab === "models" && (

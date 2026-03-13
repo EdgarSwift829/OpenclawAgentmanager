@@ -435,6 +435,128 @@ class WorkspaceManager:
                     pass
         return projects
 
+    # ------------------------------------------------------------------
+    # Global Agent Profiles (cross-project, stored in config/)
+    # ------------------------------------------------------------------
+    _PROFILES_PATH = REPO_ROOT / "config" / "agent_profiles.json"
+
+    def _load_profiles(self) -> dict:
+        """Load global agent profiles from config/agent_profiles.json.
+
+        Automatically seeds preset profiles from DEFAULT_AGENT_PROFILES
+        if they don't exist yet.
+        """
+        data: dict = {}
+        if self._PROFILES_PATH.exists():
+            try:
+                data = _read_json(self._PROFILES_PATH)
+            except Exception as e:
+                logger.error("Failed to load agent profiles: %s", e)
+
+        # Auto-seed presets from DEFAULT_AGENT_PROFILES
+        from mado.backend.agents.base_agent import DEFAULT_AGENT_PROFILES
+        changed = False
+        for role, defaults in DEFAULT_AGENT_PROFILES.items():
+            role_profiles = data.get(role, [])
+            has_preset = any(p.get("is_preset") for p in role_profiles)
+            if not has_preset:
+                preset = {
+                    "id": "preset",
+                    "name": defaults.get("title", role),
+                    "additional_prompt": "",
+                    "is_preset": True,
+                    "created_from": None,
+                }
+                role_profiles.insert(0, preset)
+                data[role] = role_profiles
+                changed = True
+        if changed:
+            self._save_profiles(data)
+        return data
+
+    def _save_profiles(self, data: dict):
+        """Persist global agent profiles to config/agent_profiles.json."""
+        self._PROFILES_PATH.parent.mkdir(parents=True, exist_ok=True)
+        self._PROFILES_PATH.write_text(
+            json.dumps(data, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+
+    def get_all_profiles(self) -> dict:
+        """Return all profiles grouped by role.
+
+        Returns: { "cto": [ {id, name, additional_prompt, is_preset}, ... ], ... }
+        """
+        return self._load_profiles()
+
+    def get_role_profiles(self, role: str) -> list:
+        """Return profiles for a specific role."""
+        data = self._load_profiles()
+        return data.get(role, [])
+
+    def create_profile(self, role: str, name: str, additional_prompt: str,
+                       clone_from: str | None = None) -> dict:
+        """Create a new named profile under a role.
+
+        If clone_from is given, copy that profile's additional_prompt as base.
+        Returns the newly created profile dict.
+        """
+        import uuid
+
+        data = self._load_profiles()
+        role_profiles = data.get(role, [])
+
+        # If cloning, find source
+        if clone_from:
+            source = next((p for p in role_profiles if p["id"] == clone_from), None)
+            if source and not additional_prompt:
+                additional_prompt = source.get("additional_prompt", "")
+
+        profile = {
+            "id": str(uuid.uuid4())[:8],
+            "name": name,
+            "additional_prompt": additional_prompt,
+            "is_preset": False,
+            "created_from": clone_from,
+        }
+        role_profiles.append(profile)
+        data[role] = role_profiles
+        self._save_profiles(data)
+        return profile
+
+    def update_profile(self, role: str, profile_id: str, updates: dict) -> dict | None:
+        """Update a non-preset profile's fields (name, additional_prompt).
+
+        Returns updated profile or None if not found / is_preset.
+        """
+        data = self._load_profiles()
+        role_profiles = data.get(role, [])
+        for p in role_profiles:
+            if p["id"] == profile_id:
+                if p.get("is_preset"):
+                    return None  # preset is immutable
+                if "name" in updates:
+                    p["name"] = updates["name"]
+                if "additional_prompt" in updates:
+                    p["additional_prompt"] = updates["additional_prompt"]
+                self._save_profiles(data)
+                return p
+        return None
+
+    def delete_profile(self, role: str, profile_id: str) -> bool:
+        """Delete a non-preset profile. Returns True if deleted."""
+        data = self._load_profiles()
+        role_profiles = data.get(role, [])
+        for i, p in enumerate(role_profiles):
+            if p["id"] == profile_id:
+                if p.get("is_preset"):
+                    return False  # cannot delete preset
+                role_profiles.pop(i)
+                data[role] = role_profiles
+                self._save_profiles(data)
+                return True
+        return False
+
 
 # ---------------------------------------------------------------------------
 # Shared singleton instance

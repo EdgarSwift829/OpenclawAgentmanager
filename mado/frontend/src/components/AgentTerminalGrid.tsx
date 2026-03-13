@@ -6,8 +6,10 @@ import { ROLE_META, TASK_STATE_META } from "@/lib/constants";
 
 /* ─── Types ────────────────────────────────────────────── */
 interface AgentProfile {
-  title: string;
-  personality: string;
+  title?: string;
+  personality?: string;
+  profile_id?: string;
+  additional_prompt?: string;
 }
 
 interface Props {

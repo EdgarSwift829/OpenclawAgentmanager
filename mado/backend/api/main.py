@@ -5,7 +5,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from mado.backend.api.routes import projects, agents, models, orchestrator, websocket, logs, openclaw
+from mado.backend.api.routes import projects, agents, models, orchestrator, websocket, logs, openclaw, profiles
 
 app = FastAPI(
     title="MADO - Multi-Agent Dev Orchestrator",
@@ -32,6 +32,7 @@ app.include_router(orchestrator.router, prefix="/api/orchestrator", tags=["orche
 app.include_router(websocket.router, prefix="/api/ws", tags=["websocket"])
 app.include_router(logs.router, prefix="/api/logs", tags=["logs"])
 app.include_router(openclaw.router, prefix="/api/openclaw", tags=["openclaw"])
+app.include_router(profiles.router, prefix="/api/profiles", tags=["profiles"])
 
 
 @app.get("/api/health")

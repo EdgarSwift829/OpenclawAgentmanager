@@ -1,0 +1,90 @@
+{
+  "cto": [
+    {
+      "id": "preset",
+      "name": "最高技術責任者",
+      "additional_prompt": "",
+      "is_preset": true,
+      "created_from": null
+    }
+  ],
+  "manager": [
+    {
+      "id": "preset",
+      "name": "プロジェクトマネージャー",
+      "additional_prompt": "",
+      "is_preset": true,
+      "created_from": null
+    }
+  ],
+  "researcher": [
+    {
+      "id": "preset",
+      "name": "シニアテクニカルリサーチャー",
+      "additional_prompt": "",
+      "is_preset": true,
+      "created_from": null
+    }
+  ],
+  "engineer": [
+    {
+      "id": "preset",
+      "name": "シニアフルスタックエンジニア",
+      "additional_prompt": "",
+      "is_preset": true,
+      "created_from": null
+    },
+    {
+      "id": "76bf7adb",
+      "name": "AI特化エンジニア",
+      "additional_prompt": "AI/ML開発に特化。PyTorch、TensorFlowに精通。",
+      "is_preset": false,
+      "created_from": null
+    }
+  ],
+  "reviewer": [
+    {
+      "id": "preset",
+      "name": "シニアコードレビュアー",
+      "additional_prompt": "",
+      "is_preset": true,
+      "created_from": null
+    }
+  ],
+  "tester": [
+    {
+      "id": "preset",
+      "name": "QAエンジニア",
+      "additional_prompt": "",
+      "is_preset": true,
+      "created_from": null
+    }
+  ],
+  "optimizer": [
+    {
+      "id": "preset",
+      "name": "パフォーマンスエンジニア",
+      "additional_prompt": "",
+      "is_preset": true,
+      "created_from": null
+    }
+  ],
+  "documenter": [
+    {
+      "id": "preset",
+      "name": "テクニカルライター",
+      "additional_prompt": "",
+      "is_preset": true,
+      "created_from": null
+    }
+  ],
+  "marketer": [
+    {
+      "id": "preset",
+      "name": "グロースマーケティングスペシャリスト",
+      "additional_prompt": "",
+      "is_preset": true,
+      "created_from": null
+    }
+  ]
+}
