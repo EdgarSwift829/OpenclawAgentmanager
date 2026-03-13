@@ -83,15 +83,33 @@ class ReviewerAgent(BaseAgent):
             # Ensure approved is actually a boolean
             if isinstance(approved, str):
                 approved = approved.lower() in ("true", "yes", "1")
+            elif not isinstance(approved, bool):
+                approved = bool(approved)
+
+            # Validate and clamp score to 1-10
             score = result.get("score", 5)
+            try:
+                score = int(score)
+            except (TypeError, ValueError):
+                score = 5
+            score = max(1, min(10, score))
+
             issues = result.get("issues", [])
+            # Ensure issues is a list of dicts
+            if not isinstance(issues, list):
+                issues = []
+            issues = [i for i in issues if isinstance(i, dict)]
 
             # Auto-reject if critical issues found
             critical_count = sum(
                 1 for i in issues
-                if isinstance(i, dict) and i.get("severity") == "critical"
+                if i.get("severity") == "critical"
             )
             if critical_count > 0:
+                approved = False
+
+            # Low score also triggers rejection
+            if score <= 3:
                 approved = False
 
             logger.info(

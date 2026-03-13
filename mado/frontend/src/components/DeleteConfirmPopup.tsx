@@ -20,13 +20,16 @@ export function DeleteConfirmPopup({ popup, onConfirm, onCancel, deleteLabel, ca
     <div
       className="delete-popup-overlay"
       onClick={onCancel}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${popup.displayName}の削除確認`}
     >
       <div
         className="delete-popup"
         style={{ left: popup.x, top: popup.y }}
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="delete-popup-text">
+        <p className="delete-popup-text" id="delete-popup-desc">
           「{popup.displayName}」を削除しますか？
         </p>
         <div className="delete-popup-actions">

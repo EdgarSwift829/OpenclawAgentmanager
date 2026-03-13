@@ -30,9 +30,12 @@ export function ProjectContextMenu({ menu, onClose, onRename, onAddChild, onArch
       className="context-menu"
       style={{ left: menu.x, top: menu.y }}
       onClick={(e) => e.stopPropagation()}
+      role="menu"
+      aria-label={`${menu.displayName}のメニュー`}
     >
       <button
         className="context-menu-item"
+        role="menuitem"
         onClick={() => {
           onClose();
           onRename(menu.projectId);
@@ -42,6 +45,7 @@ export function ProjectContextMenu({ menu, onClose, onRename, onAddChild, onArch
       </button>
       <button
         className="context-menu-item"
+        role="menuitem"
         onClick={() => {
           onClose();
           onAddChild(menu.projectId);
@@ -49,9 +53,10 @@ export function ProjectContextMenu({ menu, onClose, onRename, onAddChild, onArch
       >
         ➕ {t("addSubProject")}
       </button>
-      <div className="context-menu-separator" />
+      <div className="context-menu-separator" role="separator" />
       <button
         className="context-menu-item"
+        role="menuitem"
         onClick={() => {
           onClose();
           onArchiveToggle(menu.projectId);
@@ -60,9 +65,10 @@ export function ProjectContextMenu({ menu, onClose, onRename, onAddChild, onArch
         {menu.isArchived ? "↩ " : "📦 "}
         {menu.isArchived ? t("unarchive") : t("archive")}
       </button>
-      <div className="context-menu-separator" />
+      <div className="context-menu-separator" role="separator" />
       <button
         className="context-menu-item context-menu-item-danger"
+        role="menuitem"
         onClick={(e) => {
           onClose();
           onDelete(menu.projectId, menu.displayName, e);

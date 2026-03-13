@@ -489,6 +489,11 @@ export function ProjectTree({
         <div
           className={`tree-item ${isActive ? "tree-item-active" : ""} ${isArchived ? "tree-item-archived" : ""} ${isDragOver && dropPos === "inside" ? "tree-item-drop-inside" : ""}`}
           style={{ paddingLeft: `${0.375 + depth * 1}rem` }}
+          role="treeitem"
+          aria-selected={isActive}
+          aria-expanded={hasChildren ? isExpanded : undefined}
+          aria-level={depth + 1}
+          tabIndex={isActive ? 0 : -1}
           draggable={!isRenaming}
           onDragStart={(e) => handleDragStart(e, p)}
           onDragOver={(e) => handleDragOver(e, p)}
@@ -659,11 +664,18 @@ export function ProjectTree({
   };
 
   return (
-    <div className="project-tree" ref={treeRef}>
-      <div className="tree-header" onClick={() => setCollapsed(!collapsed)}>
-        <span className="tree-chevron">{collapsed ? "\u25B6" : "\u25BC"}</span>
+    <div className="project-tree" ref={treeRef} role="navigation" aria-label={t("projects")}>
+      <div
+        className="tree-header"
+        onClick={() => setCollapsed(!collapsed)}
+        role="button"
+        aria-expanded={!collapsed}
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCollapsed(!collapsed); } }}
+      >
+        <span className="tree-chevron" aria-hidden="true">{collapsed ? "\u25B6" : "\u25BC"}</span>
         <span className="tree-title">{t("projects")}</span>
-        <span className="tree-count">{totalProjects}</span>
+        <span className="tree-count" aria-label={`${totalProjects}件`}>{totalProjects}</span>
       </div>
 
       {!collapsed && (
@@ -723,7 +735,7 @@ export function ProjectTree({
             </button>
           </div>
 
-          <div className="tree-list">
+          <div className="tree-list" role="tree" aria-label={t("projects")}>
             {topLevel.length === 0 && (
               <div className="tree-empty">{t("noProjects")}</div>
             )}

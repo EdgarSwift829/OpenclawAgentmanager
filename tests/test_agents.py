@@ -260,6 +260,47 @@ class TestReviewerReview:
         assert "Always test" in prompt
         assert "No eval()" in prompt
 
+    def test_score_clamped_to_valid_range(self, tmp_path):
+        rev = make_agent(ReviewerAgent, tmp_path, role="reviewer")
+        # Score above 10 clamped to 10
+        with patch.object(rev, "call_llm_json", return_value={"approved": True, "score": 99, "issues": [], "feedback": "", "improvements": []}):
+            result = rev.review([])
+        assert result["score"] == 10
+        # Score below 1 clamped to 1
+        with patch.object(rev, "call_llm_json", return_value={"approved": True, "score": -5, "issues": [], "feedback": "", "improvements": []}):
+            result = rev.review([])
+        assert result["score"] == 1
+
+    def test_invalid_score_type_defaults_to_5(self, tmp_path):
+        rev = make_agent(ReviewerAgent, tmp_path, role="reviewer")
+        with patch.object(rev, "call_llm_json", return_value={"approved": True, "score": "high", "issues": [], "feedback": "", "improvements": []}):
+            result = rev.review([])
+        assert result["score"] == 5
+
+    def test_low_score_triggers_rejection(self, tmp_path):
+        rev = make_agent(ReviewerAgent, tmp_path, role="reviewer")
+        with patch.object(rev, "call_llm_json", return_value={"approved": True, "score": 2, "issues": [], "feedback": "Poor", "improvements": []}):
+            result = rev.review([])
+        assert result["approved"] is False
+        assert result["score"] == 2
+
+    def test_invalid_issues_filtered(self, tmp_path):
+        rev = make_agent(ReviewerAgent, tmp_path, role="reviewer")
+        with patch.object(rev, "call_llm_json", return_value={
+            "approved": True, "score": 8,
+            "issues": [{"severity": "info", "description": "ok"}, "not a dict", 42],
+            "feedback": "", "improvements": []
+        }):
+            result = rev.review([])
+        assert len(result["issues"]) == 1
+        assert result["issues"][0]["severity"] == "info"
+
+    def test_non_bool_approved_coerced(self, tmp_path):
+        rev = make_agent(ReviewerAgent, tmp_path, role="reviewer")
+        with patch.object(rev, "call_llm_json", return_value={"approved": 1, "score": 8, "issues": [], "feedback": "", "improvements": []}):
+            result = rev.review([])
+        assert result["approved"] is True
+
 
 # ============================================================
 # Tester Agent
