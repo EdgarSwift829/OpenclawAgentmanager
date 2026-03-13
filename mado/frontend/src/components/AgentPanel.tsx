@@ -5,6 +5,7 @@ import * as api from "@/lib/api";
 import { useI18n, type Locale } from "@/lib/i18n";
 import { useInlineStatus, StatusIndicator } from "@/components/Toast";
 import { ROLE_META } from "@/lib/constants";
+import type { AgentInfo, AgentProfileAssignment } from "@/lib/types";
 
 /* ── Types ────────────────────────────────────────────── */
 
@@ -18,8 +19,8 @@ interface GlobalProfile {
 
 interface Props {
   activeProject: string | null;
-  agentProfiles: Record<string, { profile_id?: string; additional_prompt?: string }>;
-  runtimeAgents: any[];
+  agentProfiles: Record<string, AgentProfileAssignment>;
+  runtimeAgents: AgentInfo[];
   onProfilesChanged?: () => void;
 }
 

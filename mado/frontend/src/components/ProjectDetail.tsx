@@ -4,36 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import * as api from "@/lib/api";
 import { useI18n, type Locale } from "@/lib/i18n";
 import { useInlineStatus, StatusIndicator } from "@/components/Toast";
-
-interface TaskItem {
-  id: string;
-  title: string;
-  description: string;
-  status: string;
-  deadline: string;
-  priority: string;
-}
-
-interface AgentProfile {
-  title: string;
-  personality: string;
-}
-
-interface ProjectNode {
-  project_id: string;
-  display_name?: string;
-  parent_id: string | null;
-  children: string[];
-  status: string;
-  goal: string;
-  overview: string;
-  policy: string;
-  roadmap: string;
-  description: string;
-  deadline: string | null;
-  tasks: TaskItem[];
-  agent_profiles?: Record<string, AgentProfile>;
-}
+import type { TaskItem, ProjectNode, AgentProfileAssignment } from "@/lib/types";
 
 interface Props {
   activeProject: string | null;
@@ -65,7 +36,7 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh, allRunSta
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [rulesMust, setRulesMust] = useState("");
   const [rulesForbidden, setRulesForbidden] = useState("");
-  const [agentProfiles, setAgentProfiles] = useState<Record<string, AgentProfile>>({});
+  const [agentProfiles, setAgentProfiles] = useState<Record<string, AgentProfileAssignment>>({});
   const [childInstructions, setChildInstructions] = useState<Record<string, string>>({});
   const [dispatchingChild, setDispatchingChild] = useState<string | null>(null);
   const [additionalOrder, setAdditionalOrder] = useState("");
@@ -83,8 +54,8 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh, allRunSta
     setDescription(node.description || "");
     setDeadline(node.deadline || "");
     setTasks(node.tasks || []);
-    setRulesMust((node as any).rules_must || "");
-    setRulesForbidden((node as any).rules_forbidden || "");
+    setRulesMust(node.rules_must || "");
+    setRulesForbidden(node.rules_forbidden || "");
     setAgentProfiles(node.agent_profiles || {});
     setDirty(false);
     setGoalEditing(false);

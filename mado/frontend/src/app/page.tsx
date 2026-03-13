@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import * as api from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
-import type { ProjectNode, RunStatus, AgentInfo, OrchestratorEvent } from "@/lib/types";
+import type { ProjectNode, RunStatus, AgentInfo, OrchestratorEvent, AgentProfileAssignment } from "@/lib/types";
 import { useInlineStatus, StatusIndicator } from "@/components/Toast";
 import { ProjectTree } from "@/components/ProjectTree";
 import { AgentTerminalGrid } from "@/components/AgentTerminalGrid";
@@ -14,6 +14,7 @@ import { TaskGraph } from "@/components/TaskGraph";
 import { ProjectDetail } from "@/components/ProjectDetail";
 import { AgentPanel } from "@/components/AgentPanel";
 import { LangSwitcher } from "@/components/LangSwitcher";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // ---------------------------------------------------------------------------
 // localStorage persistence for per-project state
@@ -100,7 +101,7 @@ export default function Dashboard() {
   // Get goal from project config (saved by ProjectDetail)
   const activeNode = projectTree.find((n) => n.project_id === activeProject);
   const activeGoal = activeNode?.goal || "";
-  const activeAgentProfiles: Record<string, any> = activeNode?.agent_profiles || {};
+  const activeAgentProfiles: Record<string, AgentProfileAssignment> = activeNode?.agent_profiles || {};
 
   // --- data fetching ---
   const loadProjects = useCallback(async () => {
@@ -281,12 +282,14 @@ export default function Dashboard() {
             loadAllRunStatuses();
           }}
         />
-        <AgentTerminalGrid
-          events={events}
-          agentProfiles={activeAgentProfiles}
-          activeProject={activeProject}
-          onSendOrder={handleSendOrder}
-        />
+        <ErrorBoundary>
+          <AgentTerminalGrid
+            events={events}
+            agentProfiles={activeAgentProfiles}
+            activeProject={activeProject}
+            onSendOrder={handleSendOrder}
+          />
+        </ErrorBoundary>
       </main>
 
       {/* ---- Right panel: Tabs (Timeline / Models / Tasks) ---- */}
@@ -319,29 +322,33 @@ export default function Dashboard() {
           <LangSwitcher />
         </div>
         <div className="right-content">
-          {rightTab === "timeline" && <Timeline events={events} />}
+          {rightTab === "timeline" && <ErrorBoundary><Timeline events={events} /></ErrorBoundary>}
           {rightTab === "agents" && (
-            <AgentPanel
-              activeProject={activeProject}
-              agentProfiles={activeAgentProfiles}
-              runtimeAgents={agents}
-              onProfilesChanged={loadProjects}
-            />
+            <ErrorBoundary>
+              <AgentPanel
+                activeProject={activeProject}
+                agentProfiles={activeAgentProfiles}
+                runtimeAgents={agents}
+                onProfilesChanged={loadProjects}
+              />
+            </ErrorBoundary>
           )}
           {rightTab === "models" && (
-            <ModelPanel
-              activeProject={activeProject}
-              agentProfiles={activeAgentProfiles}
-              onProfilesChange={async (profiles) => {
-                if (!activeProject) return;
-                try {
-                  await api.updateProjectConfig(activeProject, { agent_profiles: profiles });
-                  loadProjects();
-                } catch { /* ignore */ }
-              }}
-            />
+            <ErrorBoundary>
+              <ModelPanel
+                activeProject={activeProject}
+                agentProfiles={activeAgentProfiles}
+                onProfilesChange={async (profiles) => {
+                  if (!activeProject) return;
+                  try {
+                    await api.updateProjectConfig(activeProject, { agent_profiles: profiles });
+                    loadProjects();
+                  } catch { /* ignore */ }
+                }}
+              />
+            </ErrorBoundary>
           )}
-          {rightTab === "tasks" && <TaskGraph runStatus={runStatus} events={events} />}
+          {rightTab === "tasks" && <ErrorBoundary><TaskGraph runStatus={runStatus} events={events} /></ErrorBoundary>}
         </div>
       </aside>
     </div>

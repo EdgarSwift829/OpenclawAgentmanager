@@ -133,6 +133,7 @@ async def _execute_run(project_id: str, goal: str, max_iterations: int):
 def _inherit_parent_context(parent_id: str, child_id: str):
     """Copy agent_profiles and project_memory from parent to child."""
     import shutil
+    from copy import deepcopy
 
     parent_config = _workspace_manager.get_project_config(parent_id)
     child_config = _workspace_manager.get_project_config(child_id)
@@ -141,11 +142,11 @@ def _inherit_parent_context(parent_id: str, child_id: str):
     parent_profiles = parent_config.get("agent_profiles", {})
     child_profiles = child_config.get("agent_profiles", {})
     if parent_profiles:
-        merged = {**parent_profiles}  # start with parent
+        merged = deepcopy(parent_profiles)  # deep copy to avoid reference sharing
         for role, profile in child_profiles.items():
             # Only override if child has non-empty values
             if profile.get("title") or profile.get("personality"):
-                merged[role] = profile
+                merged[role] = deepcopy(profile)
         _workspace_manager.update_project_config(child_id, {"agent_profiles": merged})
         logger.info(f"Inherited agent_profiles from {parent_id} to {child_id}")
 

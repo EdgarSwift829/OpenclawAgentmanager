@@ -3,18 +3,13 @@
 import { useRef, useEffect, useState, useMemo } from "react";
 import { useI18n, type Locale } from "@/lib/i18n";
 import { ROLE_META, TASK_STATE_META } from "@/lib/constants";
+import type { OrchestratorEvent, AgentProfileAssignment } from "@/lib/types";
 
 /* ─── Types ────────────────────────────────────────────── */
-interface AgentProfile {
-  title?: string;
-  personality?: string;
-  profile_id?: string;
-  additional_prompt?: string;
-}
 
 interface Props {
-  events: any[];
-  agentProfiles?: Record<string, AgentProfile>;
+  events: OrchestratorEvent[];
+  agentProfiles?: Record<string, AgentProfileAssignment>;
   activeProject?: string | null;
   onSendOrder?: (order: string) => Promise<void>;
 }
@@ -38,7 +33,7 @@ interface LogLine {
   state?: string;
 }
 
-function buildAgentLogs(events: any[], loc: Locale): Record<string, LogLine[]> {
+function buildAgentLogs(events: OrchestratorEvent[], loc: Locale): Record<string, LogLine[]> {
   const logs: Record<string, LogLine[]> = {};
   const push = (role: string, line: LogLine) => {
     if (!logs[role]) logs[role] = [];
@@ -129,7 +124,7 @@ function buildAgentLogs(events: any[], loc: Locale): Record<string, LogLine[]> {
 }
 
 /* ─── Derive agent states from events ──────────────────── */
-function deriveAgentStates(events: any[]): Record<string, string> {
+function deriveAgentStates(events: OrchestratorEvent[]): Record<string, string> {
   const states: Record<string, string> = {};
   for (const ev of events) {
     const role = ev.role || "";
@@ -159,7 +154,7 @@ function deriveAgentStates(events: any[]): Record<string, string> {
 }
 
 /* ─── Derive task flow from events ─────────────────────── */
-function deriveTaskFlow(events: any[]): TaskFlowItem[] {
+function deriveTaskFlow(events: OrchestratorEvent[]): TaskFlowItem[] {
   const flowMap = new Map<string, TaskFlowItem>();
   const flowList: TaskFlowItem[] = [];
   for (const ev of events) {
@@ -203,7 +198,7 @@ function TerminalPane({ role, logs, meta, profile, agentState, loc }: {
   role: string;
   logs: LogLine[];
   meta: typeof ROLE_META[string];
-  profile?: AgentProfile;
+  profile?: AgentProfileAssignment;
   agentState: string;
   loc: Locale;
 }) {
@@ -224,7 +219,7 @@ function TerminalPane({ role, logs, meta, profile, agentState, loc }: {
   };
 
   const stateInfo = TASK_STATE_META[agentState] || TASK_STATE_META.idle;
-  const displayName = profile?.title || meta.label[loc];
+  const displayName = meta.label[loc];
 
   return (
     <div className="terminal-pane" style={{ "--pane-border": meta.border } as React.CSSProperties}>

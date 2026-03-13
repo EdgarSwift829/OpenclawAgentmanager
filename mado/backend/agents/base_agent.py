@@ -266,7 +266,8 @@ class BaseAgent(ABC):
             return ""
         try:
             return mt.load_project_memory()
-        except Exception:
+        except Exception as e:
+            logger.warning(f"[{self.role}] Failed to load project memory: {e}")
             return ""
 
     def save_memory(self, section: str, content: str) -> str:

@@ -229,8 +229,8 @@ class WorkspaceManager:
         if order_path.exists():
             try:
                 return json.loads(order_path.read_text(encoding="utf-8"))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Failed to read project order: %s", e)
         return []
 
     def get_project_tree(self) -> list:
@@ -369,7 +369,12 @@ class WorkspaceManager:
         """Restore a project from a named backup."""
         import shutil
 
+        # Validate backup_name is within expected directory
         backup_dir = self.projects_root / project_id / "backups" / backup_name
+        expected_parent = (self.projects_root / project_id / "backups").resolve()
+        if not str(backup_dir.resolve()).startswith(str(expected_parent)):
+            logger.warning("Path traversal attempt in restore_backup: %s", backup_name)
+            return False
         if not backup_dir.exists():
             return False
 
@@ -430,9 +435,8 @@ class WorkspaceManager:
                     # Also ensure workspace directory exists
                     (d / "workspace").mkdir(exist_ok=True)
                     projects.append(d.name)
-                except Exception:
-                    # If we can't write config, skip this directory
-                    pass
+                except Exception as e:
+                    logger.warning("Failed to auto-init project dir '%s': %s", d.name, e)
         return projects
 
     # ------------------------------------------------------------------

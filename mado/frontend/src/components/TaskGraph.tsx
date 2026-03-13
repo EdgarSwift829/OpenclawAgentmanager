@@ -3,10 +3,11 @@
 import { useMemo } from "react";
 import { useI18n, type Locale } from "@/lib/i18n";
 import { ROLE_META, TASK_STATE_META } from "@/lib/constants";
+import type { RunStatus, OrchestratorEvent } from "@/lib/types";
 
 interface Props {
-  runStatus: any;
-  events?: any[];
+  runStatus: RunStatus | null;
+  events?: OrchestratorEvent[];
 }
 
 /* ─── Derive task info from events ─────────────────────── */
@@ -20,7 +21,7 @@ interface TaskInfo {
   review_feedback?: string;
 }
 
-function deriveTasksFromEvents(events: any[]): TaskInfo[] {
+function deriveTasksFromEvents(events: OrchestratorEvent[]): TaskInfo[] {
   const tasks: Map<string, TaskInfo> = new Map();
   const decomposedTasks: TaskInfo[] = [];
 
@@ -75,7 +76,7 @@ function deriveTasksFromEvents(events: any[]): TaskInfo[] {
 }
 
 /* ─── Pipeline Flow Diagram ────────────────────────────── */
-function PipelineFlow({ loc, events }: { loc: Locale; events: any[] }) {
+function PipelineFlow({ loc, events }: { loc: Locale; events: OrchestratorEvent[] }) {
   // Determine current phase from events
   const currentPhase = useMemo(() => {
     let phase = "idle";

@@ -5,17 +5,18 @@ import * as api from "@/lib/api";
 import { useI18n, type Locale } from "@/lib/i18n";
 import { useInlineStatus, StatusIndicator } from "@/components/Toast";
 
-interface AgentProfile {
+import type { AgentProfileAssignment } from "@/lib/types";
+
+/** Extended profile type for ModelPanel backward compatibility. */
+interface ModelPanelProfile extends AgentProfileAssignment {
   title?: string;
   personality?: string;
-  profile_id?: string;
-  additional_prompt?: string;
 }
 
 interface Props {
   activeProject?: string | null;
-  agentProfiles?: Record<string, AgentProfile>;
-  onProfilesChange?: (profiles: Record<string, AgentProfile>) => void;
+  agentProfiles?: Record<string, ModelPanelProfile>;
+  onProfilesChange?: (profiles: Record<string, ModelPanelProfile>) => void;
 }
 
 const AGENT_ROLES: {

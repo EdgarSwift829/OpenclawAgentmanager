@@ -13,8 +13,15 @@ class MADOLogger:
     """Structured logging for MADO: agent messages, tool calls, errors, iterations."""
 
     def __init__(self, project_id: str, log_dir: str = None):
-        self.project_id = project_id
-        self.log_dir = Path(log_dir) if log_dir else STORAGE_DIR / project_id
+        # Sanitize project_id to prevent path traversal
+        safe_id = project_id.replace("..", "").replace("/", "_").replace("\\", "_")
+        self.project_id = safe_id
+        self.log_dir = Path(log_dir) if log_dir else STORAGE_DIR / safe_id
+        # Verify the log_dir is within STORAGE_DIR
+        if not log_dir:
+            resolved = self.log_dir.resolve()
+            if not str(resolved).startswith(str(STORAGE_DIR.resolve())):
+                raise ValueError(f"Invalid project_id: {project_id}")
         self.log_dir.mkdir(parents=True, exist_ok=True)
 
         # File logger

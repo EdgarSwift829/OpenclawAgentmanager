@@ -15,6 +15,7 @@ Enhanced with:
 import asyncio
 import logging
 import time
+from copy import deepcopy
 from typing import Optional, Callable
 from mado.backend.orchestrator.agent_factory import AgentFactory
 from mado.backend.orchestrator.workspace_manager import get_workspace_manager
@@ -168,8 +169,8 @@ class Orchestrator:
         if self._event_callback:
             try:
                 await self._event_callback(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Event callback failed for {event_type}: {e}")
 
     def _load_parent_context(self, parent_id: str) -> None:
         """Load parent project context for child runs (agent profiles + memory)."""
@@ -182,7 +183,7 @@ class Orchestrator:
             parent_profiles = parent_config.get("agent_profiles", {})
             child_profiles = self._project_config.get("agent_profiles", {})
             if parent_profiles and not child_profiles:
-                self._project_config["agent_profiles"] = parent_profiles
+                self._project_config["agent_profiles"] = deepcopy(parent_profiles)
                 logger.info(f"Child {self.project_id} inherited agent_profiles from parent {parent_id}")
 
             # Load parent's project memory as additional context
@@ -195,7 +196,7 @@ class Orchestrator:
             # Inherit parent rules if child has none
             for rule_key in ("rules_must", "rules_forbidden"):
                 if parent_config.get(rule_key) and not self._project_config.get(rule_key):
-                    self._project_config[rule_key] = parent_config[rule_key]
+                    self._project_config[rule_key] = deepcopy(parent_config[rule_key])
 
         except Exception as e:
             logger.warning(f"Failed to load parent context from {parent_id}: {e}")
@@ -219,7 +220,7 @@ class Orchestrator:
 
     def _inject_agent_context(self, agent, config: dict) -> None:
         """Inject project config, rules, message bus, and iteration context into an agent."""
-        agent.project_config = config
+        agent.project_config = deepcopy(config)
         agent.message_bus = self.message_bus
         agent.iteration_context = list(self._iteration_summaries)
 
@@ -235,7 +236,7 @@ class Orchestrator:
                     "result": str(r.get("result", ""))[:1000],
                 }
         for agent in self.agents.values():
-            agent.shared_context = shared
+            agent.shared_context = deepcopy(shared)
 
     def initialize_project(self, goal: str) -> None:
         """Initialize workspace and spawn agents for a project."""

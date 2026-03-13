@@ -1,9 +1,10 @@
 "use client";
 
 import { useI18n } from "@/lib/i18n";
+import type { OrchestratorEvent } from "@/lib/types";
 
 interface Props {
-  events: any[];
+  events: OrchestratorEvent[];
 }
 
 // Event types to hide from timeline (internal system messages)
@@ -31,7 +32,7 @@ const EVENT_STYLES: Record<string, { icon: string; color: string }> = {
   parallel_start:     { icon: "⫘", color: "#3b82f6" },
 };
 
-function getEventDisplay(event: any): { text: string; icon: string; color: string } {
+function getEventDisplay(event: OrchestratorEvent): { text: string; icon: string; color: string } {
   const style = EVENT_STYLES[event.type] || { icon: "•", color: "#6b7280" };
 
   // Use the human-readable "message" field if present

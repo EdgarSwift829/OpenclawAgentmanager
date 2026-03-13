@@ -24,13 +24,23 @@ export interface ProjectNode {
   description: string;
   deadline: string | null;
   tasks: TaskItem[];
-  agent_profiles?: Record<string, AgentProfile>;
+  rules_must?: string;
+  rules_forbidden?: string;
+  agent_profiles?: Record<string, AgentProfileAssignment>;
 }
 
-/** Agent profile stored in project config. */
+/** Agent profile assignment stored in project config (per-role). */
+export interface AgentProfileAssignment {
+  profile_id?: string;
+  additional_prompt?: string;
+}
+
+/** Legacy agent profile format (backward compatibility). */
 export interface AgentProfile {
-  title: string;
-  personality: string;
+  title?: string;
+  personality?: string;
+  profile_id?: string;
+  additional_prompt?: string;
 }
 
 /** Run status returned by getRunStatus(). */
@@ -59,5 +69,34 @@ export interface OrchestratorEvent {
   message?: string;
   iteration?: number;
   detail?: string;
-  [key: string]: unknown;
+  // Task-related fields
+  task_id?: string;
+  task?: string;
+  tasks?: Array<{ id: string; role: string; desc: string }>;
+  // Review fields
+  approved?: boolean;
+  feedback?: string;
+  score?: number | string;
+  issues?: Array<{ severity: string; description: string }>;
+  // Run fields
+  goal?: string;
+  agents?: string[];
+  error?: string;
+  summary?: string;
+  files_modified?: string[];
+  // DAG fields
+  layers?: number;
+  total_tasks?: number;
+  task_count?: number;
+  layer?: number;
+  // Agent activity
+  activity?: string;
+  sender?: string;
+  timeout?: number;
+  reason?: string;
+  plan_summary?: string;
+  // Run completion
+  iterations?: number;
+  elapsed_seconds?: number;
+  total_results?: number;
 }

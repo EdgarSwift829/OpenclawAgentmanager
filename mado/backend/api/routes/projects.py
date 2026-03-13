@@ -1,6 +1,7 @@
 """Project management API routes."""
 
 import logging
+import re
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List, Dict
@@ -9,6 +10,25 @@ from mado.backend.orchestrator.workspace_manager import get_workspace_manager
 
 router = APIRouter()
 workspace_manager = get_workspace_manager()
+
+# Pattern for safe identifiers: alphanumeric, hyphens, underscores, dots, spaces, CJK
+_SAFE_ID_RE = re.compile(r'^[a-zA-Z0-9\u3000-\u9FFF\uFF00-\uFFEF _.\-]+$')
+
+
+def _validate_safe_id(value: str, field_name: str = "ID") -> str:
+    """Validate that an identifier is safe for path construction.
+
+    Rejects path traversal attempts (../, .\\) and unsafe characters.
+    """
+    if not value or not value.strip():
+        raise HTTPException(status_code=400, detail=f"{field_name} cannot be empty")
+    value = value.strip()
+    # Block path traversal patterns
+    if '..' in value or '/' in value or '\\' in value:
+        raise HTTPException(status_code=400, detail=f"{field_name} contains unsafe path characters")
+    if not _SAFE_ID_RE.match(value):
+        raise HTTPException(status_code=400, detail=f"{field_name} contains invalid characters: {value}")
+    return value
 
 
 class ProjectCreate(BaseModel):
@@ -160,6 +180,7 @@ async def get_project(project_id: str):
     from pathlib import Path
     from mado.backend.orchestrator.workspace_manager import _read_json
 
+    project_id = _validate_safe_id(project_id, "Project ID")
     config_path = Path(workspace_manager.projects_root) / project_id / "config.json"
     if not config_path.exists():
         raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
@@ -203,6 +224,7 @@ async def update_project_config(project_id: str, data: ProjectConfigUpdate):
     """Update project config fields."""
     from pathlib import Path
 
+    project_id = _validate_safe_id(project_id, "Project ID")
     project_path = Path(workspace_manager.projects_root) / project_id
     if not project_path.exists():
         raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
@@ -303,6 +325,9 @@ async def move_project(project_id: str, data: MoveProject):
 
     logger = logging.getLogger(__name__)
 
+    project_id = _validate_safe_id(project_id, "Project ID")
+    if data.new_parent_id:
+        _validate_safe_id(data.new_parent_id, "Parent ID")
     project_path = Path(workspace_manager.projects_root) / project_id
     if not project_path.exists():
         raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
@@ -362,6 +387,7 @@ async def delete_project(project_id: str):
     from pathlib import Path
 
     logger = logging.getLogger(__name__)
+    project_id = _validate_safe_id(project_id, "Project ID")
 
     try:
         project_path = Path(workspace_manager.projects_root) / project_id
@@ -422,6 +448,7 @@ async def get_project_memory(project_id: str):
     from mado.backend.memory.project_memory import ProjectMemory
     from pathlib import Path
 
+    project_id = _validate_safe_id(project_id, "Project ID")
     project_path = Path(workspace_manager.projects_root) / project_id
     if not project_path.exists():
         raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
@@ -435,6 +462,7 @@ async def list_project_files(project_id: str):
     """List files in project workspace."""
     from mado.backend.tools.file_tools import FileTools
 
+    project_id = _validate_safe_id(project_id, "Project ID")
     workspace_path = workspace_manager.get_workspace_path(project_id)
     tools = FileTools(workspace_path)
     try:
@@ -449,6 +477,7 @@ async def list_children(project_id: str):
     """List child projects with their status/progress."""
     from pathlib import Path
 
+    project_id = _validate_safe_id(project_id, "Project ID")
     project_path = Path(workspace_manager.projects_root) / project_id
     if not project_path.exists():
         raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
@@ -471,6 +500,7 @@ async def get_project_progress(project_id: str):
     """Get aggregated progress for a parent project including all children."""
     from pathlib import Path
 
+    project_id = _validate_safe_id(project_id, "Project ID")
     project_path = Path(workspace_manager.projects_root) / project_id
     if not project_path.exists():
         raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
@@ -518,6 +548,7 @@ async def list_backups(project_id: str):
     """List available backups for a project."""
     from pathlib import Path
 
+    project_id = _validate_safe_id(project_id, "Project ID")
     project_path = Path(workspace_manager.projects_root) / project_id
     if not project_path.exists():
         raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
@@ -535,6 +566,8 @@ async def restore_backup(project_id: str, data: BackupRestore):
     """Restore a project from a named backup."""
     from pathlib import Path
 
+    project_id = _validate_safe_id(project_id, "Project ID")
+    _validate_safe_id(data.backup_name, "Backup name")
     project_path = Path(workspace_manager.projects_root) / project_id
     if not project_path.exists():
         raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")

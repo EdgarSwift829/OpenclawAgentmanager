@@ -3,10 +3,11 @@
 import * as api from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { useInlineStatus, StatusIndicator } from "@/components/Toast";
+import type { RunStatus } from "@/lib/types";
 
 interface Props {
   activeProject: string | null;
-  runStatus: any;
+  runStatus: RunStatus | null;
   onRefresh: () => void;
   /** Goal from project config (ProjectDetail saves this) */
   goal: string;
