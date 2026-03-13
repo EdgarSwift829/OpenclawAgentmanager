@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState, useMemo } from "react";
 import { useI18n, type Locale } from "@/lib/i18n";
+import { ROLE_META, TASK_STATE_META } from "@/lib/constants";
 
 /* ─── Types ────────────────────────────────────────────── */
 interface AgentProfile {
@@ -10,37 +11,11 @@ interface AgentProfile {
 }
 
 interface Props {
-  agents: any[];
   events: any[];
   agentProfiles?: Record<string, AgentProfile>;
-  assignments?: Record<string, string>;
   activeProject?: string | null;
   onSendOrder?: (order: string) => Promise<void>;
 }
-
-/* ─── Role metadata ────────────────────────────────────── */
-const ROLE_META: Record<string, { icon: string; label: { en: string; ja: string }; color: string; border: string }> = {
-  cto:        { icon: "\uD83D\uDCCB", label: { en: "CTO",        ja: "CTO"           }, color: "#f59e0b", border: "#f59e0b" },
-  manager:    { icon: "\uD83D\uDCC1", label: { en: "PM",         ja: "PM"            }, color: "#3b82f6", border: "#3b82f6" },
-  researcher: { icon: "\uD83D\uDD0D", label: { en: "Researcher", ja: "リサーチャー"   }, color: "#8b5cf6", border: "#8b5cf6" },
-  engineer:   { icon: "\u2699\uFE0F", label: { en: "Engineer",   ja: "エンジニア"     }, color: "#22c55e", border: "#22c55e" },
-  reviewer:   { icon: "\uD83D\uDCDD", label: { en: "Reviewer",   ja: "レビュアー"     }, color: "#ec4899", border: "#ec4899" },
-  tester:     { icon: "\uD83E\uDDEA", label: { en: "Tester",     ja: "テスター"       }, color: "#06b6d4", border: "#06b6d4" },
-  optimizer:  { icon: "\u26A1",       label: { en: "Optimizer",   ja: "オプティマイザー" }, color: "#f97316", border: "#f97316" },
-  documenter: { icon: "\uD83D\uDCD6", label: { en: "Documenter", ja: "ドキュメンター" }, color: "#64748b", border: "#64748b" },
-  marketer:   { icon: "\uD83D\uDCE2", label: { en: "Marketer",   ja: "マーケター"     }, color: "#e11d48", border: "#e11d48" },
-};
-
-/* ─── Task states ──────────────────────────────────────── */
-const TASK_STATES: Record<string, { label: { en: string; ja: string }; color: string }> = {
-  idle:            { label: { en: "Idle",            ja: "待機"       }, color: "#555" },
-  queued:          { label: { en: "Queued",          ja: "待ち"       }, color: "#eab308" },
-  running:         { label: { en: "Running",         ja: "実行中"     }, color: "#8b5cf6" },
-  waiting_review:  { label: { en: "Awaiting Review", ja: "レビュー待ち" }, color: "#f59e0b" },
-  completed:       { label: { en: "Completed",       ja: "完了"       }, color: "#22c55e" },
-  failed:          { label: { en: "Failed",          ja: "失敗"       }, color: "#ef4444" },
-  rejected:        { label: { en: "Rejected",        ja: "差し戻し"   }, color: "#ef4444" },
-};
 
 /* ─── Flow indicator ───────────────────────────────────── */
 interface TaskFlowItem {
@@ -183,38 +158,42 @@ function deriveAgentStates(events: any[]): Record<string, string> {
 
 /* ─── Derive task flow from events ─────────────────────── */
 function deriveTaskFlow(events: any[]): TaskFlowItem[] {
-  const flow: TaskFlowItem[] = [];
+  const flowMap = new Map<string, TaskFlowItem>();
+  const flowList: TaskFlowItem[] = [];
   for (const ev of events) {
     const type = ev.type || "";
     if (type === "tasks_decomposed" && ev.tasks) {
       for (const t of ev.tasks) {
-        flow.push({
-          task_id: t.id || "",
+        const id = t.id || "";
+        const item: TaskFlowItem = {
+          task_id: id,
           from_role: "manager",
           to_role: t.role || "engineer",
           state: "queued",
           description: t.desc || "",
           timestamp: ev.timestamp || "",
-        });
+        };
+        flowMap.set(id, item);
+        flowList.push(item);
       }
     }
     if (type === "task_started" && ev.task_id) {
-      const existing = flow.find((f) => f.task_id === ev.task_id);
+      const existing = flowMap.get(ev.task_id);
       if (existing) existing.state = "running";
     }
     if (type === "task_complete" && ev.task_id) {
-      const existing = flow.find((f) => f.task_id === ev.task_id);
+      const existing = flowMap.get(ev.task_id);
       if (existing) existing.state = "waiting_review";
     }
     if (type === "review_complete") {
-      for (const f of flow) {
+      for (const f of flowList) {
         if (f.state === "waiting_review") {
           f.state = ev.approved ? "completed" : "rejected";
         }
       }
     }
   }
-  return flow;
+  return flowList;
 }
 
 /* ─── Terminal Pane ────────────────────────────────────── */
@@ -242,7 +221,7 @@ function TerminalPane({ role, logs, meta, profile, agentState, loc }: {
     autoScrollRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
   };
 
-  const stateInfo = TASK_STATES[agentState] || TASK_STATES.idle;
+  const stateInfo = TASK_STATE_META[agentState] || TASK_STATE_META.idle;
   const displayName = profile?.title || meta.label[loc];
 
   return (
@@ -285,7 +264,7 @@ function TaskFlowBar({ flow, loc }: { flow: TaskFlowItem[]; loc: Locale }) {
       <div className="task-flow-label">{loc === "ja" ? "タスクフロー" : "Task Flow"}:</div>
       <div className="task-flow-items">
         {flow.slice(-8).map((item, i) => {
-          const stateInfo = TASK_STATES[item.state] || TASK_STATES.idle;
+          const stateInfo = TASK_STATE_META[item.state] || TASK_STATE_META.idle;
           const fromMeta = ROLE_META[item.from_role] || ROLE_META.manager;
           const toMeta = ROLE_META[item.to_role] || ROLE_META.engineer;
           return (

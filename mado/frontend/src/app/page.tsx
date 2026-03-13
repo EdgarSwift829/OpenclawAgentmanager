@@ -143,6 +143,11 @@ export default function Dashboard() {
     } catch { /* ignore */ }
   }, []);
 
+  const handleSendOrder = useCallback(async (order: string) => {
+    if (!activeProject) return;
+    await api.updateProjectConfig(activeProject, { additional_order: order });
+  }, [activeProject]);
+
   useEffect(() => {
     loadProjects();
     loadAllRunStatuses();
@@ -277,14 +282,10 @@ export default function Dashboard() {
           }}
         />
         <AgentTerminalGrid
-          agents={agents}
           events={events}
           agentProfiles={activeAgentProfiles}
           activeProject={activeProject}
-          onSendOrder={async (order) => {
-            if (!activeProject) return;
-            await api.updateProjectConfig(activeProject, { additional_order: order });
-          }}
+          onSendOrder={handleSendOrder}
         />
       </main>
 

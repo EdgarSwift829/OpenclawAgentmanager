@@ -2,34 +2,12 @@
 
 import { useMemo } from "react";
 import { useI18n, type Locale } from "@/lib/i18n";
+import { ROLE_META, TASK_STATE_META } from "@/lib/constants";
 
 interface Props {
   runStatus: any;
   events?: any[];
 }
-
-/* ─── Role metadata ────────────────────────────────────── */
-const ROLE_META: Record<string, { icon: string; label: { en: string; ja: string }; color: string }> = {
-  cto:        { icon: "\uD83D\uDCCB", label: { en: "CTO",        ja: "CTO"          }, color: "#f59e0b" },
-  manager:    { icon: "\uD83D\uDCC1", label: { en: "PM",         ja: "PM"           }, color: "#3b82f6" },
-  researcher: { icon: "\uD83D\uDD0D", label: { en: "Researcher", ja: "リサーチャー"  }, color: "#8b5cf6" },
-  engineer:   { icon: "\u2699\uFE0F", label: { en: "Engineer",   ja: "エンジニア"    }, color: "#22c55e" },
-  reviewer:   { icon: "\uD83D\uDCDD", label: { en: "Reviewer",   ja: "レビュアー"    }, color: "#ec4899" },
-  tester:     { icon: "\uD83E\uDDEA", label: { en: "Tester",     ja: "テスター"      }, color: "#06b6d4" },
-  optimizer:  { icon: "\u26A1",       label: { en: "Optimizer",   ja: "オプティマイザー" }, color: "#f97316" },
-  documenter: { icon: "\uD83D\uDCD6", label: { en: "Documenter", ja: "ドキュメンター" }, color: "#64748b" },
-  marketer:   { icon: "\uD83D\uDCE2", label: { en: "Marketer",   ja: "マーケター"    }, color: "#e11d48" },
-};
-
-const STATE_INFO: Record<string, { label: { en: string; ja: string }; color: string; dot: string }> = {
-  idle:            { label: { en: "Idle",           ja: "待機"       }, color: "#555",    dot: "\u25CB" },
-  queued:          { label: { en: "Queued",         ja: "待ち"       }, color: "#eab308", dot: "\u25D4" },
-  running:         { label: { en: "Running",        ja: "実行中"     }, color: "#8b5cf6", dot: "\u25C9" },
-  waiting_review:  { label: { en: "Review",         ja: "レビュー待ち" }, color: "#f59e0b", dot: "\u25D0" },
-  completed:       { label: { en: "Done",           ja: "完了"       }, color: "#22c55e", dot: "\u25CF" },
-  failed:          { label: { en: "Failed",         ja: "失敗"       }, color: "#ef4444", dot: "\u2716" },
-  rejected:        { label: { en: "Rejected",       ja: "差し戻し"   }, color: "#f97316", dot: "\u21A9" },
-};
 
 /* ─── Derive task info from events ─────────────────────── */
 interface TaskInfo {
@@ -99,28 +77,28 @@ function deriveTasksFromEvents(events: any[]): TaskInfo[] {
 /* ─── Pipeline Flow Diagram ────────────────────────────── */
 function PipelineFlow({ loc, events }: { loc: Locale; events: any[] }) {
   // Determine current phase from events
-  const phases = useMemo(() => {
-    let currentPhase = "idle";
+  const currentPhase = useMemo(() => {
+    let phase = "idle";
     for (const ev of events) {
       switch (ev.type) {
-        case "run_started": currentPhase = "cto_planning"; break;
+        case "run_started": phase = "cto_planning"; break;
         case "agent_activity":
-          if (ev.role === "cto") currentPhase = "cto_planning";
-          if (ev.role === "manager") currentPhase = "task_decomposition";
-          if (ev.role === "reviewer") currentPhase = "review";
+          if (ev.role === "cto") phase = "cto_planning";
+          if (ev.role === "manager") phase = "task_decomposition";
+          if (ev.role === "reviewer") phase = "review";
           break;
-        case "plan_created": currentPhase = "task_decomposition"; break;
-        case "tasks_decomposed": currentPhase = "execution"; break;
-        case "task_started": currentPhase = "execution"; break;
+        case "plan_created": phase = "task_decomposition"; break;
+        case "tasks_decomposed": phase = "execution"; break;
+        case "task_started": phase = "execution"; break;
         case "review_complete":
-          currentPhase = ev.approved ? "completed" : "rejected";
+          phase = ev.approved ? "completed" : "rejected";
           break;
-        case "iteration_approved": currentPhase = "completed"; break;
-        case "run_complete": currentPhase = "completed"; break;
-        case "run_error": currentPhase = "error"; break;
+        case "iteration_approved": phase = "completed"; break;
+        case "run_complete": phase = "completed"; break;
+        case "run_error": phase = "error"; break;
       }
     }
-    return currentPhase;
+    return phase;
   }, [events]);
 
   const steps = [
@@ -133,7 +111,7 @@ function PipelineFlow({ loc, events }: { loc: Locale; events: any[] }) {
   ];
 
   const phaseOrder = ["idle", "user", "cto_planning", "task_decomposition", "execution", "review", "completed"];
-  const currentIdx = phaseOrder.indexOf(phases);
+  const currentIdx = phaseOrder.indexOf(currentPhase);
 
   return (
     <div className="pipeline-flow">
@@ -142,9 +120,9 @@ function PipelineFlow({ loc, events }: { loc: Locale; events: any[] }) {
         {steps.map((step, i) => {
           const stepIdx = phaseOrder.indexOf(step.id);
           let stepState = "pending";
-          if (phases === "error") {
+          if (currentPhase === "error") {
             stepState = stepIdx <= currentIdx ? "error" : "pending";
-          } else if (phases === "rejected") {
+          } else if (currentPhase === "rejected") {
             stepState = step.id === "review" ? "rejected" : (stepIdx < currentIdx ? "completed" : "pending");
           } else if (stepIdx < currentIdx) {
             stepState = "completed";
@@ -159,14 +137,14 @@ function PipelineFlow({ loc, events }: { loc: Locale; events: any[] }) {
               </div>
               {i < steps.length - 1 && (
                 <div className={`pipeline-arrow ${stepIdx < currentIdx ? "pipeline-arrow-active" : ""}`}>
-                  {phases === "rejected" && step.id === "review" ? "\u21A9" : "\u2192"}
+                  {currentPhase === "rejected" && step.id === "review" ? "\u21A9" : "\u2192"}
                 </div>
               )}
             </div>
           );
         })}
       </div>
-      {phases === "rejected" && (
+      {currentPhase === "rejected" && (
         <div className="pipeline-rejection-note">
           {loc === "ja" ? "\u21A9 Reviewer \u2192 Engineer \u5DEE\u3057\u623B\u3057\u4E2D" : "\u21A9 Reviewer \u2192 Engineer rejection"}
         </div>
@@ -199,7 +177,7 @@ export function TaskGraph({ runStatus, events = [] }: Props) {
       {tasks.length > 0 && (
         <div className="task-flow-summary">
           {Object.entries(statusCounts).map(([state, count]) => {
-            const info = STATE_INFO[state] || STATE_INFO.idle;
+            const info = TASK_STATE_META[state] || TASK_STATE_META.idle;
             return (
               <span key={state} className="task-flow-badge" style={{ color: info.color }}>
                 {info.dot} {info.label[loc]}: {count}
@@ -219,7 +197,7 @@ export function TaskGraph({ runStatus, events = [] }: Props) {
           tasks.map((task, i) => {
             const roleMeta = ROLE_META[task.assigned_to] || ROLE_META.engineer;
             const fromMeta = ROLE_META[task.from_role] || ROLE_META.manager;
-            const stateInfo = STATE_INFO[task.state] || STATE_INFO.idle;
+            const stateInfo = TASK_STATE_META[task.state] || TASK_STATE_META.idle;
             return (
               <div key={task.task_id || i} className={`task-flow-card task-flow-card-${task.state}`}>
                 <div className="task-flow-card-header">
