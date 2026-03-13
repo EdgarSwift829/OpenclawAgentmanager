@@ -33,3 +33,20 @@ ignore = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["mado"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_configs = true
+ignore_missing_imports = true
+no_implicit_optional = false
+check_untyped_defs = false
+disallow_untyped_defs = false
+warn_return_any = false
+disable_error_code = [
+    "arg-type", "assignment", "no-any-return", "return-value",
+    "var-annotated", "union-attr", "import-untyped", "name-defined", "operator",
+]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+ignore_errors = true

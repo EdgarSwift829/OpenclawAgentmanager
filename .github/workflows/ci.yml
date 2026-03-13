@@ -26,13 +26,39 @@ jobs:
         run: |
           pip install -r requirements.txt
           pip install -r mado/backend/requirements.txt
-          pip install pytest pytest-asyncio httpx pytest-cov pytest-timeout ruff
+          pip install pytest pytest-asyncio httpx pytest-cov pytest-timeout ruff mypy
 
       - name: Lint (ruff)
         run: ruff check mado/backend/ tests/
 
+      - name: Type check (mypy)
+        run: mypy mado/backend/
+
       - name: Run tests
         run: python -m pytest tests/ -v --tb=short
+
+  security-audit:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r mado/backend/requirements.txt
+          pip install pip-audit
+
+      - name: Run pip-audit
+        run: pip-audit --strict --desc on 2>&1 || true
+        # Non-blocking: logs vulnerabilities but does not fail the build yet.
+        # Remove "|| true" once all known vulnerabilities are resolved.
 
   frontend-check:
     name: Frontend Type Check & Lint
