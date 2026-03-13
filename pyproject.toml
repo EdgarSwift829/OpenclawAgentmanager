@@ -12,3 +12,4 @@ markers = [
 filterwarnings = [
     "ignore::DeprecationWarning",
 ]
+addopts = "--cov=mado.backend --cov-report=term-missing --cov-fail-under=60"
