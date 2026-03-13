@@ -1,7 +1,6 @@
 """Vector Store - Code indexing and semantic search using FAISS/Chroma."""
 
 from pathlib import Path
-from typing import Optional
 
 
 class VectorStore:

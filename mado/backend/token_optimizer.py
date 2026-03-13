@@ -12,7 +12,6 @@ Optimization strategies:
   - code chunking (only relevant sections)
 """
 
-from typing import Optional
 
 
 class TokenOptimizer:

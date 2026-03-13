@@ -1,8 +1,8 @@
 """ModelManager - Register, update, switch, and route models dynamically."""
 
-import yaml
 from pathlib import Path
-from typing import Optional
+
+import yaml
 
 CONFIG_DIR = Path(__file__).resolve().parents[3] / "config"
 

@@ -1,6 +1,5 @@
 """WorkspaceManager - Project workspace isolation and management."""
 
-import os
 import json
 import logging
 from pathlib import Path

@@ -1,10 +1,10 @@
 """Orchestrator API routes - Start/stop/monitor orchestration runs."""
 
-import asyncio
 import logging
-from fastapi import APIRouter, HTTPException, BackgroundTasks
-from pydantic import BaseModel
 from typing import Optional
+
+from fastapi import APIRouter, BackgroundTasks, HTTPException
+from pydantic import BaseModel
 
 from mado.backend.orchestrator.workspace_manager import get_workspace_manager
 
@@ -88,9 +88,9 @@ async def _execute_run(project_id: str, goal: str, max_iterations: int):
     """Execute orchestration run in background with async support."""
     try:
         # Lazy imports to avoid module-level import errors blocking the route
-        from mado.backend.orchestrator.orchestrator import Orchestrator
         from mado.backend.api.routes.agents import register_session
         from mado.backend.api.routes.websocket import broadcaster
+        from mado.backend.orchestrator.orchestrator import Orchestrator
 
         orch = Orchestrator(project_id)
         orch.max_iterations = max_iterations
@@ -132,7 +132,6 @@ async def _execute_run(project_id: str, goal: str, max_iterations: int):
 
 def _inherit_parent_context(parent_id: str, child_id: str):
     """Copy agent_profiles and project_memory from parent to child."""
-    import shutil
     from copy import deepcopy
 
     parent_config = _workspace_manager.get_project_config(parent_id)

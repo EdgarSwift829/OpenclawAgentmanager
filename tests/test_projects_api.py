@@ -1,34 +1,12 @@
 """Tests for projects API routes, including path traversal validation."""
 
 import pytest
-from fastapi.testclient import TestClient
-
-from mado.backend.orchestrator.workspace_manager import WorkspaceManager
-
-
-def _make_client(tmp_path):
-    """Create isolated TestClient with patched workspace manager."""
-    import mado.backend.orchestrator.workspace_manager as wm_mod
-
-    projects_root = tmp_path / "projects"
-    projects_root.mkdir()
-    original = wm_mod._shared_instance
-    wm_mod._shared_instance = WorkspaceManager(str(projects_root))
-
-    # Patch the module-level workspace_manager in the routes module
-    import mado.backend.api.routes.projects as proj_mod
-    proj_mod.workspace_manager = wm_mod._shared_instance
-
-    from mado.backend.api.main import app
-    client = TestClient(app)
-    yield client, wm_mod._shared_instance
-
-    wm_mod._shared_instance = original
 
 
 @pytest.fixture
-def api(tmp_path):
-    yield from _make_client(tmp_path)
+def api(api_client):
+    """Alias for shared api_client fixture."""
+    yield api_client
 
 
 class TestCreateProject:

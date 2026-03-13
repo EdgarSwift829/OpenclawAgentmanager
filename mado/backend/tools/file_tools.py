@@ -1,6 +1,5 @@
 """File Tools - read_file, write_file, list_dir, search_code (restricted to workspace)."""
 
-import os
 from pathlib import Path
 
 

@@ -13,3 +13,23 @@ filterwarnings = [
     "ignore::DeprecationWarning",
 ]
 addopts = "--cov=mado.backend --cov-report=term-missing --cov-fail-under=60"
+timeout = 30
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = [
+    "F541",  # f-string without placeholders (widespread in prompt construction)
+    "F821",  # undefined name (false positive on forward-ref type annotations)
+    "E501",  # line too long (handled by line-length)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"mado/backend/memory/vector_store.py" = ["F401"]  # numpy imported for runtime use
+"tests/e2e/*" = ["F841"]  # e2e tests may have unused captures
+
+[tool.ruff.lint.isort]
+known-first-party = ["mado"]

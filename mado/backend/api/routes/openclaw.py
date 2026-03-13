@@ -1,6 +1,7 @@
 """OpenClaw integration API routes."""
 
 from fastapi import APIRouter
+
 from mado.backend.integrations.openclaw import OpenClawIntegration
 
 router = APIRouter()

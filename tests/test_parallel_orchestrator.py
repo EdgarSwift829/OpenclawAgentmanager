@@ -1,13 +1,12 @@
 """Tests for parallel orchestration, message bus, model routing, and tiering."""
 
-import asyncio
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
-from mado.backend.orchestrator.message_bus import MessageBus, Message
+from mado.backend.models.router import _call_with_retry, route_inference
+from mado.backend.orchestrator.message_bus import Message, MessageBus
 from mado.backend.orchestrator.orchestrator import Orchestrator
-from mado.backend.models.router import route_inference, _call_with_retry
-
 
 # ============================================================
 # MessageBus tests
@@ -276,8 +275,9 @@ class TestRouterRetry:
 
 class TestModelTiering:
     def test_config_has_tiers(self):
-        import yaml
         from pathlib import Path
+
+        import yaml
 
         config_path = Path(__file__).resolve().parents[1] / "config" / "models.yaml"
         if not config_path.exists():
@@ -291,8 +291,9 @@ class TestModelTiering:
             assert "tier" in config, f"Model {name} missing 'tier' field"
 
     def test_high_tier_for_planning_roles(self):
-        import yaml
         from pathlib import Path
+
+        import yaml
 
         config_dir = Path(__file__).resolve().parents[1] / "config"
         models_path = config_dir / "models.yaml"
@@ -315,8 +316,9 @@ class TestModelTiering:
                 assert tier == "high", f"{role} should use high-tier model, got {tier}"
 
     def test_fallback_configured(self):
-        import yaml
         from pathlib import Path
+
+        import yaml
 
         config_path = Path(__file__).resolve().parents[1] / "config" / "models.yaml"
         if not config_path.exists():

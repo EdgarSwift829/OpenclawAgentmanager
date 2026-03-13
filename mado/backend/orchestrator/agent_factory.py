@@ -1,8 +1,8 @@
 """AgentFactory - Dynamic agent creation, tool binding, and registration."""
 
 from typing import Optional
-from mado.backend.models.model_manager import ModelManager
 
+from mado.backend.models.model_manager import ModelManager
 
 AGENT_CLASSES = {
     "cto": "mado.backend.agents.cto.CTOAgent",

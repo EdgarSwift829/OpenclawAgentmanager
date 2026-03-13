@@ -1,9 +1,9 @@
 """MessageBus - Async message passing between agents."""
 
 import asyncio
-from typing import Any, Callable, Optional
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any, Callable, Optional
 
 
 @dataclass

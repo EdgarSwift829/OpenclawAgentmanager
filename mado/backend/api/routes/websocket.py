@@ -8,11 +8,11 @@ Features:
 """
 
 import json
-import asyncio
 import logging
 from datetime import datetime
+from typing import Dict, Optional, Set
+
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from typing import Dict, Set, Optional
 
 logger = logging.getLogger(__name__)
 

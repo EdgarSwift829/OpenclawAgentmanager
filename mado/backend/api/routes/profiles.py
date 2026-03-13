@@ -4,9 +4,10 @@ Global named profiles that live under each role and can be
 reused across projects.
 """
 
+from typing import Optional
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional
 
 from mado.backend.orchestrator.workspace_manager import get_workspace_manager
 

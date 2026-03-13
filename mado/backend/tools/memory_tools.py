@@ -24,13 +24,11 @@ class MemoryTools:
             lines = memory.split("\n")
             new_lines = []
             in_section = False
-            replaced = False
             for line in lines:
                 if line.strip() == header:
                     new_lines.append(line)
                     new_lines.append(content)
                     in_section = True
-                    replaced = True
                 elif line.startswith("## ") and in_section:
                     in_section = False
                     new_lines.append(line)

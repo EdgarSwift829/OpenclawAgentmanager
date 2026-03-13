@@ -114,8 +114,8 @@ def start_backend():
 
 def wait_for_server(url: str, timeout: int = 30, label: str = "server") -> bool:
     """Wait for an HTTP server to respond."""
-    import urllib.request
     import urllib.error
+    import urllib.request
 
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -385,8 +385,8 @@ def main():
             page = browser.new_page(viewport={"width": 1280, "height": 900})
 
             # Check if frontend is available (may not be running in CI)
-            import urllib.request
             import urllib.error
+            import urllib.request
             frontend_available = False
             try:
                 with urllib.request.urlopen(FRONTEND_URL, timeout=5) as resp:

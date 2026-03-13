@@ -1,27 +1,14 @@
 """Tests for models, agents, and logs API routes."""
 
-import pytest
 from unittest.mock import MagicMock
-from fastapi.testclient import TestClient
 
-from mado.backend.orchestrator.workspace_manager import WorkspaceManager
+import pytest
 
 
 @pytest.fixture
-def api(tmp_path):
-    """Create isolated TestClient."""
-    import mado.backend.orchestrator.workspace_manager as wm_mod
-
-    projects_root = tmp_path / "projects"
-    projects_root.mkdir()
-    original = wm_mod._shared_instance
-    wm_mod._shared_instance = WorkspaceManager(str(projects_root))
-
-    from mado.backend.api.main import app
-    client = TestClient(app)
-    yield client, wm_mod._shared_instance
-
-    wm_mod._shared_instance = original
+def api(api_client):
+    """Alias for shared api_client fixture."""
+    yield api_client
 
 
 # ============================================================

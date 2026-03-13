@@ -1,15 +1,14 @@
 """Tests for tool auto-binding (F) and task dependency graph DAG (H)."""
 
-import asyncio
 import time
-import pytest
 from unittest.mock import MagicMock
 
-from mado.backend.orchestrator.agent_factory import AgentFactory, ROLE_TOOLS, _create_tools
-from mado.backend.orchestrator.task_graph import TaskGraph
-from mado.backend.orchestrator.orchestrator import Orchestrator
-from mado.backend.models.model_manager import ModelManager
+import pytest
 
+from mado.backend.models.model_manager import ModelManager
+from mado.backend.orchestrator.agent_factory import ROLE_TOOLS, AgentFactory, _create_tools
+from mado.backend.orchestrator.orchestrator import Orchestrator
+from mado.backend.orchestrator.task_graph import TaskGraph
 
 # ============================================================
 # F. Tool auto-binding tests

@@ -1,8 +1,8 @@
 """Tests for WebSocket endpoint."""
 
 import json
+
 import pytest
-from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from mado.backend.api.main import app
@@ -61,8 +61,9 @@ class TestWebSocketEndpoint:
             assert "No active" in msg["detail"]
 
     def test_stop_with_orchestrator(self, ws_client):
-        from mado.backend.api.routes.orchestrator import _orchestrators
         from unittest.mock import MagicMock
+
+        from mado.backend.api.routes.orchestrator import _orchestrators
 
         mock_orch = MagicMock()
         _orchestrators["stop-proj"] = mock_orch

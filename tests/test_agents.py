@@ -6,18 +6,17 @@ file operations, and result formatting.
 """
 
 import json
-import pytest
-from unittest.mock import patch, MagicMock, PropertyMock
+from unittest.mock import patch
 
-from mado.backend.agents.cto import CTOAgent, AVAILABLE_ROLES, DEFAULT_TEAM
-from mado.backend.agents.manager import ManagerAgent
+from mado.backend.agents.cto import DEFAULT_TEAM, CTOAgent
+from mado.backend.agents.documenter import DocumenterAgent
 from mado.backend.agents.engineer import EngineerAgent
+from mado.backend.agents.manager import ManagerAgent
+from mado.backend.agents.marketer import MarketerAgent
+from mado.backend.agents.optimizer import OptimizerAgent
+from mado.backend.agents.researcher import ResearcherAgent
 from mado.backend.agents.reviewer import ReviewerAgent
 from mado.backend.agents.tester import TesterAgent
-from mado.backend.agents.researcher import ResearcherAgent
-from mado.backend.agents.optimizer import OptimizerAgent
-from mado.backend.agents.documenter import DocumenterAgent
-from mado.backend.agents.marketer import MarketerAgent
 
 
 def make_agent(cls, tmp_path, **kwargs):

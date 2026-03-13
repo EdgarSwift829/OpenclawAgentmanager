@@ -1,14 +1,12 @@
 """Tests for WebSocket broadcasting (C) and lifecycle management (E)."""
 
-import asyncio
-import json
 import time
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock
 
-from mado.backend.orchestrator.orchestrator import Orchestrator, AgentState
 from mado.backend.api.routes.websocket import EventBroadcaster, _event_history
-
+from mado.backend.orchestrator.orchestrator import AgentState, Orchestrator
 
 # ============================================================
 # AgentState tests

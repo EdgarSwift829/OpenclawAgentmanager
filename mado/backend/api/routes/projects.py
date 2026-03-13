@@ -2,9 +2,10 @@
 
 import logging
 import re
+from typing import Dict, List, Optional
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional, List, Dict
 
 from mado.backend.orchestrator.workspace_manager import get_workspace_manager
 
@@ -178,6 +179,7 @@ async def create_project(data: ProjectCreate):
 async def get_project(project_id: str):
     """Get project details."""
     from pathlib import Path
+
     from mado.backend.orchestrator.workspace_manager import _read_json
 
     project_id = _validate_safe_id(project_id, "Project ID")
@@ -247,8 +249,9 @@ class ProjectRename(BaseModel):
 @router.put("/{project_id}/rename")
 async def rename_project(project_id: str, data: ProjectRename):
     """Rename a project."""
-    from pathlib import Path
     import json
+    from pathlib import Path
+
     from mado.backend.orchestrator.workspace_manager import _read_json
 
     logger = logging.getLogger(__name__)
@@ -396,7 +399,7 @@ async def delete_project(project_id: str):
 
         # Stop running orchestration if active
         try:
-            from mado.backend.api.routes.orchestrator import _runs, _orchestrators
+            from mado.backend.api.routes.orchestrator import _orchestrators, _runs
             run = _runs.get(project_id)
             if run and run.get("status") == "running":
                 orch = _orchestrators.get(project_id)
@@ -445,8 +448,9 @@ async def delete_project(project_id: str):
 @router.get("/{project_id}/memory")
 async def get_project_memory(project_id: str):
     """Get project memory contents."""
-    from mado.backend.memory.project_memory import ProjectMemory
     from pathlib import Path
+
+    from mado.backend.memory.project_memory import ProjectMemory
 
     project_id = _validate_safe_id(project_id, "Project ID")
     project_path = Path(workspace_manager.projects_root) / project_id

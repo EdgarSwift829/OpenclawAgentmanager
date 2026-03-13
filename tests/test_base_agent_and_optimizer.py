@@ -1,13 +1,12 @@
 """Tests for BaseAgent, TokenOptimizer, and ProjectMemory."""
 
-import json
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import MagicMock, patch
 
-from mado.backend.agents.base_agent import BaseAgent, DEFAULT_AGENT_PROFILES
-from mado.backend.token_optimizer import TokenOptimizer
+from mado.backend.agents.base_agent import DEFAULT_AGENT_PROFILES, BaseAgent
 from mado.backend.memory.project_memory import ProjectMemory
-
+from mado.backend.token_optimizer import TokenOptimizer
 
 # ============================================================
 # BaseAgent (concrete subclass for testing)

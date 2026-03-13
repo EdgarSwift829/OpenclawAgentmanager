@@ -9,6 +9,7 @@ The Engineer:
 """
 
 import logging
+
 from mado.backend.agents.base_agent import BaseAgent
 
 logger = logging.getLogger(__name__)

@@ -1,30 +1,14 @@
 """Tests for agent profiles API routes."""
 
 import pytest
-from fastapi.testclient import TestClient
-
-from mado.backend.orchestrator.workspace_manager import WorkspaceManager
 
 
 @pytest.fixture
-def api(tmp_path):
-    """Create isolated TestClient with patched workspace manager."""
-    import mado.backend.orchestrator.workspace_manager as wm_mod
-
-    projects_root = tmp_path / "projects"
-    projects_root.mkdir()
-    original = wm_mod._shared_instance
-    wm = WorkspaceManager(str(projects_root))
-    wm_mod._shared_instance = wm
-
-    # Override profiles path to use tmp_path
+def api(api_client, tmp_path):
+    """API client with profiles path overridden to tmp_path."""
+    client, wm = api_client
     wm._PROFILES_PATH = tmp_path / "agent_profiles.json"
-
-    from mado.backend.api.main import app
-    client = TestClient(app)
     yield client, wm
-
-    wm_mod._shared_instance = original
 
 
 class TestListProfiles:

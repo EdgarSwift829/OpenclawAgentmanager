@@ -1,11 +1,10 @@
 """OpenClaw Integration - Check, install, and communicate with OpenClaw Gateway."""
 
-import subprocess
-import json
 import asyncio
+import json
 import shutil
+import subprocess
 from typing import Optional
-
 
 OPENCLAW_WS_URL = "ws://127.0.0.1:18789"
 

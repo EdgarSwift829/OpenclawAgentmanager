@@ -7,16 +7,13 @@ Tests systematic attack patterns against all security boundaries:
 - MADOLogger path sanitization
 """
 
+
 import pytest
-from unittest.mock import patch
-from fastapi.testclient import TestClient
 
-from mado.backend.tools.file_tools import FileTools
-from mado.backend.tools.exec_tools import ExecTools
-from mado.backend.safety.sandbox import Sandbox
 from mado.backend.logging_system import MADOLogger
-from mado.backend.orchestrator.workspace_manager import WorkspaceManager
-
+from mado.backend.safety.sandbox import Sandbox
+from mado.backend.tools.exec_tools import ExecTools
+from mado.backend.tools.file_tools import FileTools
 
 # ============================================================
 # Path Traversal Payloads
@@ -158,15 +155,10 @@ class TestExecToolsCommandInjection:
 # ============================================================
 
 @pytest.fixture
-def api_client(tmp_path):
-    import mado.backend.orchestrator.workspace_manager as wm_mod
-    original = wm_mod._shared_instance
-    wm_mod._shared_instance = WorkspaceManager(str(tmp_path / "projects"))
-    (tmp_path / "projects").mkdir()
-    from mado.backend.api.main import app
-    client = TestClient(app)
+def fuzz_client(api_client):
+    """Extract just the TestClient from shared api_client fixture."""
+    client, wm = api_client
     yield client
-    wm_mod._shared_instance = original
 
 
 API_TRAVERSAL_IDS = [
@@ -183,18 +175,18 @@ class TestAPIPathTraversal:
     """Fuzz API endpoints with path traversal in project IDs."""
 
     @pytest.mark.parametrize("bad_id", API_TRAVERSAL_IDS)
-    def test_get_project_blocked(self, api_client, bad_id):
-        resp = api_client.get(f"/api/projects/{bad_id}")
+    def test_get_project_blocked(self, fuzz_client, bad_id):
+        resp = fuzz_client.get(f"/api/projects/{bad_id}")
         assert resp.status_code in (400, 404, 422)
 
     @pytest.mark.parametrize("bad_id", API_TRAVERSAL_IDS)
-    def test_delete_project_blocked(self, api_client, bad_id):
-        resp = api_client.delete(f"/api/projects/{bad_id}")
+    def test_delete_project_blocked(self, fuzz_client, bad_id):
+        resp = fuzz_client.delete(f"/api/projects/{bad_id}")
         assert resp.status_code in (400, 404, 422)
 
     @pytest.mark.parametrize("bad_id", API_TRAVERSAL_IDS)
-    def test_logs_blocked(self, api_client, bad_id):
-        resp = api_client.get(f"/api/logs/{bad_id}")
+    def test_logs_blocked(self, fuzz_client, bad_id):
+        resp = fuzz_client.get(f"/api/logs/{bad_id}")
         assert resp.status_code in (400, 404, 422)
 
     @pytest.mark.parametrize("bad_id", [
@@ -203,8 +195,8 @@ class TestAPIPathTraversal:
         "/etc/passwd",
         "proj/../../../etc",
     ])
-    def test_create_project_blocked(self, api_client, bad_id):
-        resp = api_client.post("/api/projects/", json={"project_id": bad_id})
+    def test_create_project_blocked(self, fuzz_client, bad_id):
+        resp = fuzz_client.post("/api/projects/", json={"project_id": bad_id})
         assert resp.status_code in (400, 422)
 
 

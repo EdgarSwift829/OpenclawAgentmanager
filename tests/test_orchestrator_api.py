@@ -1,47 +1,13 @@
 """Tests for orchestrator API routes."""
 
-import pytest
-from unittest.mock import MagicMock, patch
-from fastapi.testclient import TestClient
 
-from mado.backend.orchestrator.workspace_manager import WorkspaceManager
+import pytest
 
 
 @pytest.fixture
-def api(tmp_path):
-    """Create isolated TestClient with patched workspace manager and orchestrator state."""
-    import mado.backend.orchestrator.workspace_manager as wm_mod
-    import mado.backend.api.routes.orchestrator as orch_mod
-
-    projects_root = tmp_path / "projects"
-    projects_root.mkdir()
-    original_wm = wm_mod._shared_instance
-    wm = WorkspaceManager(str(projects_root))
-    wm_mod._shared_instance = wm
-
-    # Patch module-level workspace manager in orchestrator routes
-    original_orch_wm = orch_mod._workspace_manager
-    orch_mod._workspace_manager = wm
-
-    # Clear run state between tests
-    original_runs = orch_mod._runs.copy()
-    original_orchestrators = orch_mod._orchestrators.copy()
-    orch_mod._runs.clear()
-    orch_mod._orchestrators.clear()
-
-    from mado.backend.api.main import app
-
-    # Patch _execute_run to no-op so BackgroundTasks doesn't block
-    with patch("mado.backend.api.routes.orchestrator._execute_run", return_value=None):
-        client = TestClient(app)
-        yield client, wm
-
-    wm_mod._shared_instance = original_wm
-    orch_mod._workspace_manager = original_orch_wm
-    orch_mod._runs.clear()
-    orch_mod._runs.update(original_runs)
-    orch_mod._orchestrators.clear()
-    orch_mod._orchestrators.update(original_orchestrators)
+def api(orchestrator_api_client):
+    """Alias for shared orchestrator_api_client fixture."""
+    yield orchestrator_api_client
 
 
 class TestStartRun:

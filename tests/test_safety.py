@@ -1,8 +1,7 @@
 """Tests for safety modules: Sandbox and AgentLimits."""
 
-import pytest
-from mado.backend.safety.sandbox import Sandbox
 from mado.backend.safety.agent_limits import AgentLimits
+from mado.backend.safety.sandbox import Sandbox
 from mado.backend.tools.exec_tools import ALLOWED_COMMANDS, BLOCKED_COMMANDS
 
 

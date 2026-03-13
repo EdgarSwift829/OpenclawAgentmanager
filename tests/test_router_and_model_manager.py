@@ -1,15 +1,16 @@
 """Tests for LLM Router and ModelManager."""
 
 import json
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
-from mado.backend.models.router import (
-    route_inference, _call_with_retry,
-    DEFAULT_MAX_RETRIES, DEFAULT_BASE_DELAY, DEFAULT_TIMEOUT,
-)
 from mado.backend.models.model_manager import ModelManager
-
+from mado.backend.models.router import (
+    DEFAULT_BASE_DELAY,
+    _call_with_retry,
+    route_inference,
+)
 
 # ============================================================
 # Router

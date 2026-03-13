@@ -1,11 +1,9 @@
 """Web Tools - search_web (SearXNG), fetch_url, extract_text."""
 
-import urllib.request
-import urllib.parse
 import json
 import re
-from typing import Optional
-
+import urllib.parse
+import urllib.request
 
 SEARXNG_URL = "http://localhost:8888"
 

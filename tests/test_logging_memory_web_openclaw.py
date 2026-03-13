@@ -1,15 +1,12 @@
 """Tests for MADOLogger, MemoryTools, WebTools, and OpenClawIntegration."""
 
 import json
-import pytest
-from unittest.mock import patch, MagicMock
-from pathlib import Path
+from unittest.mock import MagicMock, patch
 
+from mado.backend.integrations.openclaw import OpenClawIntegration
 from mado.backend.logging_system import MADOLogger
 from mado.backend.tools.memory_tools import MemoryTools
 from mado.backend.tools.web_tools import WebTools
-from mado.backend.integrations.openclaw import OpenClawIntegration
-
 
 # ============================================================
 # MADOLogger
