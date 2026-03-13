@@ -36,3 +36,4 @@ htmlcov/
 
 # E2E test screenshots (auto-generated)
 tests/e2e/screenshots/
+.hypothesis/
