@@ -14,266 +14,310 @@ interface Props {
   onSendOrder?: (order: string) => Promise<void>;
 }
 
-/* ─── Flow indicator ───────────────────────────────────── */
-interface TaskFlowItem {
-  task_id: string;
-  from_role: string;
-  to_role: string;
-  state: string;
-  description: string;
-  timestamp: string;
-}
-
-/* ─── Extract per-agent log lines from events ──────────── */
-interface LogLine {
+/* ─── Chat message ─────────────────────────────────────── */
+interface ChatMessage {
+  id: number;
+  role: string;           // agent role or "_system"
+  roleName: string;       // display name
+  icon: string;
+  color: string;
   text: string;
-  type: "system" | "task" | "complete" | "error" | "review" | "plan" | "activity" | "info" | "rejected";
   timestamp?: string;
-  task_id?: string;
-  state?: string;
+  isProgress?: boolean;   // if true, show blinking dots
 }
 
-function buildAgentLogs(events: OrchestratorEvent[], loc: Locale): Record<string, LogLine[]> {
-  const logs: Record<string, LogLine[]> = {};
-  const push = (role: string, line: LogLine) => {
-    if (!logs[role]) logs[role] = [];
-    logs[role].push(line);
-  };
+/* Helper: role display name */
+function roleName(role: string, loc: Locale): string {
+  const meta = ROLE_META[role];
+  if (meta) return meta.label[loc];
+  if (role === "_system") return loc === "ja" ? "システム" : "System";
+  return role;
+}
+
+function roleIcon(role: string): string {
+  return ROLE_META[role]?.icon || "\u2699\uFE0F";
+}
+
+function roleColor(role: string): string {
+  return ROLE_META[role]?.color || "#888";
+}
+
+/* ─── Build chat messages from events ──────────────────── */
+function buildChatMessages(events: OrchestratorEvent[], loc: Locale): ChatMessage[] {
+  const msgs: ChatMessage[] = [];
+  let id = 0;
+
+  // Track which tasks are assigned to which role (for natural delegation messages)
+  const taskAssignments: Record<string, { role: string; desc: string }> = {};
 
   for (const ev of events) {
     const type = ev.type || "";
     const role = ev.role || ev.sender || "";
     const ts = ev.timestamp || "";
 
+    const push = (r: string, text: string, isProgress = false) => {
+      msgs.push({
+        id: id++,
+        role: r,
+        roleName: roleName(r, loc),
+        icon: roleIcon(r),
+        color: roleColor(r),
+        text,
+        timestamp: ts,
+        isProgress,
+      });
+    };
+
     switch (type) {
-      case "run_started":
-        push("_system", { text: loc === "ja" ? `${ev.agents?.length || 0}体のエージェントで開始` : ev.message || "Run started", type: "system", timestamp: ts });
+      case "run_started": {
+        const agentCount = ev.agents?.length || 0;
+        push("_system", loc === "ja"
+          ? `プロジェクトの実行を開始します（${agentCount}体のエージェントが参加）`
+          : `Starting project run with ${agentCount} agents`);
         break;
-      case "run_complete":
-        push("_system", { text: loc === "ja" ? "実行完了" : "Run complete", type: "complete", timestamp: ts });
+      }
+
+      case "run_complete": {
+        const elapsed = ev.elapsed_seconds
+          ? (loc === "ja" ? `（${Math.round(ev.elapsed_seconds)}秒）` : ` (${Math.round(ev.elapsed_seconds)}s)`)
+          : "";
+        push("_system", loc === "ja"
+          ? `全工程が完了しました${elapsed}`
+          : `All phases completed${elapsed}`);
         break;
+      }
+
       case "run_error":
-        push("_system", { text: `ERROR: ${ev.error || ev.message || "unknown"}`, type: "error", timestamp: ts });
+        push("_system", loc === "ja"
+          ? `エラーが発生しました: ${ev.error || ev.message || "不明"}`
+          : `Error occurred: ${ev.error || ev.message || "unknown"}`);
         break;
+
       case "run_cancelled":
-        push("_system", { text: loc === "ja" ? "キャンセル" : "Cancelled", type: "error", timestamp: ts });
+        push("_system", loc === "ja" ? "実行がキャンセルされました" : "Run cancelled");
         break;
+
       case "iteration_started":
-        push("_system", { text: loc === "ja" ? `── イテレーション ${ev.iteration} 開始 ──` : `── Iteration ${ev.iteration} ──`, type: "system", timestamp: ts });
-        // Also push to all roles
-        for (const r of Object.keys(ROLE_META)) {
-          push(r, { text: loc === "ja" ? `── イテレーション ${ev.iteration} ──` : `── Iteration ${ev.iteration} ──`, type: "system", timestamp: ts });
+        push("_system", loc === "ja"
+          ? `── イテレーション ${ev.iteration} を開始します ──`
+          : `── Starting iteration ${ev.iteration} ──`);
+        break;
+
+      case "plan_created": {
+        const summary = ev.plan_summary || ev.message || "";
+        push("cto", loc === "ja"
+          ? `プランを策定しました。各担当に作業を割り当てます`
+          : `Plan created. Assigning work to team members`);
+        if (summary) {
+          push("cto", summary);
         }
         break;
-      case "plan_created":
-        push("cto", { text: ev.plan_summary || ev.message || "Plan created", type: "plan", timestamp: ts });
-        break;
-      case "tasks_decomposed":
-        push("manager", { text: ev.message || `${ev.task_count} tasks decomposed`, type: "plan", timestamp: ts });
+      }
+
+      case "tasks_decomposed": {
+        const count = ev.task_count || ev.tasks?.length || 0;
+        push("manager", loc === "ja"
+          ? `プランを${count}件のタスクに分解しました`
+          : `Decomposed plan into ${count} tasks`);
         if (ev.tasks) {
           for (const t of ev.tasks) {
-            push("manager", { text: `  → [${t.role}] ${t.desc}`, type: "info", timestamp: ts, task_id: t.id });
+            taskAssignments[t.id] = { role: t.role, desc: t.desc };
+            const targetName = roleName(t.role, loc);
+            push("manager", loc === "ja"
+              ? `${targetName}に「${t.desc}」を発注しました`
+              : `Assigned "${t.desc}" to ${targetName}`);
           }
         }
         break;
-      case "agent_activity":
-        if (role) push(role, { text: ev.message || ev.activity || "", type: "activity", timestamp: ts });
+      }
+
+      case "task_started": {
+        const taskDesc = ev.task || ev.message || "";
+        if (role) {
+          push(role, loc === "ja"
+            ? `「${taskDesc}」の作業を開始しました`
+            : `Started working on "${taskDesc}"`);
+          // Add a progress message
+          push(role, loc === "ja"
+            ? "作業中"
+            : "Working", true);
+        }
         break;
-      case "task_started":
-        if (role) push(role, { text: `> ${ev.task || ev.message || "task started"}`, type: "task", timestamp: ts, task_id: ev.task_id, state: "running" });
+      }
+
+      case "agent_activity": {
+        const activityText = ev.message || ev.activity || "";
+        if (role && activityText) {
+          push(role, activityText);
+        }
         break;
-      case "task_complete":
-        if (role) push(role, { text: `✓ ${ev.summary || ev.message || "done"}`, type: "complete", timestamp: ts, task_id: ev.task_id, state: "completed" });
+      }
+
+      case "task_complete": {
+        const summary = ev.summary || ev.message || "";
+        if (role) {
+          push(role, loc === "ja"
+            ? `作業が完了しました${summary ? `：${summary}` : ""}`
+            : `Work completed${summary ? `: ${summary}` : ""}`);
+          // Check if files were modified
+          if (ev.files_modified && ev.files_modified.length > 0) {
+            push(role, loc === "ja"
+              ? `変更ファイル: ${ev.files_modified.join(", ")}`
+              : `Modified: ${ev.files_modified.join(", ")}`);
+          }
+          push(role, loc === "ja"
+            ? "次の担当に引き継ぎます"
+            : "Handing off to next role");
+        }
         break;
-      case "task_error":
-        if (role) push(role, { text: `✗ ${ev.error || ev.message || "error"}`, type: "error", timestamp: ts, task_id: ev.task_id, state: "failed" });
+      }
+
+      case "task_error": {
+        const errMsg = ev.error || ev.message || "";
+        if (role) {
+          push(role, loc === "ja"
+            ? `作業中にエラーが発生しました: ${errMsg}`
+            : `Error during work: ${errMsg}`);
+        }
         break;
+      }
+
       case "task_timeout":
-        if (role) push(role, { text: `⏱ TIMEOUT (${ev.timeout}s)`, type: "error", timestamp: ts, state: "failed" });
+        if (role) {
+          push(role, loc === "ja"
+            ? `タイムアウトしました（${ev.timeout}秒）`
+            : `Timed out (${ev.timeout}s)`);
+        }
         break;
+
       case "review_complete": {
         const approved = ev.approved;
         const score = ev.score || "?";
         const feedback = ev.feedback || "";
-        push("reviewer", {
-          text: approved
-            ? (loc === "ja" ? `✓ 承認 (スコア: ${score}/10)` : `✓ Approved (score: ${score}/10)`)
-            : (loc === "ja" ? `✗ 差し戻し (スコア: ${score}/10)\n  ${feedback}` : `✗ Rejected (score: ${score}/10)\n  ${feedback}`),
-          type: approved ? "complete" : "rejected",
-          timestamp: ts,
-          state: approved ? "completed" : "rejected",
-        });
+        if (approved) {
+          push("reviewer", loc === "ja"
+            ? `レビュー完了：承認しました（スコア: ${score}/10）`
+            : `Review complete: Approved (score: ${score}/10)`);
+        } else {
+          push("reviewer", loc === "ja"
+            ? `レビュー完了：差し戻しました（スコア: ${score}/10）`
+            : `Review complete: Rejected (score: ${score}/10)`);
+          if (feedback) {
+            push("reviewer", loc === "ja"
+              ? `修正事項: ${feedback}`
+              : `Feedback: ${feedback}`);
+          }
+        }
+        // Show issues if any
+        if (ev.issues && ev.issues.length > 0) {
+          for (const issue of ev.issues) {
+            push("reviewer", `[${issue.severity}] ${issue.description}`);
+          }
+        }
         break;
       }
-      case "task_rejected":
-        if (role) push(role, { text: loc === "ja" ? `← 差し戻し: ${ev.reason || ""}` : `← Rejected: ${ev.reason || ""}`, type: "rejected", timestamp: ts, state: "rejected" });
+
+      case "task_rejected": {
+        const reason = ev.reason || "";
+        if (role) {
+          push(role, loc === "ja"
+            ? `差し戻しを受けました${reason ? `：${reason}` : ""}。修正に取り掛かります`
+            : `Received rejection${reason ? `: ${reason}` : ""}. Starting corrections`);
+        }
         break;
+      }
+
       case "dag_execution":
-        push("_system", { text: ev.message || `DAG: ${ev.total_tasks} tasks`, type: "system", timestamp: ts });
+        push("_system", loc === "ja"
+          ? `DAG実行：${ev.total_tasks}件のタスクを並列処理します`
+          : `DAG execution: processing ${ev.total_tasks} tasks in parallel`);
         break;
+
       case "dag_layer_start":
-        push("_system", { text: ev.message || `Layer ${ev.layer}`, type: "system", timestamp: ts });
+        push("_system", loc === "ja"
+          ? `レイヤー${ev.layer}のタスクを実行中`
+          : `Executing layer ${ev.layer} tasks`);
         break;
+
       default:
         if (ev.message && role) {
-          push(role, { text: ev.message, type: "activity", timestamp: ts });
+          push(role, ev.message);
         }
     }
   }
-  return logs;
+
+  return msgs;
 }
 
-/* ─── Derive agent states from events ──────────────────── */
-function deriveAgentStates(events: OrchestratorEvent[]): Record<string, string> {
+/* ─── Derive which roles are currently "running" ──────── */
+function deriveRunningRoles(events: OrchestratorEvent[]): Set<string> {
   const states: Record<string, string> = {};
   for (const ev of events) {
     const role = ev.role || "";
-    const type = ev.type || "";
     if (!role || role === "orchestrator") continue;
-    switch (type) {
+    switch (ev.type) {
       case "agent_activity":
       case "task_started":
         states[role] = "running";
         break;
       case "task_complete":
-        states[role] = "completed";
-        break;
       case "task_error":
       case "task_timeout":
-        states[role] = "failed";
-        break;
-      case "review_complete":
-        states[role] = ev.approved ? "completed" : "rejected";
-        break;
       case "task_rejected":
-        states[role] = "rejected";
+        states[role] = "done";
         break;
     }
   }
-  return states;
-}
-
-/* ─── Derive task flow from events ─────────────────────── */
-function deriveTaskFlow(events: OrchestratorEvent[]): TaskFlowItem[] {
-  const flowMap = new Map<string, TaskFlowItem>();
-  const flowList: TaskFlowItem[] = [];
-  for (const ev of events) {
-    const type = ev.type || "";
-    if (type === "tasks_decomposed" && ev.tasks) {
-      for (const t of ev.tasks) {
-        const id = t.id || "";
-        const item: TaskFlowItem = {
-          task_id: id,
-          from_role: "manager",
-          to_role: t.role || "engineer",
-          state: "queued",
-          description: t.desc || "",
-          timestamp: ev.timestamp || "",
-        };
-        flowMap.set(id, item);
-        flowList.push(item);
-      }
-    }
-    if (type === "task_started" && ev.task_id) {
-      const existing = flowMap.get(ev.task_id);
-      if (existing) existing.state = "running";
-    }
-    if (type === "task_complete" && ev.task_id) {
-      const existing = flowMap.get(ev.task_id);
-      if (existing) existing.state = "waiting_review";
-    }
-    if (type === "review_complete") {
-      for (const f of flowList) {
-        if (f.state === "waiting_review") {
-          f.state = ev.approved ? "completed" : "rejected";
-        }
-      }
-    }
+  const running = new Set<string>();
+  for (const [role, state] of Object.entries(states)) {
+    if (state === "running") running.add(role);
   }
-  return flowList;
+  return running;
 }
 
-/* ─── Terminal Pane ────────────────────────────────────── */
-function TerminalPane({ role, logs, meta, profile, agentState, loc }: {
-  role: string;
-  logs: LogLine[];
-  meta: typeof ROLE_META[string];
-  profile?: AgentProfileAssignment;
-  agentState: string;
-  loc: Locale;
-}) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const autoScrollRef = useRef(true);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (el && autoScrollRef.current) {
-      el.scrollTop = el.scrollHeight;
-    }
-  }, [logs.length]);
-
-  const handleScroll = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    autoScrollRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
-  };
-
-  const stateInfo = TASK_STATE_META[agentState] || TASK_STATE_META.idle;
-  const displayName = meta.label[loc];
-
+/* ─── Blinking dots component ─────────────────────────── */
+function BlinkingDots() {
   return (
-    <div className="terminal-pane" style={{ "--pane-border": meta.border } as React.CSSProperties}>
-      {/* Title bar */}
-      <div className="terminal-titlebar">
-        <span className="terminal-titlebar-icon">{meta.icon}</span>
-        <span className="terminal-titlebar-name" style={{ color: meta.color }}>{displayName}</span>
-        <span className="terminal-titlebar-state" style={{ color: stateInfo.color }}>
-          {stateInfo.label[loc]}
-        </span>
-      </div>
-      {/* Terminal body */}
-      <div className="terminal-body" ref={scrollRef} onScroll={handleScroll}>
-        {logs.length === 0 ? (
-          <div className="terminal-empty">
-            <span className="terminal-cursor">_</span>
-            <span className="terminal-empty-text">{loc === "ja" ? "待機中..." : "Standby..."}</span>
-          </div>
-        ) : (
-          logs.map((line, i) => (
-            <div key={i} className={`terminal-line terminal-line-${line.type}`}>
-              {line.timestamp && (
-                <span className="terminal-ts">{new Date(line.timestamp).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
-              )}
-              <span className="terminal-text">{line.text}</span>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
+    <span className="blinking-dots">
+      <span className="dot dot-1">.</span>
+      <span className="dot dot-2">.</span>
+      <span className="dot dot-3">.</span>
+    </span>
   );
 }
 
 /* ─── Task Flow Bar ────────────────────────────────────── */
-function TaskFlowBar({ flow, loc }: { flow: TaskFlowItem[]; loc: Locale }) {
-  if (flow.length === 0) return null;
+function TaskFlowBar({ events, loc }: { events: OrchestratorEvent[]; loc: Locale }) {
+  // Build active roles status bar
+  const ROLE_ORDER = ["cto", "manager", "researcher", "engineer", "reviewer", "tester", "optimizer", "documenter", "marketer"];
+  const activeRoles = useMemo(() => {
+    const roles = new Set<string>();
+    for (const ev of events) {
+      const role = ev.role || ev.sender || "";
+      if (role && role !== "orchestrator" && ROLE_META[role]) {
+        roles.add(role);
+      }
+    }
+    return ROLE_ORDER.filter((r) => roles.has(r));
+  }, [events]);
+
+  const runningRoles = useMemo(() => deriveRunningRoles(events), [events]);
+
+  if (activeRoles.length === 0) return null;
+
   return (
-    <div className="task-flow-bar">
-      <div className="task-flow-label">{loc === "ja" ? "タスクフロー" : "Task Flow"}:</div>
-      <div className="task-flow-items">
-        {flow.slice(-8).map((item, i) => {
-          const stateInfo = TASK_STATE_META[item.state] || TASK_STATE_META.idle;
-          const fromMeta = ROLE_META[item.from_role] || ROLE_META.manager;
-          const toMeta = ROLE_META[item.to_role] || ROLE_META.engineer;
-          return (
-            <div key={i} className="task-flow-item" title={item.description}>
-              <span className="task-flow-from" style={{ color: fromMeta.color }}>{fromMeta.icon}</span>
-              <span className="task-flow-arrow">→</span>
-              <span className="task-flow-to" style={{ color: toMeta.color }}>{toMeta.icon}</span>
-              <span className="task-flow-state" style={{ color: stateInfo.color }}>{stateInfo.label[loc]}</span>
-            </div>
-          );
-        })}
-      </div>
+    <div className="chat-flow-bar">
+      {activeRoles.map((role) => {
+        const meta = ROLE_META[role];
+        const isRunning = runningRoles.has(role);
+        return (
+          <div key={role} className={`chat-flow-agent ${isRunning ? "chat-flow-agent-active" : ""}`}>
+            <span className="chat-flow-icon">{meta.icon}</span>
+            <span className="chat-flow-name" style={{ color: meta.color }}>{meta.label[loc]}</span>
+            {isRunning && <BlinkingDots />}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -327,23 +371,33 @@ function CommandBar({ loc, onSend, activeProject }: {
 export function AgentTerminalGrid({ events, agentProfiles = {}, activeProject, onSendOrder }: Props) {
   const { t, locale } = useI18n();
   const loc = locale as Locale;
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const autoScrollRef = useRef(true);
 
-  const agentLogs = useMemo(() => buildAgentLogs(events, loc), [events, loc]);
-  const agentStates = useMemo(() => deriveAgentStates(events), [events]);
-  const taskFlow = useMemo(() => deriveTaskFlow(events), [events]);
+  const chatMessages = useMemo(() => buildChatMessages(events, loc), [events, loc]);
+  const runningRoles = useMemo(() => deriveRunningRoles(events), [events]);
 
-  // Determine active roles from events (preserve display order)
-  const ROLE_ORDER = ["cto", "manager", "researcher", "engineer", "reviewer", "tester", "optimizer", "documenter", "marketer"];
-  const activeRoles = useMemo(() => {
-    const roles = new Set<string>();
-    for (const ev of events) {
-      const role = ev.role || ev.sender || "";
-      if (role && role !== "orchestrator" && ROLE_META[role]) {
-        roles.add(role);
-      }
+  // Filter out "progress" messages for non-running roles (they finished)
+  const visibleMessages = useMemo(() => {
+    return chatMessages.filter((msg) => {
+      if (msg.isProgress && !runningRoles.has(msg.role)) return false;
+      return true;
+    });
+  }, [chatMessages, runningRoles]);
+
+  // Auto-scroll
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el && autoScrollRef.current) {
+      el.scrollTop = el.scrollHeight;
     }
-    return ROLE_ORDER.filter((r) => roles.has(r));
-  }, [events]);
+  }, [visibleMessages.length]);
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    autoScrollRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+  };
 
   if (events.length === 0) {
     return (
@@ -358,40 +412,38 @@ export function AgentTerminalGrid({ events, agentProfiles = {}, activeProject, o
     );
   }
 
-  // Calculate grid layout based on active role count
-  const paneCount = activeRoles.length;
-  let gridClass = "terminal-grid-2x2";
-  if (paneCount <= 1) gridClass = "terminal-grid-1x1";
-  else if (paneCount === 2) gridClass = "terminal-grid-1x2";
-  else if (paneCount === 3) gridClass = "terminal-grid-1-2";
-  else if (paneCount <= 4) gridClass = "terminal-grid-2x2";
-  else if (paneCount <= 6) gridClass = "terminal-grid-2x3";
-  else gridClass = "terminal-grid-3x3";
-
   return (
     <div className="terminal-grid-container">
-      {/* Task flow indicator */}
-      <TaskFlowBar flow={taskFlow} loc={loc} />
+      {/* Active agents status bar */}
+      <TaskFlowBar events={events} loc={loc} />
 
-      {/* Terminal panes */}
-      <div className={`terminal-grid ${gridClass}`}>
-        {activeRoles.map((role) => {
-          const meta = ROLE_META[role];
-          const logs = agentLogs[role] || [];
-          const profile = agentProfiles[role];
-          const state = agentStates[role] || "idle";
-          return (
-            <TerminalPane
-              key={role}
-              role={role}
-              logs={logs}
-              meta={meta}
-              profile={profile}
-              agentState={state}
-              loc={loc}
-            />
-          );
-        })}
+      {/* Chat log */}
+      <div className="chat-log" ref={scrollRef} onScroll={handleScroll}>
+        {visibleMessages.map((msg) => (
+          <div key={msg.id} className={`chat-message ${msg.role === "_system" ? "chat-message-system" : ""}`}>
+            {msg.role !== "_system" && (
+              <div className="chat-avatar" style={{ borderColor: msg.color }}>
+                <span>{msg.icon}</span>
+              </div>
+            )}
+            <div className={`chat-bubble ${msg.role === "_system" ? "chat-bubble-system" : ""}`}>
+              {msg.role !== "_system" && (
+                <div className="chat-sender" style={{ color: msg.color }}>
+                  {msg.roleName}
+                  {msg.timestamp && (
+                    <span className="chat-time">
+                      {new Date(msg.timestamp).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                    </span>
+                  )}
+                </div>
+              )}
+              <div className="chat-text">
+                {msg.text}
+                {msg.isProgress && <BlinkingDots />}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Command input bar */}
