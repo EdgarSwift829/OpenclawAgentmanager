@@ -241,9 +241,13 @@ export default function Dashboard() {
     };
   }, [activeProject]);
 
-  // Show setup wizard on first launch
+  // Show loading while checking setup status
   if (!setupChecked) {
-    return null; // Loading setup status
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", color: "var(--text-secondary)" }}>
+        <span>Loading...</span>
+      </div>
+    );
   }
   if (needsSetup) {
     return <SetupWizard onComplete={handleSetupComplete} />;
