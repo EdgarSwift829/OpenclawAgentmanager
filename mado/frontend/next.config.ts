@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Prevent Next.js from stripping trailing slashes before proxying
+  skipTrailingSlashRedirect: true,
   async rewrites() {
     return [
       {
