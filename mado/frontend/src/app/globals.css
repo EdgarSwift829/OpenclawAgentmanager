@@ -1370,34 +1370,7 @@ input, select {
   color: var(--text-secondary);
 }
 
-/* Project agents section */
-.detail-agents-section { margin-bottom: 0.5rem; }
-.detail-agents-header { display: flex; align-items: center; margin-bottom: 0.25rem; }
-.detail-agents-label { font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); }
-.detail-agents-list { display: flex; flex-wrap: wrap; gap: 0.375rem; align-items: center; }
-.detail-agent-badge {
-  display: inline-flex; align-items: center; gap: 0.25rem;
-  padding: 0.125rem 0.5rem;
-  background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 4px;
-  font-size: 0.75rem; color: var(--text-primary);
-}
-.detail-agent-remove {
-  background: none; border: none; cursor: pointer;
-  color: var(--text-secondary); font-size: 0.875rem; padding: 0; line-height: 1;
-}
-.detail-agent-remove:hover { color: var(--danger, #e74c3c); }
-.detail-agent-add {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 1.5rem; height: 1.5rem;
-  border: 1px dashed var(--border); border-radius: 4px;
-  background: transparent; cursor: pointer; color: var(--text-secondary); font-size: 0.875rem;
-}
-.detail-agent-add:hover { border-color: var(--accent); color: var(--accent); }
-.detail-agent-select {
-  padding: 0.125rem 0.25rem;
-  border: 1px solid var(--accent); border-radius: 4px;
-  background: var(--bg-secondary); color: var(--text-primary); font-size: 0.75rem;
-}
+
 
 /* Additional order input */
 .detail-order-section { margin-bottom: 0.5rem; }
@@ -2520,11 +2493,35 @@ input, select {
   text-align: center;
   padding: 1rem;
 }
+.agents-tab-group { margin-bottom: 0.75rem; }
+.agents-tab-group-title {
+  font-size: 0.6875rem; font-weight: 600; color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: 0.05em;
+  margin: 0 0 0.375rem 0.25rem; padding: 0;
+}
 .agents-tab-list {
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
 }
+.agents-tab-card-available {
+  opacity: 0.6;
+  border-style: dashed;
+}
+.agents-tab-add-btn {
+  font-size: 0.6875rem; padding: 0.125rem 0.5rem;
+  border: 1px solid var(--border); border-radius: 3px;
+  background: transparent; color: var(--accent); cursor: pointer;
+  flex-shrink: 0;
+}
+.agents-tab-add-btn:hover { background: var(--accent); color: #fff; }
+.agents-tab-remove-btn {
+  font-size: 0.6875rem; padding: 0.25rem 0.5rem;
+  border: 1px solid var(--danger, #e74c3c); border-radius: 3px;
+  background: transparent; color: var(--danger, #e74c3c); cursor: pointer;
+  margin-bottom: 0.375rem;
+}
+.agents-tab-remove-btn:hover { background: var(--danger, #e74c3c); color: #fff; }
 
 /* ── Role card ── */
 .agents-tab-card {
