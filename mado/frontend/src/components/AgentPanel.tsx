@@ -229,7 +229,7 @@ export function AgentPanel({ activeProject, agentProfiles, runtimeAgents, onProf
             const model = runtime?.model || assignments[role] || "\u2014";
             const isActive = !!runtime;
             const isExpanded = expandedRole === role;
-            const roleProfiles = globalProfiles[role] || [];
+            const roleProfiles = (globalProfiles[role] || []).filter(p => !p.is_preset);
             const selectedId = agentProfiles[role]?.profile_id || null;
 
             return (
@@ -255,17 +255,7 @@ export function AgentPanel({ activeProject, agentProfiles, runtimeAgents, onProf
                 {/* Expanded: profiles list */}
                 {isExpanded && (
                   <div className="agents-tab-profiles">
-                    {/* Preset note */}
-                    <div className="agents-tab-preset">
-                      <div className="agents-tab-preset-text">
-                        {loc === "ja"
-                          ? "プリセットは編集可能ですが上書き保存はできません。編集後は別名で新しいプロフィールとして保存されます。"
-                          : "Presets can be edited but not overwritten. Edits are saved as a new profile with a different name."
-                        }
-                      </div>
-                    </div>
-
-                    {/* Profiles list (preset + custom) */}
+                    {/* Profiles list (custom only) */}
                     {roleProfiles.map((profile) => {
                       const isSelected = selectedId === profile.id;
                       const isEditingThis = editingProfile === profile.id;

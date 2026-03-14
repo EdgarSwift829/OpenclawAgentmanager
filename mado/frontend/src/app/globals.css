@@ -1370,6 +1370,35 @@ input, select {
   color: var(--text-secondary);
 }
 
+/* Project agents section */
+.detail-agents-section { margin-bottom: 0.5rem; }
+.detail-agents-header { display: flex; align-items: center; margin-bottom: 0.25rem; }
+.detail-agents-label { font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); }
+.detail-agents-list { display: flex; flex-wrap: wrap; gap: 0.375rem; align-items: center; }
+.detail-agent-badge {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 4px;
+  font-size: 0.75rem; color: var(--text-primary);
+}
+.detail-agent-remove {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-secondary); font-size: 0.875rem; padding: 0; line-height: 1;
+}
+.detail-agent-remove:hover { color: var(--danger, #e74c3c); }
+.detail-agent-add {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.5rem; height: 1.5rem;
+  border: 1px dashed var(--border); border-radius: 4px;
+  background: transparent; cursor: pointer; color: var(--text-secondary); font-size: 0.875rem;
+}
+.detail-agent-add:hover { border-color: var(--accent); color: var(--accent); }
+.detail-agent-select {
+  padding: 0.125rem 0.25rem;
+  border: 1px solid var(--accent); border-radius: 4px;
+  background: var(--bg-secondary); color: var(--text-primary); font-size: 0.75rem;
+}
+
 /* Additional order input */
 .detail-order-section { margin-bottom: 0.5rem; }
 .detail-order-row {
@@ -2115,32 +2144,6 @@ input, select {
 }
 .terminal-grid-empty-icon { font-size: 2rem; opacity: 0.5; margin-bottom: 0.5rem; }
 .terminal-grid-empty-sub { font-size: 0.75rem; opacity: 0.6; }
-
-/* Agent status grid (shown when no events yet) */
-.agent-status-grid {
-  flex: 1;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 0.5rem;
-  padding: 0.75rem;
-  align-content: start;
-  overflow-y: auto;
-}
-.agent-status-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.75rem 0.5rem;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-}
-.agent-status-icon { font-size: 1.5rem; }
-.agent-status-name { font-weight: 600; color: var(--text-primary); }
-.agent-status-state { font-size: 0.6875rem; opacity: 0.6; }
 
 /* ---- Task Flow Bar ---- */
 .task-flow-bar {

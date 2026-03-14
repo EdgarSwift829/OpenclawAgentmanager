@@ -71,7 +71,6 @@ export default function Dashboard() {
   const [rightTab, setRightTab] = useState<"timeline" | "agents" | "models" | "tasks">("timeline");
   const [allRunStatuses, setAllRunStatuses] = useState<Record<string, string>>({});
   const [planUsage, setPlanUsage] = useState<{ projects: number; max_projects: number; plan: string } | null>(null);
-  const [assignments, setAssignments] = useState<Record<string, string>>({});
 
   // --- load / save per-project state on switch ---
   const switchProject = useCallback(
@@ -158,23 +157,15 @@ export default function Dashboard() {
     await api.updateProjectConfig(activeProject, { additional_order: order });
   }, [activeProject]);
 
-  const loadAssignments = useCallback(async () => {
-    try {
-      const data = await api.getAssignments();
-      setAssignments(data.assignments || {});
-    } catch { /* ignore */ }
-  }, []);
-
   useEffect(() => {
     loadProjects();
     loadAllRunStatuses();
-    loadAssignments();
     const interval = setInterval(() => {
       loadProjects();
       loadAllRunStatuses();
     }, 5000);
     return () => clearInterval(interval);
-  }, [loadProjects, loadAllRunStatuses, loadAssignments]);
+  }, [loadProjects, loadAllRunStatuses]);
 
   useEffect(() => {
     if (!activeProject) return;
@@ -306,7 +297,6 @@ export default function Dashboard() {
             agentProfiles={activeAgentProfiles}
             activeProject={activeProject}
             onSendOrder={handleSendOrder}
-            configuredRoles={Object.keys(assignments)}
           />
         </ErrorBoundary>
       </main>

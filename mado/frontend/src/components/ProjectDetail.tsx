@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import * as api from "@/lib/api";
 import { useI18n, type Locale } from "@/lib/i18n";
 import { useInlineStatus, StatusIndicator } from "@/components/Toast";
+import { ROLE_META } from "@/lib/constants";
 import type { TaskItem, ProjectNode, AgentProfileAssignment } from "@/lib/types";
 
 interface Props {
@@ -40,6 +41,7 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh, allRunSta
   const [childInstructions, setChildInstructions] = useState<Record<string, string>>({});
   const [dispatchingChild, setDispatchingChild] = useState<string | null>(null);
   const [additionalOrder, setAdditionalOrder] = useState("");
+  const [addingAgent, setAddingAgent] = useState(false);
 
   const node = projectTree.find((n) => n.project_id === activeProject);
   const isParent = node ? node.children.length > 0 || !node.parent_id : false;
@@ -213,6 +215,57 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh, allRunSta
             </span>
           </div>
         )}
+      </div>
+
+      {/* ── Project Agents ── */}
+      <div className="detail-agents-section">
+        <div className="detail-agents-header">
+          <span className="detail-agents-label">{locale === "ja" ? "エージェント" : "Agents"}</span>
+        </div>
+        <div className="detail-agents-list">
+          {Object.keys(agentProfiles).map((role) => {
+            const meta = ROLE_META[role];
+            if (!meta) return null;
+            return (
+              <span key={role} className="detail-agent-badge">
+                <span>{meta.icon} {meta.label[locale as "en" | "ja"]}</span>
+                <button className="detail-agent-remove" onClick={() => {
+                  const updated = { ...agentProfiles };
+                  delete updated[role];
+                  setAgentProfiles(updated);
+                  markDirty();
+                }}>{"\u00D7"}</button>
+              </span>
+            );
+          })}
+          {addingAgent ? (
+            <select
+              className="detail-agent-select"
+              autoFocus
+              value=""
+              onChange={(e) => {
+                if (e.target.value) {
+                  setAgentProfiles({ ...agentProfiles, [e.target.value]: {} });
+                  markDirty();
+                }
+                setAddingAgent(false);
+              }}
+              onBlur={() => setAddingAgent(false)}
+            >
+              <option value="">{locale === "ja" ? "ロールを選択" : "Select role"}</option>
+              {Object.keys(ROLE_META)
+                .filter((r) => !agentProfiles[r])
+                .map((r) => (
+                  <option key={r} value={r}>{ROLE_META[r].icon} {ROLE_META[r].label[locale as "en" | "ja"]}</option>
+                ))
+              }
+            </select>
+          ) : (
+            Object.keys(ROLE_META).some((r) => !agentProfiles[r]) && (
+              <button className="detail-agent-add" onClick={() => setAddingAgent(true)}>+</button>
+            )
+          )}
+        </div>
       </div>
 
       {/* ── Task Status Summary ── */}
