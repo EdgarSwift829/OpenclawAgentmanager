@@ -131,6 +131,7 @@ class WorkspaceManager:
                 "display_name": display_name or project_id,
                 "created": True,
                 "agents": [],
+                "agent_profiles": {},
                 "status": "initialized",
                 "parent_id": parent_id,
                 "children": [],
@@ -156,6 +157,7 @@ class WorkspaceManager:
             config = {
                 "project_id": parent_id,
                 "status": "initialized",
+                "agent_profiles": {},
                 "parent_id": None,
                 "children": [child_id],
                 "goal": "",
@@ -423,6 +425,7 @@ class WorkspaceManager:
                         "project_id": d.name,
                         "created": True,
                         "agents": [],
+                        "agent_profiles": {},
                         "status": "initialized",
                         "parent_id": None,
                         "children": [],
