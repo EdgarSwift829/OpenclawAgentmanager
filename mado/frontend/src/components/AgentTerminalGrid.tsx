@@ -440,6 +440,17 @@ export function AgentTerminalGrid({ events, agentProfiles = {}, activeProject, o
     return ROLE_ORDER.filter((r) => roles.has(r));
   }, [events, agentProfiles]);
 
+  if (!activeProject) {
+    return (
+      <div className="terminal-grid-container">
+        <div className="terminal-grid-empty">
+          <div className="terminal-grid-empty-icon">{"\uD83D\uDCC2"}</div>
+          <div>{t("selectProject")}</div>
+        </div>
+      </div>
+    );
+  }
+
   if (activeRoles.length === 0) {
     return (
       <div className="terminal-grid-container">

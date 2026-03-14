@@ -70,6 +70,16 @@ async def list_projects():
     }
 
 
+@router.get("/settings/status")
+async def get_setup_status():
+    """Check if initial setup has been completed."""
+    initialized = workspace_manager.is_initialized()
+    return {
+        "initialized": initialized,
+        "projects_root": workspace_manager.get_projects_root(),
+    }
+
+
 @router.get("/settings/root")
 async def get_projects_root():
     """Get current projects root path."""

@@ -109,12 +109,61 @@ class WorkspaceManager:
         """Return current projects root path."""
         return str(self.projects_root)
 
-    def set_projects_root(self, new_root: str):
-        """Update projects root path and persist to config."""
+    def set_projects_root(self, new_root: str, seed_demo: bool = True):
+        """Update projects root path and persist to config.
+
+        If seed_demo is True and the target directory has no projects,
+        automatically install the demo project.
+        """
         path = Path(new_root)
         path.mkdir(parents=True, exist_ok=True)
         _save_projects_root(new_root)
         self.projects_root = path
+
+        if seed_demo:
+            # Only seed demo if the folder has no existing projects
+            existing = [d for d in path.iterdir() if d.is_dir() and (d / "config.json").exists()] if path.exists() else []
+            if not existing:
+                self.seed_demo_project()
+
+    def seed_demo_project(self) -> bool:
+        """Install the bundled demo project into projects_root if not present.
+
+        Returns True if the demo was installed, False if it already exists.
+        """
+        import shutil
+
+        demo_id = "sample-todo-app"
+        target_dir = self.projects_root / demo_id
+        if target_dir.exists():
+            return False
+
+        # Copy from bundled sample in repo root
+        source_dir = REPO_ROOT / "projects" / demo_id
+        if not source_dir.exists():
+            logger.warning("Bundled demo project not found at %s", source_dir)
+            return False
+
+        try:
+            shutil.copytree(str(source_dir), str(target_dir))
+            # Ensure workspace dir exists
+            (target_dir / "workspace").mkdir(exist_ok=True)
+            logger.info("Seeded demo project '%s' into %s", demo_id, self.projects_root)
+            return True
+        except Exception as e:
+            logger.error("Failed to seed demo project: %s", e)
+            return False
+
+    def is_initialized(self) -> bool:
+        """Check if projects_root has been explicitly configured (not default)."""
+        try:
+            if SETTINGS_PATH.exists():
+                data = yaml.safe_load(SETTINGS_PATH.read_text(encoding="utf-8")) or {}
+                root = data.get("projects_root", "")
+                return bool(root and root.strip())
+        except Exception:
+            pass
+        return False
 
     def create_workspace(self, project_id: str, parent_id: str = None,
                          display_name: str = None) -> str:

@@ -15,6 +15,7 @@ import { ProjectDetail } from "@/components/ProjectDetail";
 import { AgentPanel } from "@/components/AgentPanel";
 import { LangSwitcher } from "@/components/LangSwitcher";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { SetupWizard } from "@/components/SetupWizard";
 
 // ---------------------------------------------------------------------------
 // localStorage persistence for per-project state
@@ -71,6 +72,10 @@ export default function Dashboard() {
   const [rightTab, setRightTab] = useState<"timeline" | "agents" | "models" | "tasks">("timeline");
   const [allRunStatuses, setAllRunStatuses] = useState<Record<string, string>>({});
   const [planUsage, setPlanUsage] = useState<{ projects: number; max_projects: number; plan: string } | null>(null);
+
+  // --- Setup wizard state ---
+  const [setupChecked, setSetupChecked] = useState(false);
+  const [needsSetup, setNeedsSetup] = useState(false);
 
   // --- refs for latest state (avoid stale closures in callbacks) ---
   const activeProjectRef = useRef(activeProject);
@@ -165,7 +170,30 @@ export default function Dashboard() {
     await api.updateProjectConfig(activeProject, { additional_order: order });
   }, [activeProject]);
 
+  // --- Check if initial setup is needed ---
   useEffect(() => {
+    api.getSetupStatus()
+      .then((res) => {
+        setNeedsSetup(!res.initialized);
+        setSetupChecked(true);
+      })
+      .catch(() => {
+        // API not available yet, skip setup check
+        setSetupChecked(true);
+      });
+  }, []);
+
+  const handleSetupComplete = useCallback(() => {
+    setNeedsSetup(false);
+    // Reload projects after setup (demo project will be available)
+    loadProjects().then(() => {
+      // Auto-select first project after setup
+      // (handled by the auto-select effect below)
+    });
+  }, [loadProjects]);
+
+  useEffect(() => {
+    if (needsSetup) return; // Don't poll while setup wizard is open
     loadProjects();
     loadAllRunStatuses();
     const interval = setInterval(() => {
@@ -173,7 +201,14 @@ export default function Dashboard() {
       loadAllRunStatuses();
     }, 5000);
     return () => clearInterval(interval);
-  }, [loadProjects, loadAllRunStatuses]);
+  }, [loadProjects, loadAllRunStatuses, needsSetup]);
+
+  // Auto-select first project when none is active
+  useEffect(() => {
+    if (!activeProject && projectTree.length > 0) {
+      switchProject(projectTree[0].project_id);
+    }
+  }, [activeProject, projectTree, switchProject]);
 
   useEffect(() => {
     if (!activeProject) return;
@@ -205,6 +240,14 @@ export default function Dashboard() {
       }
     };
   }, [activeProject]);
+
+  // Show setup wizard on first launch
+  if (!setupChecked) {
+    return null; // Loading setup status
+  }
+  if (needsSetup) {
+    return <SetupWizard onComplete={handleSetupComplete} />;
+  }
 
   return (
     <div className={`app-layout ${sidebarOpen ? "" : "sidebar-is-collapsed"}`}>

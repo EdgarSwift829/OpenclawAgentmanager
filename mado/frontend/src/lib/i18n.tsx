@@ -5,6 +5,22 @@ import { createContext, useContext, useState, useCallback, ReactNode } from "rea
 export type Locale = "ja" | "en";
 
 const dict = {
+  // Setup Wizard
+  setupWelcome: { en: "Welcome to MADO", ja: "MADOへようこそ" },
+  setupWelcomeSub: { en: "Let's set up your workspace", ja: "ワークスペースを設定しましょう" },
+  setupStep1Title: { en: "Projects Folder", ja: "プロジェクトフォルダ" },
+  setupStep1Desc: { en: "Choose a folder to store your projects. A demo project will be created automatically.", ja: "プロジェクトを保存するフォルダを選択してください。デモプロジェクトが自動で作成されます。" },
+  setupStep2Title: { en: "LLM Settings", ja: "LLM設定" },
+  setupStep2Desc: { en: "Configure your local LLM provider and model.", ja: "ローカルLLMのプロバイダーとモデルを設定してください。" },
+  setupFolderPath: { en: "Folder path", ja: "フォルダパス" },
+  setupFolderPlaceholder: { en: "e.g. E:\\AI Storage\\projects", ja: "例: E:\\AI Storage\\projects" },
+  setupSave: { en: "Save & Continue", ja: "保存して次へ" },
+  setupComplete: { en: "Start Using MADO", ja: "MADOを使い始める" },
+  setupProvider: { en: "Provider", ja: "プロバイダー" },
+  setupModel: { en: "Default Model", ja: "デフォルトモデル" },
+  setupSkip: { en: "Skip (use defaults)", ja: "スキップ（デフォルト設定を使用）" },
+  setupSaving: { en: "Saving...", ja: "保存中..." },
+
   // Sidebar
   collapse: { en: "Collapse", ja: "閉じる" },
   expand: { en: "Expand", ja: "開く" },

@@ -12,6 +12,9 @@ async function fetchJSON(path: string, options?: RequestInit) {
   return res.json();
 }
 
+// Setup
+export const getSetupStatus = () => fetchJSON("/projects/settings/status");
+
 // Projects
 export const listProjects = () => fetchJSON("/projects/");
 export const getProjectsRoot = () => fetchJSON("/projects/settings/root");
