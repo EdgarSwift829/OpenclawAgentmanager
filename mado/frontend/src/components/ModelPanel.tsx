@@ -132,10 +132,11 @@ export function ModelPanel({ activeProject, agentProfiles = {}, onProfilesChange
     setDragIdx(idx);
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", String(idx));
-    requestAnimationFrame(() => (e.currentTarget as HTMLElement).classList.add("block-dragging"));
+    const el = e.currentTarget as HTMLElement;
+    requestAnimationFrame(() => el?.classList.add("block-dragging"));
   };
   const handleDragEnd = (e: React.DragEvent) => {
-    (e.currentTarget as HTMLElement).classList.remove("block-dragging");
+    (e.currentTarget as HTMLElement)?.classList.remove("block-dragging");
     setDragIdx(null);
     setOverIdx(null);
     dragCounterRef.current = 0;
