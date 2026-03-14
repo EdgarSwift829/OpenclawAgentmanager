@@ -269,11 +269,31 @@ def write_env_info() -> None:
     env_file.write_text("\n".join(lines), encoding="utf-8")
 
 
+# ── Config file bootstrap ──────────────────────────────────────
+def bootstrap_config() -> None:
+    """Copy .example config files to active configs if they don't exist yet."""
+    print("\n── Config Files ──")
+    config_dir = MADO_ROOT.parent / "config"
+    if not config_dir.exists():
+        warn(f"config ディレクトリが見つかりません: {config_dir}")
+        return
+
+    for example in sorted(config_dir.glob("*.example")):
+        target = example.with_suffix("")  # settings.yaml.example → settings.yaml
+        if target.exists():
+            ok(f"{target.name} 確認済み")
+        else:
+            shutil.copy2(example, target)
+            ok(f"{target.name} を作成しました（{example.name} からコピー）")
+
+
 # ── Main ────────────────────────────────────────────────────────
 def main() -> int:
     print("=" * 50)
     print("  MADO 環境自動セットアップ")
     print("=" * 50)
+
+    bootstrap_config()
 
     results = []
     results.append(check_python())
