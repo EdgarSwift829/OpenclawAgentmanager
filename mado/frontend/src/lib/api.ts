@@ -44,12 +44,12 @@ export const getAgent = (projectId: string, role: string) => fetchJSON(`/agents/
 // Agent Profiles (global, cross-project)
 export const listAllProfiles = () => fetchJSON("/profiles/");
 export const listRoleProfiles = (role: string) => fetchJSON(`/profiles/${role}`);
-export const createProfile = (role: string, name: string, additional_prompt: string, clone_from?: string) =>
+export const createProfile = (role: string, name: string, additional_prompt: string, clone_from?: string, base_prompt?: string) =>
   fetchJSON(`/profiles/${role}`, {
     method: "POST",
-    body: JSON.stringify({ name, additional_prompt, clone_from: clone_from || null }),
+    body: JSON.stringify({ name, additional_prompt, base_prompt: base_prompt || "", clone_from: clone_from || null }),
   });
-export const updateProfile = (role: string, profileId: string, updates: { name?: string; additional_prompt?: string }) =>
+export const updateProfile = (role: string, profileId: string, updates: { name?: string; additional_prompt?: string; base_prompt?: string }) =>
   fetchJSON(`/profiles/${role}/${profileId}`, { method: "PUT", body: JSON.stringify(updates) });
 export const deleteProfile = (role: string, profileId: string) =>
   fetchJSON(`/profiles/${role}/${profileId}`, { method: "DELETE" });

@@ -13,6 +13,7 @@ interface GlobalProfile {
   id: string;
   name: string;
   additional_prompt: string;
+  base_prompt: string;
   is_preset: boolean;
   created_from?: string | null;
 }
@@ -41,6 +42,7 @@ export function AgentPanel({ activeProject, agentProfiles, runtimeAgents, onProf
   const [expandedRole, setExpandedRole] = useState<string | null>(null);
   const [editingProfile, setEditingProfile] = useState<string | null>(null); // profile id
   const [editName, setEditName] = useState("");
+  const [editBasePrompt, setEditBasePrompt] = useState("");
   const [editPrompt, setEditPrompt] = useState("");
   const [creating, setCreating] = useState<{ role: string; mode: "new" | "clone"; sourceId?: string } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -114,6 +116,7 @@ export function AgentPanel({ activeProject, agentProfiles, runtimeAgents, onProf
         editName.trim(),
         editPrompt,
         creating.mode === "clone" ? creating.sourceId : undefined,
+        editBasePrompt,
       );
       showStatus(loc === "ja" ? "プロフィールを作成しました" : "Profile created", "success");
       setCreating(null);
@@ -128,6 +131,7 @@ export function AgentPanel({ activeProject, agentProfiles, runtimeAgents, onProf
   const startEdit = (profile: GlobalProfile) => {
     setEditingProfile(profile.id);
     setEditName(profile.is_preset ? "" : profile.name);
+    setEditBasePrompt(profile.base_prompt || "");
     setEditPrompt(profile.additional_prompt);
     setCreating(null);
   };
@@ -156,7 +160,7 @@ export function AgentPanel({ activeProject, agentProfiles, runtimeAgents, onProf
       }
       setSaving(true);
       try {
-        await api.createProfile(role, editName.trim(), editPrompt, editingProfile);
+        await api.createProfile(role, editName.trim(), editPrompt, editingProfile, editBasePrompt);
         showStatus(loc === "ja" ? "新しいプロフィールとして保存しました" : "Saved as new profile", "success");
         setEditingProfile(null);
         await loadProfiles();
@@ -174,6 +178,7 @@ export function AgentPanel({ activeProject, agentProfiles, runtimeAgents, onProf
       await api.updateProfile(role, editingProfile, {
         name: editName.trim(),
         additional_prompt: editPrompt,
+        base_prompt: editBasePrompt,
       });
       showStatus(loc === "ja" ? "保存しました" : "Saved", "success");
       setEditingProfile(null);
@@ -279,15 +284,32 @@ export function AgentPanel({ activeProject, agentProfiles, runtimeAgents, onProf
                                 onChange={(e) => setEditName(e.target.value)}
                                 placeholder={loc === "ja" ? "新しいプロフィール名を入力" : "Enter new profile name"}
                               />
+                              <label className="agents-tab-editor-label" style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.5rem", display: "block" }}>
+                                {loc === "ja" ? "ベースプロンプト（ロール定義）" : "Base Prompt (role definition)"}
+                              </label>
+                              <textarea
+                                className="agents-tab-editor-textarea"
+                                value={editBasePrompt}
+                                onChange={(e) => setEditBasePrompt(e.target.value)}
+                                placeholder={loc === "ja"
+                                  ? "このロールの基本的な振る舞いを定義するプロンプト"
+                                  : "Base prompt defining this role's behavior"
+                                }
+                                rows={8}
+                                style={{ fontFamily: "monospace", fontSize: "0.8rem" }}
+                              />
+                              <label className="agents-tab-editor-label" style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.5rem", display: "block" }}>
+                                {loc === "ja" ? "追加プロンプト（カスタマイズ）" : "Additional Prompt (customization)"}
+                              </label>
                               <textarea
                                 className="agents-tab-editor-textarea"
                                 value={editPrompt}
                                 onChange={(e) => setEditPrompt(e.target.value)}
                                 placeholder={loc === "ja"
-                                  ? "追加プロンプト（プリセットに加えて適用されます）"
-                                  : "Additional prompt (applied on top of preset)"
+                                  ? "追加プロンプト（ベースに加えて適用されます）"
+                                  : "Additional prompt (applied on top of base)"
                                 }
-                                rows={6}
+                                rows={4}
                               />
                               <div className="agents-tab-editor-actions">
                                 <button className="agents-tab-editor-cancel" onClick={() => setEditingProfile(null)} disabled={saving}>
@@ -329,7 +351,12 @@ export function AgentPanel({ activeProject, agentProfiles, runtimeAgents, onProf
                             </div>
                           )}
 
-                          {/* Preview additional_prompt if not editing */}
+                          {/* Preview base_prompt + additional_prompt if not editing */}
+                          {!isEditingThis && isSelected && profile.base_prompt && (
+                            <div className="agents-tab-profile-preview" style={{ whiteSpace: "pre-wrap", fontSize: "0.75rem", lineHeight: 1.4, maxHeight: "8rem", overflow: "auto", background: "var(--bg-secondary, #1a1a2e)", padding: "0.5rem", borderRadius: "4px", margin: "0.25rem 0" }}>
+                              {profile.base_prompt}
+                            </div>
+                          )}
                           {!isEditingThis && profile.additional_prompt && (
                             <div className="agents-tab-profile-preview">
                               {profile.additional_prompt.split("\n").slice(0, 2).join(" ")}

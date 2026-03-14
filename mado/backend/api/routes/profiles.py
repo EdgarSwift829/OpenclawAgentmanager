@@ -17,12 +17,14 @@ router = APIRouter()
 class ProfileCreate(BaseModel):
     name: str
     additional_prompt: str = ""
+    base_prompt: str = ""
     clone_from: Optional[str] = None
 
 
 class ProfileUpdate(BaseModel):
     name: Optional[str] = None
     additional_prompt: Optional[str] = None
+    base_prompt: Optional[str] = None
 
 
 @router.get("/")
@@ -49,6 +51,7 @@ async def create_profile(role: str, data: ProfileCreate):
         role=role,
         name=data.name.strip(),
         additional_prompt=data.additional_prompt,
+        base_prompt=data.base_prompt,
         clone_from=data.clone_from,
     )
     return profile

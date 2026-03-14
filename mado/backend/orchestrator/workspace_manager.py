@@ -488,9 +488,17 @@ class WorkspaceManager:
     def get_all_profiles(self) -> dict:
         """Return all profiles grouped by role.
 
-        Returns: { "cto": [ {id, name, additional_prompt, is_preset}, ... ], ... }
+        Returns: { "cto": [ {id, name, additional_prompt, is_preset, base_prompt}, ... ], ... }
         """
-        return self._load_profiles()
+        from mado.backend.agents.base_agent import DEFAULT_AGENT_PROFILES
+        data = self._load_profiles()
+        # Inject base_prompt (personality) from DEFAULT_AGENT_PROFILES into each profile
+        for role, profiles in data.items():
+            defaults = DEFAULT_AGENT_PROFILES.get(role, {})
+            base_prompt = defaults.get("personality", "")
+            for p in profiles:
+                p["base_prompt"] = base_prompt
+        return data
 
     def get_role_profiles(self, role: str) -> list:
         """Return profiles for a specific role."""
@@ -498,6 +506,7 @@ class WorkspaceManager:
         return data.get(role, [])
 
     def create_profile(self, role: str, name: str, additional_prompt: str,
+                       base_prompt: str = "",
                        clone_from: str | None = None) -> dict:
         """Create a new named profile under a role.
 
@@ -519,6 +528,7 @@ class WorkspaceManager:
             "id": str(uuid.uuid4())[:8],
             "name": name,
             "additional_prompt": additional_prompt,
+            "base_prompt": base_prompt,
             "is_preset": False,
             "created_from": clone_from,
         }
@@ -542,6 +552,8 @@ class WorkspaceManager:
                     p["name"] = updates["name"]
                 if "additional_prompt" in updates:
                     p["additional_prompt"] = updates["additional_prompt"]
+                if "base_prompt" in updates:
+                    p["base_prompt"] = updates["base_prompt"]
                 self._save_profiles(data)
                 return p
         return None
