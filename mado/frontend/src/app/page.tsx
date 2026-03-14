@@ -317,12 +317,6 @@ export default function Dashboard() {
             {t("agentsTab")}
           </button>
           <button
-            className={`right-tab ${rightTab === "models" ? "right-tab-active" : ""}`}
-            onClick={() => setRightTab("models")}
-          >
-            {t("models")}
-          </button>
-          <button
             className={`right-tab ${rightTab === "tasks" ? "right-tab-active" : ""}`}
             onClick={() => setRightTab("tasks")}
           >
@@ -334,16 +328,6 @@ export default function Dashboard() {
           {rightTab === "timeline" && <ErrorBoundary><Timeline events={events} /></ErrorBoundary>}
           {rightTab === "agents" && (
             <ErrorBoundary>
-              <AgentPanel
-                activeProject={activeProject}
-                agentProfiles={activeAgentProfiles}
-                runtimeAgents={agents}
-                onProfilesChanged={loadProjects}
-              />
-            </ErrorBoundary>
-          )}
-          {rightTab === "models" && (
-            <ErrorBoundary>
               <ModelPanel
                 activeProject={activeProject}
                 agentProfiles={activeAgentProfiles}
@@ -354,6 +338,12 @@ export default function Dashboard() {
                     loadProjects();
                   } catch { /* ignore */ }
                 }}
+              />
+              <AgentPanel
+                activeProject={activeProject}
+                agentProfiles={activeAgentProfiles}
+                runtimeAgents={agents}
+                onProfilesChanged={loadProjects}
               />
             </ErrorBoundary>
           )}
