@@ -18,8 +18,8 @@ _runs: dict = {}
 _orchestrators: dict = {}
 _workspace_manager = get_workspace_manager()
 
-# Safe project ID pattern
-_SAFE_ID_RE = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9_\-]{0,99}$')
+# Safe project ID pattern (unified with projects.py: alphanumeric, CJK, hyphens, underscores, spaces)
+_SAFE_ID_RE = re.compile(r'^[a-zA-Z0-9\u3000-\u9FFF\uFF00-\uFFEF _.\-]+$')
 
 # Input limits
 MAX_GOAL_LENGTH = 5000
@@ -35,8 +35,10 @@ class RunCreate(BaseModel):
     @field_validator("project_id")
     @classmethod
     def validate_project_id(cls, v):
+        if '..' in v or '/' in v or '\\' in v:
+            raise ValueError("project_id contains unsafe path characters")
         if not _SAFE_ID_RE.match(v):
-            raise ValueError("Invalid project_id: must be alphanumeric with hyphens/underscores, max 100 chars")
+            raise ValueError("Invalid project_id")
         return v
 
     @field_validator("goal")
@@ -64,8 +66,10 @@ class DispatchChild(BaseModel):
     @field_validator("parent_id", "child_id")
     @classmethod
     def validate_ids(cls, v):
+        if '..' in v or '/' in v or '\\' in v:
+            raise ValueError("ID contains unsafe path characters")
         if not _SAFE_ID_RE.match(v):
-            raise ValueError("Invalid ID: must be alphanumeric with hyphens/underscores")
+            raise ValueError("Invalid ID")
         return v
 
     @field_validator("instruction")
@@ -149,20 +153,28 @@ async def _execute_run(project_id: str, goal: str, max_iterations: int):
         orch.max_iterations = max_iterations
         _orchestrators[project_id] = orch
 
-        # Connect WebSocket broadcasting
+        # Connect WebSocket broadcasting + agent registration
+        _agents_registered = False
+
         async def ws_event_handler(event: dict):
+            nonlocal _agents_registered
             try:
                 await broadcaster.broadcast(project_id, event)
             except Exception as e:
                 logger.warning(f"Failed to broadcast event for {project_id}: {e}")
             if event.get("type") == "iteration_started":
                 _runs[project_id]["iteration"] = event.get("iteration", 0)
+            # Register agents once they're available (after run_started)
+            if not _agents_registered and event.get("type") == "run_started":
+                register_session(project_id, orch.agents)
+                _agents_registered = True
 
         orch.on_event(ws_event_handler)
 
         # Run directly as async
         result = await orch.run_async(goal)
 
+        # Re-register at completion (agents may have changed during run)
         register_session(project_id, orch.agents)
 
         _runs[project_id] = {

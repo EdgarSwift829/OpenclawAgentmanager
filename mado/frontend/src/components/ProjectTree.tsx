@@ -3,18 +3,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import * as api from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
+import type { ProjectNode } from "@/lib/types";
 import { useInlineStatus, StatusIndicator } from "@/components/Toast";
 import { DeleteConfirmPopup } from "@/components/DeleteConfirmPopup";
 import { ProjectContextMenu } from "@/components/ProjectContextMenu";
 import { FolderSettings } from "@/components/FolderSettings";
-
-interface ProjectNode {
-  project_id: string;
-  display_name?: string;
-  parent_id: string | null;
-  children: string[];
-  status: string;
-}
 
 interface PlanUsage {
   projects: number;

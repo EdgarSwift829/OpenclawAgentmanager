@@ -373,7 +373,9 @@ class WorkspaceManager:
         # Validate backup_name is within expected directory
         backup_dir = self.projects_root / project_id / "backups" / backup_name
         expected_parent = (self.projects_root / project_id / "backups").resolve()
-        if not str(backup_dir.resolve()).startswith(str(expected_parent)):
+        try:
+            backup_dir.resolve().relative_to(expected_parent)
+        except ValueError:
             logger.warning("Path traversal attempt in restore_backup: %s", backup_name)
             return False
         if not backup_dir.exists():

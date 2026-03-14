@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import * as api from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import type { ProjectNode, RunStatus, AgentInfo, OrchestratorEvent, AgentProfileAssignment } from "@/lib/types";
@@ -72,12 +72,20 @@ export default function Dashboard() {
   const [allRunStatuses, setAllRunStatuses] = useState<Record<string, string>>({});
   const [planUsage, setPlanUsage] = useState<{ projects: number; max_projects: number; plan: string } | null>(null);
 
+  // --- refs for latest state (avoid stale closures in callbacks) ---
+  const activeProjectRef = useRef(activeProject);
+  const maxIterRef = useRef(maxIter);
+  const eventsRef = useRef(events);
+  activeProjectRef.current = activeProject;
+  maxIterRef.current = maxIter;
+  eventsRef.current = events;
+
   // --- load / save per-project state on switch ---
   const switchProject = useCallback(
     (id: string) => {
       // Save current project state before switching
-      if (activeProject) {
-        saveProjectState(activeProject, { maxIter, events });
+      if (activeProjectRef.current) {
+        saveProjectState(activeProjectRef.current, { maxIter: maxIterRef.current, events: eventsRef.current });
       }
       // Load new project state
       const saved = loadProjectState(id);
@@ -85,19 +93,19 @@ export default function Dashboard() {
       setEvents(saved.events);
       setActiveProject(id);
     },
-    [activeProject, maxIter, events],
+    [],
   );
 
   // Persist on unmount / tab close
   useEffect(() => {
     const handleUnload = () => {
-      if (activeProject) {
-        saveProjectState(activeProject, { maxIter, events });
+      if (activeProjectRef.current) {
+        saveProjectState(activeProjectRef.current, { maxIter: maxIterRef.current, events: eventsRef.current });
       }
     };
     window.addEventListener("beforeunload", handleUnload);
     return () => window.removeEventListener("beforeunload", handleUnload);
-  }, [activeProject, maxIter, events]);
+  }, []);
 
   // Get goal from project config (saved by ProjectDetail)
   const activeNode = projectTree.find((n) => n.project_id === activeProject);
@@ -181,13 +189,21 @@ export default function Dashboard() {
   // WebSocket for real-time events
   useEffect(() => {
     if (!activeProject) return;
-    let ws: WebSocket;
+    let ws: WebSocket | null = null;
+    let closed = false;
     try {
       ws = api.connectWebSocket(activeProject, (data) => {
-        setEvents((prev) => [...prev.slice(-200), data as OrchestratorEvent]);
+        if (!closed) {
+          setEvents((prev) => [...prev.slice(-200), data as OrchestratorEvent]);
+        }
       });
     } catch { /* WebSocket not available */ }
-    return () => ws?.close();
+    return () => {
+      closed = true;
+      if (ws) {
+        try { ws.close(); } catch { /* already closed */ }
+      }
+    };
   }, [activeProject]);
 
   return (
