@@ -422,10 +422,15 @@ export function AgentTerminalGrid({ events, agentProfiles = {}, activeProject, o
   const agentLogs = useMemo(() => buildAgentLogs(events, loc), [events, loc]);
   const agentStates = useMemo(() => deriveAgentStates(events), [events]);
 
-  // Determine active roles from events
+  // Determine active roles: agentProfiles (config) が主、events で追加分を補完
   const ROLE_ORDER = ["cto", "manager", "researcher", "engineer", "reviewer", "tester", "optimizer", "documenter", "marketer"];
   const activeRoles = useMemo(() => {
     const roles = new Set<string>();
+    // 1) プロジェクトに登録済みのエージェントを全て含める
+    for (const role of Object.keys(agentProfiles)) {
+      if (ROLE_META[role]) roles.add(role);
+    }
+    // 2) イベントに登場したエージェントも追加（未登録でもイベントがあれば表示）
     for (const ev of events) {
       const role = ev.role || ev.sender || "";
       if (role && role !== "orchestrator" && ROLE_META[role]) {
@@ -433,9 +438,9 @@ export function AgentTerminalGrid({ events, agentProfiles = {}, activeProject, o
       }
     }
     return ROLE_ORDER.filter((r) => roles.has(r));
-  }, [events]);
+  }, [events, agentProfiles]);
 
-  if (events.length === 0) {
+  if (activeRoles.length === 0) {
     return (
       <div className="terminal-grid-container">
         <div className="terminal-grid-empty">
