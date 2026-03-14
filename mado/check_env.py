@@ -286,6 +286,22 @@ def bootstrap_config() -> None:
             shutil.copy2(example, target)
             ok(f"{target.name} を作成しました（{example.name} からコピー）")
 
+    # settings.yaml のテスト残骸を検出・修復
+    settings_path = config_dir / "settings.yaml"
+    if settings_path.exists():
+        import yaml as _yaml
+        try:
+            data = _yaml.safe_load(settings_path.read_text(encoding="utf-8")) or {}
+            root = str(data.get("projects_root", "") or "")
+            if root and "/tmp/" in root:
+                warn(f"settings.yaml にテスト用パスを検出: {root}")
+                example = config_dir / "settings.yaml.example"
+                if example.exists():
+                    shutil.copy2(example, settings_path)
+                    ok("settings.yaml をリセットしました")
+        except Exception:
+            pass
+
 
 # ── Main ────────────────────────────────────────────────────────
 def main() -> int:

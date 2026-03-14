@@ -30,6 +30,10 @@ class ModelManager:
             with open(agents_path, encoding="utf-8") as f:
                 self.agent_assignments = yaml.safe_load(f) or {}
 
+        # 自動追加: assignments が空なら全ロールにデフォルトモデルを割り当て
+        if not self.agent_assignments:
+            self._populate_default_roles()
+
     def get_model(self, role: str) -> dict:
         """Get model config for a given agent role."""
         model_name = self.agent_assignments.get(role, "qwen3.5-9b")
@@ -52,6 +56,32 @@ class ModelManager:
 
     def save_assignments(self) -> None:
         """Public method to persist current assignments to agents.yaml."""
+        self._save_assignments()
+
+    def add_role(self, role: str, model: str) -> None:
+        """Add a new role with the specified model."""
+        if role in self.agent_assignments:
+            raise ValueError(f"Role already exists: {role}")
+        if model not in self.models:
+            raise ValueError(f"Model not registered: {model}")
+        self.agent_assignments[role] = model
+        self._save_assignments()
+
+    def remove_role(self, role: str) -> None:
+        """Remove a role."""
+        if role not in self.agent_assignments:
+            raise ValueError(f"Role not found: {role}")
+        del self.agent_assignments[role]
+        self._save_assignments()
+
+    def _populate_default_roles(self) -> None:
+        """Populate all known roles with default models when assignments are empty."""
+        from mado.backend.orchestrator.agent_factory import AGENT_CLASSES
+        high_tier = "qwen3.5-9b"
+        standard_tier = "qwen2.5-coder-7b"
+        planning_roles = {"cto", "manager", "researcher", "marketer"}
+        for role in AGENT_CLASSES:
+            self.agent_assignments[role] = high_tier if role in planning_roles else standard_tier
         self._save_assignments()
 
     def _save_assignments(self) -> None:

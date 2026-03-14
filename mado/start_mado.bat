@@ -36,7 +36,7 @@ echo.
 
 :: ── Step 2: Start Backend (minimized) ──────────────
 echo [2/3] バックエンド起動中 (http://localhost:8000) ...
-start /min "" cmd /c "call "%~dp0backend\run_backend.bat""
+start "" wscript.exe "%~dp0backend\run_backend_hidden.vbs"
 timeout /t 3 /nobreak >nul
 
 :: ── Step 3: Start Desktop Window ───────────────────

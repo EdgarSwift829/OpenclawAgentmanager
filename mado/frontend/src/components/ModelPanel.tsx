@@ -187,6 +187,38 @@ export function ModelPanel({ activeProject, agentProfiles = {}, onProfilesChange
     });
   };
 
+  // Add / Remove
+  const [addingRole, setAddingRole] = useState(false);
+  const [newRole, setNewRole] = useState("");
+  const [newModel, setNewModel] = useState("");
+
+  const availableRoles = AGENT_ROLES.filter((r) => !roles.includes(r.key));
+
+  const handleAddRole = async () => {
+    if (!newRole || !newModel) return;
+    try {
+      await api.addRole(newRole, newModel);
+      showStatus(loc === "ja" ? `${newRole} を追加しました` : `Added ${newRole}`, "success");
+      setAddingRole(false);
+      setNewRole("");
+      setNewModel("");
+      await load();
+    } catch (e: any) {
+      showStatus(`Error: ${e.message}`, "error");
+    }
+  };
+
+  const handleRemoveRole = async (role: string) => {
+    try {
+      await api.removeRole(role);
+      showStatus(loc === "ja" ? `${role} を削除しました` : `Removed ${role}`, "success");
+      setExpandedRole(null);
+      await load();
+    } catch (e: any) {
+      showStatus(`Error: ${e.message}`, "error");
+    }
+  };
+
   const modelNames = Object.keys(models);
 
   return (
@@ -284,12 +316,72 @@ export function ModelPanel({ activeProject, agentProfiles = {}, onProfilesChange
                       <option key={m} value={m}>{m} ({PROVIDER_BADGE[models[m]?.provider] || models[m]?.provider || "?"})</option>
                     ))}
                   </select>
+                  <button
+                    className="block-detail-remove"
+                    onClick={() => handleRemoveRole(role)}
+                    style={{ marginTop: "0.5rem", padding: "0.25rem 0.75rem", fontSize: "0.8rem", color: "var(--danger, #e74c3c)", border: "1px solid var(--danger, #e74c3c)", borderRadius: "4px", background: "transparent", cursor: "pointer" }}
+                  >
+                    {loc === "ja" ? "このエージェントを削除" : "Remove this agent"}
+                  </button>
                 </div>
               )}
             </div>
           );
         })}
       </div>
+
+      {/* Add agent section */}
+      {addingRole ? (
+        <div className="block-add-form" style={{ padding: "0.75rem", border: "1px dashed var(--border)", borderRadius: "6px", marginTop: "0.5rem" }}>
+          <div style={{ marginBottom: "0.5rem", fontWeight: 500 }}>
+            {loc === "ja" ? "エージェント追加" : "Add Agent"}
+          </div>
+          <select
+            value={newRole}
+            onChange={(e) => setNewRole(e.target.value)}
+            style={{ width: "100%", padding: "0.3rem", marginBottom: "0.4rem", borderRadius: "4px", border: "1px solid var(--border)" }}
+          >
+            <option value="">{loc === "ja" ? "ロールを選択" : "Select role"}</option>
+            {availableRoles.map((r) => (
+              <option key={r.key} value={r.key}>{r.icon} {r.label[loc]}</option>
+            ))}
+          </select>
+          <select
+            value={newModel}
+            onChange={(e) => setNewModel(e.target.value)}
+            style={{ width: "100%", padding: "0.3rem", marginBottom: "0.4rem", borderRadius: "4px", border: "1px solid var(--border)" }}
+          >
+            <option value="">{loc === "ja" ? "モデルを選択" : "Select model"}</option>
+            {modelNames.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button
+              onClick={handleAddRole}
+              disabled={!newRole || !newModel}
+              style={{ padding: "0.3rem 0.75rem", borderRadius: "4px", border: "1px solid var(--border)", cursor: "pointer", background: "var(--accent, #3498db)", color: "#fff" }}
+            >
+              {loc === "ja" ? "追加" : "Add"}
+            </button>
+            <button
+              onClick={() => { setAddingRole(false); setNewRole(""); setNewModel(""); }}
+              style={{ padding: "0.3rem 0.75rem", borderRadius: "4px", border: "1px solid var(--border)", cursor: "pointer", background: "transparent" }}
+            >
+              {loc === "ja" ? "キャンセル" : "Cancel"}
+            </button>
+          </div>
+        </div>
+      ) : (
+        availableRoles.length > 0 && (
+          <button
+            onClick={() => setAddingRole(true)}
+            style={{ width: "100%", marginTop: "0.5rem", padding: "0.5rem", border: "1px dashed var(--border)", borderRadius: "6px", background: "transparent", cursor: "pointer", color: "var(--text-secondary, #888)" }}
+          >
+            + {loc === "ja" ? "エージェント追加" : "Add Agent"}
+          </button>
+        )
+      )}
     </div>
   );
 }

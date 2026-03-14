@@ -22,6 +22,10 @@ class ModelRegister(BaseModel):
     capabilities: list = []
 
 
+class RoleAdd(BaseModel):
+    model: str
+
+
 class RoleOrder(BaseModel):
     roles: list[str]
 
@@ -57,6 +61,26 @@ async def register_model(data: ModelRegister):
         "capabilities": data.capabilities,
     })
     return {"status": "registered", "model": data.name}
+
+
+@router.post("/assignments/{role}")
+async def add_role(role: str, data: RoleAdd):
+    """Add a new role with the specified model."""
+    try:
+        model_manager.add_role(role, data.model)
+        return {"status": "added", "role": role, "model": data.model}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete("/assignments/{role}")
+async def remove_role(role: str):
+    """Remove a role."""
+    try:
+        model_manager.remove_role(role)
+        return {"status": "removed", "role": role}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.put("/reorder")
