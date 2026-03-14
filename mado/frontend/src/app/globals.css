@@ -1964,7 +1964,8 @@ input, select {
   transition: border-color 0.2s;
 }
 .agents-tab-card-active {
-  border-color: var(--running);
+  border-color: #22c55e;
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.25);
 }
 .agents-tab-card-header {
   display: flex;
@@ -2081,6 +2082,16 @@ input, select {
   margin-top: 0;
 }
 
+/* Goal full-screen editing mode */
+.detail-goal-fullscreen {
+  max-height: none;
+  flex: 1;
+  overflow-y: auto;
+}
+.detail-goal-fullscreen .detail-goal-textarea {
+  min-height: 200px;
+}
+
 /* =========================================================================
    Agent Terminal Grid (tmux-style multi-pane)
    ========================================================================= */
@@ -2104,6 +2115,32 @@ input, select {
 }
 .terminal-grid-empty-icon { font-size: 2rem; opacity: 0.5; margin-bottom: 0.5rem; }
 .terminal-grid-empty-sub { font-size: 0.75rem; opacity: 0.6; }
+
+/* Agent status grid (shown when no events yet) */
+.agent-status-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.5rem;
+  padding: 0.75rem;
+  align-content: start;
+  overflow-y: auto;
+}
+.agent-status-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.75rem 0.5rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+.agent-status-icon { font-size: 1.5rem; }
+.agent-status-name { font-weight: 600; color: var(--text-primary); }
+.agent-status-state { font-size: 0.6875rem; opacity: 0.6; }
 
 /* ---- Task Flow Bar ---- */
 .task-flow-bar {
@@ -2493,7 +2530,7 @@ input, select {
   border-radius: 6px;
   overflow: hidden;
 }
-.agents-tab-card-active { border-color: var(--accent); }
+.agents-tab-card-active { border-color: #22c55e; box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.25); }
 .agents-tab-card-header {
   display: flex;
   align-items: center;

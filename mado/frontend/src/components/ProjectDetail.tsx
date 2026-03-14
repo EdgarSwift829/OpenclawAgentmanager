@@ -156,7 +156,7 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh, allRunSta
   );
 
   return (
-    <div className="project-detail compact-detail">
+    <div className={`project-detail ${goalEditing ? "detail-goal-fullscreen" : "compact-detail"}`}>
       {/* ── Header ── */}
       <div className="detail-header">
         <h3 className="detail-title">{node?.display_name || activeProject}</h3>
@@ -191,7 +191,7 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh, allRunSta
             </div>
             <textarea
               className="detail-textarea detail-goal-textarea"
-              rows={3}
+              rows={10}
               autoFocus
               placeholder={t("goalPlaceholder")}
               value={goal}

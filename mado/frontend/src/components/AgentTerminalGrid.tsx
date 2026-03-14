@@ -12,6 +12,7 @@ interface Props {
   agentProfiles?: Record<string, AgentProfileAssignment>;
   activeProject?: string | null;
   onSendOrder?: (order: string) => Promise<void>;
+  configuredRoles?: string[];
 }
 
 /* ─── Flow indicator ───────────────────────────────────── */
@@ -324,7 +325,7 @@ function CommandBar({ loc, onSend, activeProject }: {
 }
 
 /* ─── Main Component ───────────────────────────────────── */
-export function AgentTerminalGrid({ events, agentProfiles = {}, activeProject, onSendOrder }: Props) {
+export function AgentTerminalGrid({ events, agentProfiles = {}, activeProject, onSendOrder, configuredRoles = [] }: Props) {
   const { t, locale } = useI18n();
   const loc = locale as Locale;
 
@@ -346,13 +347,29 @@ export function AgentTerminalGrid({ events, agentProfiles = {}, activeProject, o
   }, [events]);
 
   if (events.length === 0) {
+    const displayRoles = configuredRoles.filter((r) => ROLE_META[r]);
     return (
       <div className="terminal-grid-container">
-        <div className="terminal-grid-empty">
-          <div className="terminal-grid-empty-icon">{"\uD83D\uDCAC"}</div>
-          <div>{t("waitingForAgents")}</div>
-          <div className="terminal-grid-empty-sub">{t("startRunToSpawn")}</div>
-        </div>
+        {displayRoles.length > 0 ? (
+          <div className="agent-status-grid">
+            {displayRoles.map((role) => {
+              const meta = ROLE_META[role];
+              return (
+                <div key={role} className="agent-status-card">
+                  <span className="agent-status-icon">{meta.icon}</span>
+                  <span className="agent-status-name">{meta.label[loc]}</span>
+                  <span className="agent-status-state">{loc === "ja" ? "待機中" : "Standby"}</span>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="terminal-grid-empty">
+            <div className="terminal-grid-empty-icon">{"\uD83D\uDCAC"}</div>
+            <div>{t("waitingForAgents")}</div>
+            <div className="terminal-grid-empty-sub">{t("startRunToSpawn")}</div>
+          </div>
+        )}
         <CommandBar loc={loc} onSend={onSendOrder} activeProject={activeProject} />
       </div>
     );

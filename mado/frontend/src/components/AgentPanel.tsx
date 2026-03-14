@@ -70,6 +70,11 @@ export function AgentPanel({ activeProject, agentProfiles, runtimeAgents, onProf
 
   const runtimeMap = new Map(runtimeAgents.map((a) => [a.role, a]));
   const configuredRoles = Object.keys(assignments);
+  const sortedRoles = [...configuredRoles].sort((a, b) => {
+    const aActive = runtimeMap.has(a) ? 1 : 0;
+    const bActive = runtimeMap.has(b) ? 1 : 0;
+    return bActive - aActive;
+  });
 
   /* ── Handlers ──────────────────────────────────────── */
 
@@ -218,7 +223,7 @@ export function AgentPanel({ activeProject, agentProfiles, runtimeAgents, onProf
         </div>
       ) : (
         <div className="agents-tab-list">
-          {configuredRoles.map((role) => {
+          {sortedRoles.map((role) => {
             const meta = ROLE_META[role] || { icon: "\uD83E\uDD16", label: { en: role, ja: role }, color: "#888", border: "#888" };
             const runtime = runtimeMap.get(role);
             const model = runtime?.model || assignments[role] || "\u2014";
