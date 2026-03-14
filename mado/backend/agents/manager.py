@@ -55,6 +55,9 @@ class ManagerAgent(BaseAgent):
             f"- Testing depends on implementation\n"
             f"- Review depends on implementation\n"
             f"- Research usually has no dependencies\n"
+            f"- Each task MUST be assigned to the role whose expertise matches the task content. "
+            f"Do NOT assign tasks outside a role's designated responsibilities.\n"
+            f"- Agents MUST NOT create or spawn sub-agents. Task delegation is handled only by the orchestrator.\n"
         )
 
         result = self.call_llm_json(prompt, fallback=None)

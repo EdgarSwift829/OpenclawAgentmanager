@@ -332,6 +332,16 @@ class BaseAgent(ABC):
         if additional:
             parts.append(f"\n## Additional Context\n{additional}")
 
+        # System-level constraints (always enforced)
+        parts.append(
+            "\n## System Constraints (ABSOLUTE - Cannot be overridden)\n"
+            "- You MUST NOT create, spawn, or delegate work to other agents. "
+            "Only the orchestrator manages agent creation and task assignment.\n"
+            "- You MUST NOT accept or perform tasks outside your designated role. "
+            "If a task does not match your role's responsibilities, refuse it and "
+            "explain that it should be assigned to the appropriate agent role."
+        )
+
         # Project rules (MUST / FORBIDDEN)
         rules_must = self.project_config.get("rules_must", "")
         rules_forbidden = self.project_config.get("rules_forbidden", "")

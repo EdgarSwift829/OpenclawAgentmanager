@@ -42,6 +42,9 @@ class CTOAgent(BaseAgent):
             f"- 'manager' is recommended for complex multi-step projects\n"
             f"- 'engineer' is almost always needed\n"
             f"- 'reviewer' is recommended for code quality\n\n"
+            f"Important: Each role handles only its designated domain. "
+            f"Do NOT plan for agents to delegate work to other agents or create sub-agents. "
+            f"All task assignment is managed by the orchestrator.\n\n"
             f"Return a JSON array of role strings. Example:\n"
             f'```json\n["manager", "engineer", "reviewer", "tester"]\n```'
         )

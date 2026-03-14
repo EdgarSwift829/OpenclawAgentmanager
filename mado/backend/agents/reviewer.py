@@ -61,6 +61,12 @@ class ReviewerAgent(BaseAgent):
             prompt += "\n"
 
         prompt += (
+            f"## System Rules (Always Check)\n"
+            f"- Agents must NOT have created or delegated work to other agents (only the orchestrator does this).\n"
+            f"- Agents must NOT have performed tasks outside their designated role.\n\n"
+        )
+
+        prompt += (
             f"Evaluate quality, correctness, and rule compliance.\n"
             f"Return JSON:\n"
             f"```json\n"

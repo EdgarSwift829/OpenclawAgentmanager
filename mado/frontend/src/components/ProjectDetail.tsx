@@ -156,246 +156,162 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh, allRunSta
   );
 
   return (
-    <div className={`project-detail ${goalEditing ? "detail-goal-fullscreen" : "compact-detail"}`}>
-      {/* ── Header ── */}
-      <div className="detail-header">
-        <h3 className="detail-title">{node?.display_name || activeProject}</h3>
-        <div className="detail-save-area">
-          <StatusIndicator status={status} />
-          {dirty && (
-            <button
-              className="btn btn-primary detail-save-btn"
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? t("saving") : t("save")}
-            </button>
-          )}
-        </div>
+    <>
+    {/* ── Compact bar (always visible) ── */}
+    <div className="detail-compact-bar">
+      <h3 className="detail-title">{node?.display_name || activeProject}</h3>
+      <span className="detail-goal-preview">
+        {goal ? goal.slice(0, 60) + (goal.length > 60 ? "..." : "") : ""}
+      </span>
+      <div className="detail-compact-actions">
+        <StatusIndicator status={status} />
+        <button
+          className="btn btn-sm detail-manage-btn"
+          onClick={() => setDetailsOpen(!detailsOpen)}
+        >
+          {locale === "ja" ? "目標管理" : "Settings"}
+        </button>
       </div>
+    </div>
 
-      {/* ── Goal: click to expand, save/close to collapse ── */}
-      <div className="detail-goal-section">
-        {goalEditing ? (
-          <div className="detail-goal-editing">
-            <div className="detail-goal-editing-header">
-              <span className="detail-goal-label">{t("goalPlaceholder").replace("...", "")}</span>
-              <div className="detail-goal-actions">
-                <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={saving}>
-                  {saving ? t("saving") : t("save")}
-                </button>
-                <button className="btn btn-sm btn-ghost" onClick={() => setGoalEditing(false)}>
-                  {t("cancel")}
-                </button>
-              </div>
-            </div>
+    {/* ── Full overlay (shown when detailsOpen) ── */}
+    {detailsOpen && (
+      <div className="detail-overlay">
+        <div className="detail-overlay-header">
+          <h3 className="detail-title">{node?.display_name || activeProject}</h3>
+          <div className="detail-overlay-actions">
+            <StatusIndicator status={status} />
+            {dirty && (
+              <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={saving}>
+                {saving ? t("saving") : t("save")}
+              </button>
+            )}
+            <button className="btn btn-sm btn-ghost" onClick={() => setDetailsOpen(false)}>
+              {locale === "ja" ? "閉じる" : "Close"}
+            </button>
+          </div>
+        </div>
+
+        <div className="detail-overlay-body">
+          {/* Goal */}
+          <div className="detail-field">
+            <label className="detail-label">{t("goalPlaceholder").replace("...", "")}</label>
             <textarea
               className="detail-textarea detail-goal-textarea"
-              rows={10}
-              autoFocus
+              rows={4}
               placeholder={t("goalPlaceholder")}
               value={goal}
               onChange={(e) => { setGoal(e.target.value); markDirty(); }}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") { setGoalEditing(false); }
-              }}
             />
           </div>
-        ) : (
-          <div
-            className="detail-goal-display"
-            onClick={() => setGoalEditing(true)}
-            title={t("editGoal")}
-          >
-            <span className="detail-goal-label">{t("goalPlaceholder").replace("...", "")}</span>
-            <span className="detail-goal-text">
-              {goal || <span className="detail-goal-placeholder">{t("goalPlaceholder")}</span>}
-            </span>
-          </div>
-        )}
-      </div>
 
-      {/* ── Task Status Summary ── */}
-      {tasks.length > 0 && (
-        <div className="detail-task-summary">
-          <span className="detail-task-summary-label">{t("taskStatusSummary")}</span>
-          <div className="detail-task-badges">
-            {(taskCounts["done"] || 0) > 0 && (
-              <span className="task-badge task-badge-done">{t("done")} {taskCounts["done"]}</span>
-            )}
-            {(taskCounts["in_progress"] || 0) > 0 && (
-              <span className="task-badge task-badge-progress">{t("inProgress")} {taskCounts["in_progress"]}</span>
-            )}
-            {(taskCounts["pending"] || 0) > 0 && (
-              <span className="task-badge task-badge-pending">{t("pending")} {taskCounts["pending"]}</span>
-            )}
-            <span className="task-badge-total">{tasks.length}{locale === "ja" ? "件" : " total"}</span>
-          </div>
-        </div>
-      )}
-
-      {/* ── Additional Order Input ── */}
-      <div className="detail-order-section">
-        <div className="detail-order-row">
-          <input
-            className="detail-order-input"
-            placeholder={t("additionalOrderPlaceholder")}
-            value={additionalOrder}
-            onChange={(e) => setAdditionalOrder(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSendOrder();
-              }
-            }}
-          />
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={handleSendOrder}
-            disabled={!additionalOrder.trim()}
-          >
-            {t("sendOrder")}
-          </button>
-        </div>
-      </div>
-
-      {/* ── Child Project Management ── */}
-      {node.children.length > 0 && (
-        <div className="detail-field child-management">
-          <div className="child-management-header">
-            <label className="detail-label">{t("childProjectManagement")}</label>
-            {onDispatchAll && (
-              <div className="child-management-actions">
-                <button
-                  className="btn btn-sm btn-primary"
-                  onClick={async () => {
-                    if (!activeProject) return;
-                    try {
-                      await onDispatchAll(activeProject);
-                      showStatus("全子プロジェクトを開始", "success");
-                    } catch (e: any) {
-                      showStatus(`一括開始エラー: ${e.message}`, "error");
-                    }
-                  }}
-                >
-                  {t("dispatchAll")}
-                </button>
+          {/* Task Status Summary */}
+          {tasks.length > 0 && (
+            <div className="detail-task-summary">
+              <span className="detail-task-summary-label">{t("taskStatusSummary")}</span>
+              <div className="detail-task-badges">
+                {(taskCounts["done"] || 0) > 0 && <span className="task-badge task-badge-done">{t("done")} {taskCounts["done"]}</span>}
+                {(taskCounts["in_progress"] || 0) > 0 && <span className="task-badge task-badge-progress">{t("inProgress")} {taskCounts["in_progress"]}</span>}
+                {(taskCounts["pending"] || 0) > 0 && <span className="task-badge task-badge-pending">{t("pending")} {taskCounts["pending"]}</span>}
+                <span className="task-badge-total">{tasks.length}{locale === "ja" ? "件" : " total"}</span>
               </div>
-            )}
-          </div>
-          <div className="child-management-hint">
-            <span className="hint-badge hint-inherit">{t("inheritingProfiles")}</span>
-            <span className="hint-badge hint-memory">{t("inheritingMemory")}</span>
-          </div>
-          <div className="child-cards">
-            {node.children.map((childId) => {
-              const childNode = projectTree.find((n) => n.project_id === childId);
-              const childStatus = allRunStatuses?.[childId] || "idle";
-              const isRunning = childStatus === "running";
-              const instruction = childInstructions[childId] || "";
-              const isDispatching = dispatchingChild === childId;
+            </div>
+          )}
 
-              return (
-                <div key={childId} className={`child-card ${isRunning ? "child-running" : ""}`}>
-                  <div className="child-card-top">
-                    <div className="child-card-info">
-                      <span className="child-card-name">{childNode?.display_name || childId}</span>
-                      <span className={`child-status-badge child-status-${childStatus}`}>
-                        {childStatus === "running" ? t("running") :
-                         childStatus === "completed" ? t("completed") :
-                         childStatus === "error" ? t("error") :
-                         childStatus === "paused" ? t("paused") :
-                         childStatus === "stopped" ? t("stopped") :
-                         t("initialized")}
-                      </span>
-                    </div>
-                    <div className="child-card-goal">
-                      {childNode?.goal ? childNode.goal.slice(0, 80) : "—"}
-                    </div>
+          {/* Additional Order Input */}
+          <div className="detail-order-section">
+            <div className="detail-order-row">
+              <input
+                className="detail-order-input"
+                placeholder={t("additionalOrderPlaceholder")}
+                value={additionalOrder}
+                onChange={(e) => setAdditionalOrder(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendOrder(); }
+                }}
+              />
+              <button className="btn btn-primary btn-sm" onClick={handleSendOrder} disabled={!additionalOrder.trim()}>
+                {t("sendOrder")}
+              </button>
+            </div>
+          </div>
+
+          {/* Child Project Management */}
+          {node.children.length > 0 && (
+            <div className="detail-field child-management">
+              <div className="child-management-header">
+                <label className="detail-label">{t("childProjectManagement")}</label>
+                {onDispatchAll && (
+                  <div className="child-management-actions">
+                    <button className="btn btn-sm btn-primary" onClick={async () => {
+                      if (!activeProject) return;
+                      try { await onDispatchAll(activeProject); showStatus("全子プロジェクトを開始", "success"); }
+                      catch (e: any) { showStatus(`一括開始エラー: ${e.message}`, "error"); }
+                    }}>{t("dispatchAll")}</button>
                   </div>
-                  <div className="child-card-bottom">
-                    <input
-                      className="child-instruction-input"
-                      placeholder={t("childInstruction")}
-                      value={instruction}
-                      onChange={(e) => setChildInstructions({ ...childInstructions, [childId]: e.target.value })}
-                      disabled={isRunning || isDispatching}
-                    />
-                    <div className="child-card-buttons">
-                      {!isRunning ? (
-                        <button
-                          className="btn btn-sm btn-primary"
-                          disabled={isDispatching}
-                          onClick={async () => {
-                            if (!activeProject || !onDispatchChild) return;
-                            setDispatchingChild(childId);
-                            try {
-                              await onDispatchChild(activeProject, childId, instruction || undefined);
-                              showStatus(`「${childNode?.display_name || childId}」を開始`, "success");
-                              setChildInstructions({ ...childInstructions, [childId]: "" });
-                            } catch (e: any) {
-                              showStatus(`開始エラー: ${e.message}`, "error");
-                            } finally {
-                              setDispatchingChild(null);
-                            }
-                          }}
-                        >
-                          {isDispatching ? "..." : t("dispatchChild")}
-                        </button>
-                      ) : (
-                        <button
-                          className="btn btn-sm btn-danger"
-                          onClick={async () => {
-                            if (!onStopChild) return;
-                            try {
-                              await onStopChild(childId);
-                              showStatus(`「${childNode?.display_name || childId}」を停止`, "success");
-                            } catch (e: any) {
-                              showStatus(`停止エラー: ${e.message}`, "error");
-                            }
-                          }}
-                        >
-                          {t("stopChild")}
-                        </button>
-                      )}
+                )}
+              </div>
+              <div className="child-management-hint">
+                <span className="hint-badge hint-inherit">{t("inheritingProfiles")}</span>
+                <span className="hint-badge hint-memory">{t("inheritingMemory")}</span>
+              </div>
+              <div className="child-cards">
+                {node.children.map((childId) => {
+                  const childNode = projectTree.find((n) => n.project_id === childId);
+                  const childStatus = allRunStatuses?.[childId] || "idle";
+                  const isRunning = childStatus === "running";
+                  const instruction = childInstructions[childId] || "";
+                  const isDispatching = dispatchingChild === childId;
+                  return (
+                    <div key={childId} className={`child-card ${isRunning ? "child-running" : ""}`}>
+                      <div className="child-card-top">
+                        <div className="child-card-info">
+                          <span className="child-card-name">{childNode?.display_name || childId}</span>
+                          <span className={`child-status-badge child-status-${childStatus}`}>
+                            {childStatus === "running" ? t("running") : childStatus === "completed" ? t("completed") : childStatus === "error" ? t("error") : childStatus === "paused" ? t("paused") : childStatus === "stopped" ? t("stopped") : t("initialized")}
+                          </span>
+                        </div>
+                        <div className="child-card-goal">{childNode?.goal ? childNode.goal.slice(0, 80) : "\u2014"}</div>
+                      </div>
+                      <div className="child-card-bottom">
+                        <input className="child-instruction-input" placeholder={t("childInstruction")} value={instruction}
+                          onChange={(e) => setChildInstructions({ ...childInstructions, [childId]: e.target.value })} disabled={isRunning || isDispatching} />
+                        <div className="child-card-buttons">
+                          {!isRunning ? (
+                            <button className="btn btn-sm btn-primary" disabled={isDispatching} onClick={async () => {
+                              if (!activeProject || !onDispatchChild) return;
+                              setDispatchingChild(childId);
+                              try { await onDispatchChild(activeProject, childId, instruction || undefined); showStatus(`「${childNode?.display_name || childId}」を開始`, "success"); setChildInstructions({ ...childInstructions, [childId]: "" }); }
+                              catch (e: any) { showStatus(`開始エラー: ${e.message}`, "error"); }
+                              finally { setDispatchingChild(null); }
+                            }}>{isDispatching ? "..." : t("dispatchChild")}</button>
+                          ) : (
+                            <button className="btn btn-sm btn-danger" onClick={async () => {
+                              if (!onStopChild) return;
+                              try { await onStopChild(childId); showStatus(`「${childNode?.display_name || childId}」を停止`, "success"); }
+                              catch (e: any) { showStatus(`停止エラー: ${e.message}`, "error"); }
+                            }}>{t("stopChild")}</button>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
-      {/* ── Detail Settings (collapsible) ── */}
-      <div className="detail-settings-toggle" onClick={() => setDetailsOpen(!detailsOpen)}>
-        <span className="detail-settings-chevron">{detailsOpen ? "\u25BC" : "\u25B6"}</span>
-        <span className="detail-settings-label">{t("detailSettings")}</span>
-      </div>
-
-      {detailsOpen && (
-        <div className="detail-settings-body">
           {/* Project Rules */}
           <div className="detail-rules-group">
             <div className="detail-field detail-rules-must">
               <label className="detail-label">{t("rulesMust")}</label>
-              <textarea
-                className="detail-textarea"
-                rows={3}
-                placeholder={t("rulesMustPlaceholder")}
-                value={rulesMust}
-                onChange={(e) => { setRulesMust(e.target.value); markDirty(); }}
-              />
+              <textarea className="detail-textarea" rows={3} placeholder={t("rulesMustPlaceholder")} value={rulesMust}
+                onChange={(e) => { setRulesMust(e.target.value); markDirty(); }} />
             </div>
             <div className="detail-field detail-rules-forbidden">
               <label className="detail-label">{t("rulesForbidden")}</label>
-              <textarea
-                className="detail-textarea"
-                rows={3}
-                placeholder={t("rulesForbiddenPlaceholder")}
-                value={rulesForbidden}
-                onChange={(e) => { setRulesForbidden(e.target.value); markDirty(); }}
-              />
+              <textarea className="detail-textarea" rows={3} placeholder={t("rulesForbiddenPlaceholder")} value={rulesForbidden}
+                onChange={(e) => { setRulesForbidden(e.target.value); markDirty(); }} />
             </div>
           </div>
 
@@ -442,26 +358,21 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh, allRunSta
                   {tasks.map((task, idx) => (
                     <div key={task.id} className="detail-task-item">
                       <div className="detail-task-row">
-                        <select className="detail-task-status" value={task.status}
-                          onChange={(e) => updateTask(idx, "status", e.target.value)}>
+                        <select className="detail-task-status" value={task.status} onChange={(e) => updateTask(idx, "status", e.target.value)}>
                           <option value="pending">{t("pending")}</option>
                           <option value="in_progress">{t("inProgress")}</option>
                           <option value="done">{t("done")}</option>
                         </select>
-                        <select className="detail-task-priority" value={task.priority}
-                          onChange={(e) => updateTask(idx, "priority", e.target.value)}>
+                        <select className="detail-task-priority" value={task.priority} onChange={(e) => updateTask(idx, "priority", e.target.value)}>
                           <option value="high">{t("priorityHigh")}</option>
                           <option value="medium">{t("priorityMedium")}</option>
                           <option value="low">{t("priorityLow")}</option>
                         </select>
-                        <input className="detail-task-title" placeholder={t("taskTitle")} value={task.title}
-                          onChange={(e) => updateTask(idx, "title", e.target.value)} />
-                        <input type="date" className="detail-task-deadline" value={task.deadline}
-                          onChange={(e) => updateTask(idx, "deadline", e.target.value)} />
+                        <input className="detail-task-title" placeholder={t("taskTitle")} value={task.title} onChange={(e) => updateTask(idx, "title", e.target.value)} />
+                        <input type="date" className="detail-task-deadline" value={task.deadline} onChange={(e) => updateTask(idx, "deadline", e.target.value)} />
                         <button className="detail-task-remove" onClick={() => removeTask(idx)}>{"\u2716"}</button>
                       </div>
-                      <textarea className="detail-task-desc" rows={1} placeholder={t("descriptionPlaceholder")}
-                        value={task.description} onChange={(e) => updateTask(idx, "description", e.target.value)} />
+                      <textarea className="detail-task-desc" rows={1} placeholder={t("descriptionPlaceholder")} value={task.description} onChange={(e) => updateTask(idx, "description", e.target.value)} />
                     </div>
                   ))}
                 </div>
@@ -477,7 +388,8 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh, allRunSta
             </div>
           )}
         </div>
-      )}
-    </div>
+      </div>
+    )}
+    </>
   );
 }
