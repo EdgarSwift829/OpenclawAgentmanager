@@ -39,9 +39,9 @@ echo [2/3] バックエンド起動中 (http://localhost:8000) ...
 start "" wscript.exe "%~dp0backend\run_backend_hidden.vbs"
 timeout /t 3 /nobreak >nul
 
-:: ── Step 3: Start Desktop Window ───────────────────
+:: ── Step 3: Start Desktop Window (hidden console) ──
 echo [3/3] フロントエンド＋デスクトップウィンドウ起動中...
-start "" "%PYTHON_CMD%" "%~dp0desktop_window.py"
+start "" wscript.exe "%~dp0run_desktop_hidden.vbs"
 
 echo.
 echo ============================================
