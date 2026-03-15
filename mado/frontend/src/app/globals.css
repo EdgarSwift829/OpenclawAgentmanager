@@ -12,7 +12,11 @@
   --error: #ef4444;
   --running: #8b5cf6;
   --sidebar-width: 240px;
-  --right-panel-width: 300px;
+  --right-panel-width: 320px;
+}
+
+html {
+  font-size: 18px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
