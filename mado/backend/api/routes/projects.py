@@ -32,6 +32,77 @@ def _validate_safe_id(value: str, field_name: str = "ID") -> str:
     return value
 
 
+class BrowseDirsRequest(BaseModel):
+    path: Optional[str] = None  # None = list drives/roots
+
+
+@router.post("/browse-dirs")
+async def browse_directories(data: BrowseDirsRequest):
+    """List subdirectories of a given path for folder browser UI."""
+    import os
+    import platform
+    from pathlib import Path
+
+    target = data.path
+
+    # If no path given, return filesystem roots
+    if not target or not target.strip():
+        if platform.system() == "Windows":
+            # List available drive letters
+            import string
+            drives = []
+            for letter in string.ascii_uppercase:
+                drive = f"{letter}:\\"
+                if os.path.exists(drive):
+                    drives.append({"name": f"{letter}:", "path": drive, "has_children": True})
+            return {"path": "", "parent": None, "dirs": drives, "can_create": False}
+        else:
+            target = "/"
+
+    target = target.strip()
+    target_path = Path(target).resolve()
+
+    if not target_path.exists():
+        # Return parent path info so the UI can still navigate
+        parent = str(target_path.parent) if target_path.parent != target_path else None
+        return {
+            "path": str(target_path),
+            "parent": parent,
+            "dirs": [],
+            "exists": False,
+            "can_create": True,
+        }
+
+    if not target_path.is_dir():
+        raise HTTPException(status_code=400, detail="Path is not a directory")
+
+    dirs = []
+    try:
+        for entry in sorted(target_path.iterdir()):
+            if entry.is_dir() and not entry.name.startswith("."):
+                has_children = False
+                try:
+                    has_children = any(c.is_dir() for c in entry.iterdir())
+                except PermissionError:
+                    pass
+                dirs.append({
+                    "name": entry.name,
+                    "path": str(entry),
+                    "has_children": has_children,
+                })
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="Permission denied")
+
+    parent = str(target_path.parent) if target_path.parent != target_path else None
+    return {
+        "path": str(target_path),
+        "parent": parent,
+        "dirs": dirs,
+        "exists": True,
+        "can_create": True,
+    }
+
+
 class ProjectCreate(BaseModel):
     project_id: str
     goal: Optional[str] = ""

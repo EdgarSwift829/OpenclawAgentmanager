@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import type { TKey } from "@/lib/i18n";
+import { FolderBrowser } from "./FolderBrowser";
 
 type OpenClawStatus = "unknown" | "checking" | "installed" | "not_installed" | "installing" | "error";
 
@@ -31,15 +33,27 @@ export function FolderSettings({
   onRetryOpenClaw,
   t,
 }: Props) {
+  const [showBrowser, setShowBrowser] = useState(false);
+
   return (
     <div className="tree-folder-settings">
-      <input
-        className="tree-input tree-folder-input"
-        placeholder={t("folderPath")}
-        value={folderPath}
-        onChange={(e) => onFolderPathChange(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && onSave()}
-      />
+      <div className="tree-folder-input-row">
+        <input
+          className="tree-input tree-folder-input"
+          placeholder={t("folderPath")}
+          value={folderPath}
+          onChange={(e) => onFolderPathChange(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && onSave()}
+        />
+        <button
+          className="tree-browse-btn"
+          onClick={() => setShowBrowser(true)}
+          title={t("browse")}
+          type="button"
+        >
+          {"..."}
+        </button>
+      </div>
       <div className="tree-folder-actions">
         <button
           className="tree-add-btn"
@@ -87,6 +101,17 @@ export function FolderSettings({
           </span>
         )}
       </div>
+      {showBrowser && (
+        <FolderBrowser
+          currentPath={folderPath || savedPath}
+          onSelect={(path) => {
+            onFolderPathChange(path);
+            setShowBrowser(false);
+          }}
+          onClose={() => setShowBrowser(false)}
+          t={t}
+        />
+      )}
     </div>
   );
 }

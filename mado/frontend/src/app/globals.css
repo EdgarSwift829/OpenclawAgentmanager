@@ -2877,3 +2877,334 @@ input, select {
 }
 .setup-llm-model-label { color: var(--text-secondary); }
 .setup-llm-model-value { color: var(--accent); font-weight: 600; font-family: var(--font-mono); }
+
+/* =========================================================================
+   Setup - Input row with browse button
+   ========================================================================= */
+.setup-input-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  align-items: stretch;
+}
+.setup-input-with-browse {
+  flex: 1;
+  margin-bottom: 0;
+}
+.setup-browse-btn {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.2s;
+}
+.setup-browse-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* =========================================================================
+   Tree - Folder input row with browse
+   ========================================================================= */
+.tree-folder-input-row {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+.tree-folder-input-row .tree-folder-input {
+  flex: 1;
+}
+.tree-browse-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: 4px;
+  width: 28px;
+  height: 24px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.tree-browse-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* =========================================================================
+   Folder Browser - Explorer-style overlay
+   ========================================================================= */
+.folder-browser-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.folder-browser {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  width: min(520px, 90vw);
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+}
+.folder-browser-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.folder-browser-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.folder-browser-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  cursor: pointer;
+  padding: 0.25rem;
+}
+.folder-browser-close:hover { color: var(--error); }
+
+/* Path bar */
+.folder-browser-pathbar {
+  display: flex;
+  gap: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+}
+.folder-browser-up-btn,
+.folder-browser-go-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.folder-browser-up-btn:hover,
+.folder-browser-go-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.folder-browser-up-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.folder-browser-path-input {
+  flex: 1;
+  padding: 0.375rem 0.5rem;
+  font-size: 0.75rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  outline: none;
+  font-family: monospace;
+}
+.folder-browser-path-input:focus {
+  border-color: var(--accent);
+}
+
+/* Error */
+.folder-browser-error {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  color: var(--error);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* Directory list */
+.folder-browser-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 200px;
+  max-height: 320px;
+  padding: 0.25rem 0;
+}
+.folder-browser-loading,
+.folder-browser-empty,
+.folder-browser-not-exists {
+  padding: 1.5rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+.folder-browser-not-exists {
+  color: var(--warning);
+}
+.folder-browser-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.375rem 0.75rem;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+.folder-browser-item:hover {
+  background: var(--bg-card);
+}
+.folder-browser-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+.folder-browser-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* New folder */
+.folder-browser-newfolder {
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--border);
+}
+.folder-browser-newfolder-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0.25rem 0;
+}
+.folder-browser-newfolder-btn:hover {
+  text-decoration: underline;
+}
+.folder-browser-newfolder-row {
+  display: flex;
+  gap: 0.375rem;
+  align-items: center;
+}
+.folder-browser-newfolder-input {
+  flex: 1;
+  padding: 0.375rem 0.5rem;
+  font-size: 0.75rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  outline: none;
+}
+.folder-browser-newfolder-input:focus {
+  border-color: var(--accent);
+}
+.folder-browser-newfolder-ok {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.folder-browser-newfolder-ok:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.folder-browser-newfolder-cancel {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  font-size: 0.625rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.folder-browser-newfolder-cancel:hover {
+  color: var(--error);
+  border-color: var(--error);
+}
+
+/* Footer */
+.folder-browser-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.625rem 0.75rem;
+  border-top: 1px solid var(--border);
+  gap: 0.5rem;
+}
+.folder-browser-selected {
+  flex: 1;
+  min-width: 0;
+}
+.folder-browser-selected-path {
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+.folder-browser-actions {
+  display: flex;
+  gap: 0.375rem;
+  flex-shrink: 0;
+}
+.folder-browser-cancel-btn {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.folder-browser-cancel-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
+}
+.folder-browser-select-btn {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.folder-browser-select-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.folder-browser-select-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}

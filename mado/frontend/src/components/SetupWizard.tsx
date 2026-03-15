@@ -3,6 +3,7 @@
 import { useState } from "react";
 import * as api from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
+import { FolderBrowser } from "./FolderBrowser";
 
 interface Props {
   onComplete: () => void;
@@ -14,6 +15,7 @@ export function SetupWizard({ onComplete }: Props) {
   const [folderPath, setFolderPath] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [showBrowser, setShowBrowser] = useState(false);
 
   // LLM settings
   const [provider, setProvider] = useState("lmstudio");
@@ -66,15 +68,24 @@ export function SetupWizard({ onComplete }: Props) {
             <h3 className="setup-section-title">{t("setupStep1Title")}</h3>
             <p className="setup-section-desc">{t("setupStep1Desc")}</p>
             <label className="setup-label">{t("setupFolderPath")}</label>
-            <input
-              className="setup-input"
-              type="text"
-              value={folderPath}
-              onChange={(e) => setFolderPath(e.target.value)}
-              placeholder={t("setupFolderPlaceholder")}
-              onKeyDown={(e) => { if (e.key === "Enter") handleSaveFolder(); }}
-              autoFocus
-            />
+            <div className="setup-input-row">
+              <input
+                className="setup-input setup-input-with-browse"
+                type="text"
+                value={folderPath}
+                onChange={(e) => setFolderPath(e.target.value)}
+                placeholder={t("setupFolderPlaceholder")}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSaveFolder(); }}
+                autoFocus
+              />
+              <button
+                className="setup-browse-btn"
+                onClick={() => setShowBrowser(true)}
+                type="button"
+              >
+                {t("browse")}
+              </button>
+            </div>
             {error && <div className="setup-error">{error}</div>}
             <button
               className="setup-btn-primary"
@@ -138,6 +149,18 @@ export function SetupWizard({ onComplete }: Props) {
           </div>
         )}
       </div>
+
+      {showBrowser && (
+        <FolderBrowser
+          currentPath={folderPath}
+          onSelect={(path) => {
+            setFolderPath(path);
+            setShowBrowser(false);
+          }}
+          onClose={() => setShowBrowser(false)}
+          t={t}
+        />
+      )}
     </div>
   );
 }

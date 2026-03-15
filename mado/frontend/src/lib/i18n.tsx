@@ -105,6 +105,19 @@ const dict = {
   iterationTimeline: { en: "Iteration Timeline", ja: "反復タイムライン" },
   noEventsYet: { en: "No events yet", ja: "イベントなし" },
 
+  // Folder Browser
+  browse: { en: "Browse", ja: "参照" },
+  browseFolder: { en: "Select Folder", ja: "フォルダを選択" },
+  folderUp: { en: "Go up", ja: "上の階層へ" },
+  folderGo: { en: "Go", ja: "移動" },
+  folderLoading: { en: "Loading...", ja: "読み込み中..." },
+  folderEmpty: { en: "No subfolders", ja: "サブフォルダなし" },
+  folderNotExists: { en: "This folder does not exist yet. It will be created.", ja: "このフォルダはまだ存在しません。作成されます。" },
+  folderSelect: { en: "Select This Folder", ja: "このフォルダを選択" },
+  folderCreateSelect: { en: "Create & Select", ja: "作成して選択" },
+  newFolder: { en: "New Folder", ja: "新しいフォルダ" },
+  newFolderName: { en: "Folder name", ja: "フォルダ名" },
+
   // Settings
   projectsFolder: { en: "Projects Folder", ja: "プロジェクトフォルダ" },
   folderPath: { en: "Folder path", ja: "フォルダパス" },

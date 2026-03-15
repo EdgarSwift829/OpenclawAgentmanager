@@ -20,6 +20,8 @@ export const listProjects = () => fetchJSON("/projects/");
 export const getProjectsRoot = () => fetchJSON("/projects/settings/root");
 export const setProjectsRoot = (projects_root: string) =>
   fetchJSON("/projects/settings/root", { method: "PUT", body: JSON.stringify({ projects_root }) });
+export const browseDirs = (path?: string) =>
+  fetchJSON("/projects/browse-dirs", { method: "POST", body: JSON.stringify({ path: path || null }) });
 export const createProject = (project_id: string, goal: string, parent_id?: string) =>
   fetchJSON("/projects/", { method: "POST", body: JSON.stringify({ project_id, goal, parent_id }) });
 export const getProject = (id: string) => fetchJSON(`/projects/${id}`);
