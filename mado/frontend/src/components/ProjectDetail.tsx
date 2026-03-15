@@ -160,7 +160,7 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh, allRunSta
     {/* ── Compact bar (always visible) ── */}
     <div className="detail-compact-bar">
       <h3 className="detail-title">{node?.display_name || activeProject}</h3>
-      <span className="detail-goal-preview">
+      <span className="detail-goal-preview" title={goal || ""}>
         {goal ? goal.slice(0, 60) + (goal.length > 60 ? "..." : "") : ""}
       </span>
       <div className="detail-compact-actions">
