@@ -13,7 +13,7 @@ const dict = {
   setupStep2Title: { en: "LLM Settings", ja: "LLM設定" },
   setupStep2Desc: { en: "Configure your local LLM provider and model.", ja: "ローカルLLMのプロバイダーとモデルを設定してください。" },
   setupFolderPath: { en: "Folder path", ja: "フォルダパス" },
-  setupFolderPlaceholder: { en: "e.g. E:\\AI Storage\\projects", ja: "例: E:\\AI Storage\\projects" },
+  setupFolderPlaceholder: { en: "Enter or browse folder path", ja: "フォルダパスを入力または参照" },
   setupSave: { en: "Save & Continue", ja: "保存して次へ" },
   setupComplete: { en: "Start Using MADO", ja: "MADOを使い始める" },
   setupProvider: { en: "Provider", ja: "プロバイダー" },
