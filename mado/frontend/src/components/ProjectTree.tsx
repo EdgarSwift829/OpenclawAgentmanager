@@ -56,7 +56,8 @@ export function ProjectTree({
   onPauseRun,
   planUsage,
 }: Props) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const loc = locale;
   const { status: treeStatus, showStatus } = useInlineStatus();
   const [deletePopup, setDeletePopup] = useState<{ projectId: string; displayName: string; x: number; y: number } | null>(null);
   const [newId, setNewId] = useState("");
@@ -762,7 +763,12 @@ export function ProjectTree({
 
       {/* Plan usage indicator */}
       {planUsage && (
-        <div className="tree-plan-usage">
+        <div
+          className="tree-plan-usage"
+          title={loc === "ja"
+            ? `現在 ${planUsage.projects}個 / 最大 ${planUsage.max_projects}個のプロジェクト（${planUsage.plan}）`
+            : `${planUsage.projects} of ${planUsage.max_projects} projects (${planUsage.plan})`}
+        >
           <div className="tree-plan-bar">
             <div
               className={`tree-plan-fill ${planUsage.projects >= planUsage.max_projects ? "tree-plan-full" : ""}`}
