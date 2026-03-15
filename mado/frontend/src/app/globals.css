@@ -2134,12 +2134,15 @@ input, select {
   background: rgba(255, 255, 255, 0.04);
   border-bottom: 1px solid var(--pane-border, var(--border));
   flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
 }
-.terminal-titlebar-icon { font-size: 0.8125rem; }
+.terminal-titlebar-icon { font-size: 0.8125rem; flex-shrink: 0; }
 .terminal-titlebar-name {
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.02em;
+  flex-shrink: 0;
 }
 .terminal-titlebar-model {
   font-size: 0.5625rem;
@@ -2147,6 +2150,12 @@ input, select {
   font-family: monospace;
   margin-left: 0.25rem;
   opacity: 0.7;
+  max-width: 7rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
 }
 .terminal-titlebar-model.disconnected {
   color: var(--error);

@@ -339,7 +339,10 @@ function TerminalPane({ role, logs, meta, agentState, loc, modelName, modelConne
         <span className="terminal-titlebar-icon">{meta.icon}</span>
         <span className="terminal-titlebar-name" style={{ color: meta.color }}>{displayName}</span>
         {modelName && (
-          <span className={`terminal-titlebar-model ${modelConnected === false ? "disconnected" : ""}`}>
+          <span
+            className={`terminal-titlebar-model ${modelConnected === false ? "disconnected" : ""}`}
+            title={modelName + (modelConnected === false ? (loc === "ja" ? " (未接続)" : " (disconnected)") : "")}
+          >
             {modelName}
             {modelConnected === false && (loc === "ja" ? " (未接続)" : " (disconnected)")}
           </span>
