@@ -422,22 +422,22 @@ export function AgentTerminalGrid({ events, agentProfiles = {}, activeProject, o
   const agentLogs = useMemo(() => buildAgentLogs(events, loc), [events, loc]);
   const agentStates = useMemo(() => deriveAgentStates(events), [events]);
 
-  // Determine active roles: agentProfiles (config) が主、events で追加分を補完
-  const ROLE_ORDER = ["cto", "manager", "researcher", "engineer", "reviewer", "tester", "optimizer", "documenter", "marketer"];
+  // 全エージェントを常に表示（LLM接続に依存しない）
+  const DEFAULT_ROLES = ["cto", "manager", "researcher", "engineer", "reviewer", "tester", "optimizer", "documenter"];
   const activeRoles = useMemo(() => {
-    const roles = new Set<string>();
-    // 1) プロジェクトに登録済みのエージェントを全て含める
+    const roles = new Set<string>(DEFAULT_ROLES);
+    // イベントやプロファイルに追加ロールがあれば含める
     for (const role of Object.keys(agentProfiles)) {
       if (ROLE_META[role]) roles.add(role);
     }
-    // 2) イベントに登場したエージェントも追加（未登録でもイベントがあれば表示）
     for (const ev of events) {
       const role = ev.role || ev.sender || "";
       if (role && role !== "orchestrator" && ROLE_META[role]) {
         roles.add(role);
       }
     }
-    return ROLE_ORDER.filter((r) => roles.has(r));
+    const ORDER = ["cto", "manager", "researcher", "engineer", "reviewer", "tester", "optimizer", "documenter", "marketer"];
+    return ORDER.filter((r) => roles.has(r));
   }, [events, agentProfiles]);
 
   if (!activeProject) {
@@ -447,19 +447,6 @@ export function AgentTerminalGrid({ events, agentProfiles = {}, activeProject, o
           <div className="terminal-grid-empty-icon">{"\uD83D\uDCC2"}</div>
           <div>{t("selectProject")}</div>
         </div>
-      </div>
-    );
-  }
-
-  if (activeRoles.length === 0) {
-    return (
-      <div className="terminal-grid-container">
-        <div className="terminal-grid-empty">
-          <div className="terminal-grid-empty-icon">{"\uD83D\uDCAC"}</div>
-          <div>{t("waitingForAgents")}</div>
-          <div className="terminal-grid-empty-sub">{t("startRunToSpawn")}</div>
-        </div>
-        <CommandBar loc={loc} onSend={onSendOrder} activeProject={activeProject} />
       </div>
     );
   }
