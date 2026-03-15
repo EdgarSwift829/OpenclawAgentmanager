@@ -103,7 +103,7 @@ const dict = {
 
   // Timeline
   iterationTimeline: { en: "Iteration Timeline", ja: "反復タイムライン" },
-  noEventsYet: { en: "No events yet", ja: "イベントなし" },
+  noEventsYet: { en: "No events yet. Press Start to begin.", ja: "イベントなし — 「開始」を押すと実行ログが表示されます" },
 
   // Folder Browser
   browse: { en: "Browse", ja: "参照" },
