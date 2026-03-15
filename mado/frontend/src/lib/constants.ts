@@ -1,17 +1,17 @@
 /* ─── Shared role metadata ──────────────────────────────── */
 export const ROLE_META: Record<
   string,
-  { icon: string; label: { en: string; ja: string }; color: string; border: string }
+  { icon: string; label: { en: string; ja: string }; color: string; border: string; hint: { en: string; ja: string } }
 > = {
-  cto:        { icon: "\uD83D\uDCCB", label: { en: "CTO",        ja: "CTO"              }, color: "#f59e0b", border: "#f59e0b" },
-  manager:    { icon: "\uD83D\uDCC1", label: { en: "PM",         ja: "PM"               }, color: "#3b82f6", border: "#3b82f6" },
-  researcher: { icon: "\uD83D\uDD0D", label: { en: "Researcher", ja: "リサーチャー"      }, color: "#8b5cf6", border: "#8b5cf6" },
-  engineer:   { icon: "\u2699\uFE0F", label: { en: "Engineer",   ja: "エンジニア"        }, color: "#22c55e", border: "#22c55e" },
-  reviewer:   { icon: "\uD83D\uDCDD", label: { en: "Reviewer",   ja: "レビュアー"        }, color: "#ec4899", border: "#ec4899" },
-  tester:     { icon: "\uD83E\uDDEA", label: { en: "Tester",     ja: "テスター"          }, color: "#06b6d4", border: "#06b6d4" },
-  optimizer:  { icon: "\u26A1",       label: { en: "Optimizer",   ja: "オプティマイザー"  }, color: "#f97316", border: "#f97316" },
-  documenter: { icon: "\uD83D\uDCD6", label: { en: "Documenter", ja: "ドキュメンター"    }, color: "#64748b", border: "#64748b" },
-  marketer:   { icon: "\uD83D\uDCE2", label: { en: "Marketer",   ja: "マーケター"        }, color: "#e11d48", border: "#e11d48" },
+  cto:        { icon: "\uD83D\uDCCB", label: { en: "CTO",        ja: "CTO"              }, color: "#f59e0b", border: "#f59e0b", hint: { en: "Plans architecture & strategy", ja: "設計と戦略を策定" } },
+  manager:    { icon: "\uD83D\uDCC1", label: { en: "PM",         ja: "PM"               }, color: "#3b82f6", border: "#3b82f6", hint: { en: "Manages tasks & workflow", ja: "タスクと進行を管理" } },
+  researcher: { icon: "\uD83D\uDD0D", label: { en: "Researcher", ja: "リサーチャー"      }, color: "#8b5cf6", border: "#8b5cf6", hint: { en: "Researches technical details", ja: "技術調査を担当" } },
+  engineer:   { icon: "\u2699\uFE0F", label: { en: "Engineer",   ja: "エンジニア"        }, color: "#22c55e", border: "#22c55e", hint: { en: "Writes & implements code", ja: "コードを実装" } },
+  reviewer:   { icon: "\uD83D\uDCDD", label: { en: "Reviewer",   ja: "レビュアー"        }, color: "#ec4899", border: "#ec4899", hint: { en: "Reviews code quality", ja: "コード品質をレビュー" } },
+  tester:     { icon: "\uD83E\uDDEA", label: { en: "Tester",     ja: "テスター"          }, color: "#06b6d4", border: "#06b6d4", hint: { en: "Runs tests & QA", ja: "テストと品質保証" } },
+  optimizer:  { icon: "\u26A1",       label: { en: "Optimizer",   ja: "オプティマイザー"  }, color: "#f97316", border: "#f97316", hint: { en: "Optimizes performance", ja: "パフォーマンスを最適化" } },
+  documenter: { icon: "\uD83D\uDCD6", label: { en: "Documenter", ja: "ドキュメンター"    }, color: "#64748b", border: "#64748b", hint: { en: "Writes documentation", ja: "ドキュメントを作成" } },
+  marketer:   { icon: "\uD83D\uDCE2", label: { en: "Marketer",   ja: "マーケター"        }, color: "#e11d48", border: "#e11d48", hint: { en: "Handles growth strategy", ja: "グロース戦略を担当" } },
 };
 
 /* ─── Shared task state metadata ───────────────────────── */

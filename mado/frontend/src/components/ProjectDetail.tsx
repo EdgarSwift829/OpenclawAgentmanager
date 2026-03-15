@@ -26,6 +26,16 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh, allRunSta
   const [goalEditing, setGoalEditing] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
+  // Close overlay on ESC key
+  useEffect(() => {
+    if (!detailsOpen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDetailsOpen(false);
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [detailsOpen]);
+
   // Editable fields
   const [goal, setGoal] = useState("");
   const [overview, setOverview] = useState("");

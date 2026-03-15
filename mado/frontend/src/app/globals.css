@@ -759,14 +759,15 @@ body {
 }
 .right-tab {
   flex: 1;
-  padding: 0.5rem;
+  padding: 0.5rem 0.25rem;
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
   color: var(--text-secondary);
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
 }
 .right-tab:hover { color: var(--text-primary); }
 .right-tab-active {
@@ -2193,17 +2194,20 @@ input, select {
 
 .terminal-empty {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 0.25rem;
   color: var(--text-secondary);
-  opacity: 0.5;
+  opacity: 0.6;
   padding-top: 0.5rem;
 }
-.terminal-cursor {
-  animation: blink 1s infinite;
-  color: var(--text-primary);
+.terminal-empty-text {
+  font-size: 0.75rem;
 }
-@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+.terminal-empty-hint {
+  font-size: 0.625rem;
+  opacity: 0.7;
+}
 
 .terminal-line {
   display: flex;
@@ -2410,9 +2414,17 @@ input, select {
 }
 .task-flow-empty {
   color: var(--text-secondary);
-  font-size: 0.8125rem;
-  padding: 1rem;
+  padding: 1.5rem 1rem;
   text-align: center;
+}
+.task-flow-empty-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin-bottom: 0.375rem;
+}
+.task-flow-empty-hint {
+  font-size: 0.6875rem;
+  opacity: 0.7;
 }
 
 .task-flow-card {

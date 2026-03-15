@@ -356,8 +356,8 @@ function TerminalPane({ role, logs, meta, agentState, loc, modelName, modelConne
       <div className="terminal-body" ref={scrollRef} onScroll={handleScroll}>
         {logs.length === 0 ? (
           <div className="terminal-empty">
-            <span className="terminal-cursor">_</span>
-            <span className="terminal-empty-text">{loc === "ja" ? "待機中..." : "Standby..."}</span>
+            <span className="terminal-empty-text">{loc === "ja" ? "待機中" : "Standby"}</span>
+            {meta.hint && <span className="terminal-empty-hint">{meta.hint[loc]}</span>}
           </div>
         ) : (
           logs.map((line, i) => {

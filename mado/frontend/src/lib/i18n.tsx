@@ -186,6 +186,7 @@ const dict = {
   // TaskGraph
   taskGraph: { en: "Task Graph", ja: "タスクグラフ" },
   noActiveTasks: { en: "No active tasks", ja: "アクティブなタスクなし" },
+  noActiveTasksHint: { en: "Press \"Start\" to begin — task progress will appear here.", ja: "「開始」を押すと、ここにタスクの進捗が表示されます。" },
   ctoPlanning: { en: "CTO Planning", ja: "CTO 計画" },
   taskDecomposition: { en: "Task Decomposition", ja: "タスク分解" },
   research: { en: "Research", ja: "リサーチ" },

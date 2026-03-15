@@ -192,7 +192,8 @@ export function TaskGraph({ runStatus, events = [] }: Props) {
       <div className="task-flow-list">
         {tasks.length === 0 ? (
           <div className="task-flow-empty">
-            {t("noActiveTasks")}
+            <div className="task-flow-empty-title">{t("noActiveTasks")}</div>
+            <div className="task-flow-empty-hint">{t("noActiveTasksHint")}</div>
           </div>
         ) : (
           tasks.map((task, i) => {
