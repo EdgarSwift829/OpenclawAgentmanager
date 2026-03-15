@@ -18,7 +18,7 @@ function renderRunControl(overrides: Partial<Parameters<typeof RunControl>[0]> =
     runStatus: null as RunStatus | null,
     onRefresh: vi.fn(),
     goal: "Build a REST API",
-    maxIter: 30,
+    maxIter: 200,
     onMaxIterChange: vi.fn(),
   };
   return render(

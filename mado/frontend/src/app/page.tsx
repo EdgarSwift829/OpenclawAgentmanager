@@ -46,7 +46,7 @@ function saveAllStates(states: Record<string, ProjectState>) {
 
 function loadProjectState(id: string): ProjectState {
   const all = loadAllStates();
-  return all[id] || { maxIter: 30, events: [] };
+  return all[id] || { maxIter: 200, events: [] };
 }
 
 function saveProjectState(id: string, state: ProjectState) {
@@ -67,7 +67,7 @@ export default function Dashboard() {
   const [runStatus, setRunStatus] = useState<RunStatus | null>(null);
   const [agents, setAgents] = useState<AgentInfo[]>([]);
   const [events, setEvents] = useState<OrchestratorEvent[]>([]);
-  const [maxIter, setMaxIter] = useState(30);
+  const [maxIter, setMaxIter] = useState(200);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [rightTab, setRightTab] = useState<"timeline" | "agents" | "models" | "tasks">("timeline");
   const [allRunStatuses, setAllRunStatuses] = useState<Record<string, string>>({});
