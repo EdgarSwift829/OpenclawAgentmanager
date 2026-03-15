@@ -2115,7 +2115,10 @@ input, select {
 }
 .terminal-grid-2x2 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
 .terminal-grid-2x3 { grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr; }
+.terminal-grid-2x4 { grid-template-columns: repeat(4, 1fr); grid-template-rows: 1fr 1fr; }
 .terminal-grid-3x3 { grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; }
+.terminal-grid-3x4 { grid-template-columns: repeat(4, 1fr); grid-template-rows: 1fr 1fr 1fr; }
+.terminal-grid-4x4 { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); }
 
 /* ---- Terminal Pane ---- */
 .terminal-pane {

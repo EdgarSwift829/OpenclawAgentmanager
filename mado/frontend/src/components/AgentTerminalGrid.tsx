@@ -501,7 +501,7 @@ export function AgentTerminalGrid({ events, agentProfiles = {}, activeProject, o
     );
   }
 
-  // Grid layout based on active role count
+  // Grid layout based on active role count（エージェント増加にも対応）
   const paneCount = activeRoles.length;
   let gridClass = "terminal-grid-2x2";
   if (paneCount <= 1) gridClass = "terminal-grid-1x1";
@@ -509,7 +509,10 @@ export function AgentTerminalGrid({ events, agentProfiles = {}, activeProject, o
   else if (paneCount === 3) gridClass = "terminal-grid-1-2";
   else if (paneCount <= 4) gridClass = "terminal-grid-2x2";
   else if (paneCount <= 6) gridClass = "terminal-grid-2x3";
-  else gridClass = "terminal-grid-3x3";
+  else if (paneCount <= 8) gridClass = "terminal-grid-2x4";
+  else if (paneCount <= 9) gridClass = "terminal-grid-3x3";
+  else if (paneCount <= 12) gridClass = "terminal-grid-3x4";
+  else gridClass = "terminal-grid-4x4";
 
   return (
     <div className="terminal-grid-container">
