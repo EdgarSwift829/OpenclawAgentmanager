@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useEffect, useState, useMemo } from "react";
+import { useRef, useEffect, useState, useMemo, useCallback } from "react";
 import { useI18n, type Locale } from "@/lib/i18n";
 import { ROLE_META, TASK_STATE_META } from "@/lib/constants";
 import type { OrchestratorEvent, AgentProfileAssignment } from "@/lib/types";
+import * as api from "@/lib/api";
 
 /* ─── Types ────────────────────────────────────────────── */
 
@@ -302,12 +303,14 @@ function BlinkingDots() {
 }
 
 /* ─── Terminal Pane ────────────────────────────────────── */
-function TerminalPane({ role, logs, meta, agentState, loc }: {
+function TerminalPane({ role, logs, meta, agentState, loc, modelName, modelConnected }: {
   role: string;
   logs: LogLine[];
   meta: typeof ROLE_META[string];
   agentState: string;
   loc: Locale;
+  modelName?: string;
+  modelConnected?: boolean;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef(true);
@@ -335,6 +338,12 @@ function TerminalPane({ role, logs, meta, agentState, loc }: {
       <div className="terminal-titlebar">
         <span className="terminal-titlebar-icon">{meta.icon}</span>
         <span className="terminal-titlebar-name" style={{ color: meta.color }}>{displayName}</span>
+        {modelName && (
+          <span className={`terminal-titlebar-model ${modelConnected === false ? "disconnected" : ""}`}>
+            {modelName}
+            {modelConnected === false && (loc === "ja" ? " (未接続)" : " (disconnected)")}
+          </span>
+        )}
         {isRunning && <BlinkingDots />}
         <span className="terminal-titlebar-state" style={{ color: stateInfo.color }}>
           {stateInfo.label[loc]}
@@ -422,6 +431,44 @@ export function AgentTerminalGrid({ events, agentProfiles = {}, activeProject, o
   const agentLogs = useMemo(() => buildAgentLogs(events, loc), [events, loc]);
   const agentStates = useMemo(() => deriveAgentStates(events), [events]);
 
+  // モデル割当と接続状態
+  const [modelAssignments, setModelAssignments] = useState<Record<string, string>>({});
+  const [modelConnected, setModelConnected] = useState<Record<string, boolean>>({});
+
+  const checkModels = useCallback(async () => {
+    try {
+      const data = await api.getAssignments();
+      const assignments: Record<string, string> = data.assignments || {};
+      setModelAssignments(assignments);
+
+      // 利用可能モデル一覧を取得して接続状態を判定
+      try {
+        const modelsData = await api.listModels();
+        const available = new Set(Object.keys(modelsData.models || {}));
+        const connected: Record<string, boolean> = {};
+        for (const [role, model] of Object.entries(assignments)) {
+          connected[role] = available.has(model);
+        }
+        setModelConnected(connected);
+      } catch {
+        // モデル一覧取得失敗 = 全て未接続扱い
+        const connected: Record<string, boolean> = {};
+        for (const role of Object.keys(assignments)) {
+          connected[role] = false;
+        }
+        setModelConnected(connected);
+      }
+    } catch {
+      // assignments取得失敗
+    }
+  }, []);
+
+  useEffect(() => {
+    checkModels();
+    const interval = setInterval(checkModels, 30000);
+    return () => clearInterval(interval);
+  }, [checkModels]);
+
   // 全エージェントを常に表示（LLM接続に依存しない）
   const DEFAULT_ROLES = ["cto", "manager", "researcher", "engineer", "reviewer", "tester", "optimizer", "documenter"];
   const activeRoles = useMemo(() => {
@@ -477,6 +524,8 @@ export function AgentTerminalGrid({ events, agentProfiles = {}, activeProject, o
               meta={meta}
               agentState={state}
               loc={loc}
+              modelName={modelAssignments[role]}
+              modelConnected={modelAssignments[role] ? modelConnected[role] : undefined}
             />
           );
         })}

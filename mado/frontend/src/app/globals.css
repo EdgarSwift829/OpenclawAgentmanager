@@ -2141,6 +2141,17 @@ input, select {
   font-weight: 700;
   letter-spacing: 0.02em;
 }
+.terminal-titlebar-model {
+  font-size: 0.5625rem;
+  color: var(--text-secondary);
+  font-family: monospace;
+  margin-left: 0.25rem;
+  opacity: 0.7;
+}
+.terminal-titlebar-model.disconnected {
+  color: var(--error);
+  opacity: 1;
+}
 .terminal-titlebar-state {
   margin-left: auto;
   font-size: 0.625rem;
