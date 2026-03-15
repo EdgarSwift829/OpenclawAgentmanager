@@ -358,6 +358,7 @@ function TerminalPane({ role, logs, meta, agentState, loc, modelName, modelConne
           <div className="terminal-empty">
             <span className="terminal-empty-text">{loc === "ja" ? "待機中" : "Standby"}</span>
             {meta.hint && <span className="terminal-empty-hint">{meta.hint[loc]}</span>}
+            {modelName && <span className="terminal-empty-model">{modelName}</span>}
           </div>
         ) : (
           logs.map((line, i) => {

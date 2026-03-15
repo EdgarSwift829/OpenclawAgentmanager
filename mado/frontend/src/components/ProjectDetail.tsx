@@ -26,15 +26,27 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh, allRunSta
   const [goalEditing, setGoalEditing] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
+  // Close overlay with unsaved changes confirmation
+  const tryClose = useCallback(() => {
+    if (dirty) {
+      const msg = locale === "ja"
+        ? "未保存の変更があります。閉じてもよろしいですか？"
+        : "You have unsaved changes. Close anyway?";
+      if (!window.confirm(msg)) return;
+      setDirty(false);
+    }
+    setDetailsOpen(false);
+  }, [dirty, locale]);
+
   // Close overlay on ESC key
   useEffect(() => {
     if (!detailsOpen) return;
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setDetailsOpen(false);
+      if (e.key === "Escape") tryClose();
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [detailsOpen]);
+  }, [detailsOpen, tryClose]);
 
   // Editable fields
   const [goal, setGoal] = useState("");
@@ -170,7 +182,7 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh, allRunSta
     {/* ── Compact bar (always visible) ── */}
     <div className="detail-compact-bar">
       <h3 className="detail-title">{node?.display_name || activeProject}</h3>
-      <span className="detail-goal-preview" title={goal || ""}>
+      <span className="detail-goal-preview" title={goal || ""} onClick={() => setDetailsOpen(true)}>
         {goal ? goal.slice(0, 60) + (goal.length > 60 ? "..." : "") : ""}
       </span>
       <div className="detail-compact-actions">
@@ -196,8 +208,9 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh, allRunSta
                 {saving ? t("saving") : t("save")}
               </button>
             )}
-            <button className="btn btn-sm btn-ghost" onClick={() => setDetailsOpen(false)}>
+            <button className="btn btn-sm btn-ghost" onClick={tryClose}>
               {locale === "ja" ? "閉じる" : "Close"}
+              <kbd className="kbd-hint">ESC</kbd>
             </button>
           </div>
         </div>

@@ -777,7 +777,9 @@ export function ProjectTree({
           </div>
           <span className="tree-plan-text">
             {planUsage.projects}/{planUsage.max_projects} {t("projectUsage")}
-            <span className="tree-plan-name">{planUsage.plan}</span>
+            <span className="tree-plan-name" title={loc === "ja" ? `現在のプラン: ${planUsage.plan}` : `Current plan: ${planUsage.plan}`}>
+              {planUsage.plan === "Free" ? (loc === "ja" ? "無料" : "Free") : planUsage.plan}
+            </span>
           </span>
         </div>
       )}

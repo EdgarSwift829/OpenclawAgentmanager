@@ -267,6 +267,7 @@ export function AgentPanel({ activeProject, agentProfiles, runtimeAgents, onProf
                         className="agents-tab-card-header"
                         onClick={() => setExpandedRole(isExpanded ? null : role)}
                         style={{ cursor: "pointer" }}
+                        title={meta.label[loc]}
                       >
                         <span className="agents-tab-card-icon">{meta.icon}</span>
                         <div className="agents-tab-card-info">
