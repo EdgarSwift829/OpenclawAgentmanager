@@ -412,7 +412,7 @@ function CommandBar({ loc, onSend, activeProject }: {
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
-        placeholder={loc === "ja" ? "追加指示を入力..." : "Enter additional instruction..."}
+        placeholder={loc === "ja" ? "例: 「エラーハンドリングを追加して」" : "e.g. \"Add error handling\""}
         disabled={sending || !activeProject}
       />
       <button
