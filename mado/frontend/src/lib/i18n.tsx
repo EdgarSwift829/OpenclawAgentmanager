@@ -9,7 +9,7 @@ const dict = {
   setupWelcome: { en: "Welcome to MADO", ja: "MADOへようこそ" },
   setupWelcomeSub: { en: "Let's set up your workspace", ja: "ワークスペースを設定しましょう" },
   setupStep1Title: { en: "Projects Folder", ja: "プロジェクトフォルダ" },
-  setupStep1Desc: { en: "Choose a folder to store your projects. A demo project will be created automatically.", ja: "プロジェクトを保存するフォルダを選択してください。デモプロジェクトが自動で作成されます。" },
+  setupStep1Desc: { en: "Open the folder where your projects will be stored.", ja: "作業フォルダを開いてください。" },
   setupStep2Title: { en: "LLM Settings", ja: "LLM設定" },
   setupStep2Desc: { en: "Configure your local LLM provider and model.", ja: "ローカルLLMのプロバイダーとモデルを設定してください。" },
   setupFolderPath: { en: "Folder path", ja: "フォルダパス" },
@@ -107,16 +107,12 @@ const dict = {
 
   // Folder Browser
   browse: { en: "Browse", ja: "参照" },
-  browseFolder: { en: "Select Folder", ja: "フォルダを選択" },
+  browseFolder: { en: "Open Work Folder", ja: "作業フォルダを開いてください" },
   folderUp: { en: "Go up", ja: "上の階層へ" },
   folderGo: { en: "Go", ja: "移動" },
   folderLoading: { en: "Loading...", ja: "読み込み中..." },
   folderEmpty: { en: "No subfolders", ja: "サブフォルダなし" },
-  folderNotExists: { en: "This folder does not exist yet. It will be created.", ja: "このフォルダはまだ存在しません。作成されます。" },
   folderSelect: { en: "Select This Folder", ja: "このフォルダを選択" },
-  folderCreateSelect: { en: "Create & Select", ja: "作成して選択" },
-  newFolder: { en: "New Folder", ja: "新しいフォルダ" },
-  newFolderName: { en: "Folder name", ja: "フォルダ名" },
 
   // Settings
   projectsFolder: { en: "Projects Folder", ja: "プロジェクトフォルダ" },

@@ -15,7 +15,6 @@ interface BrowseResult {
   parent: string | null;
   dirs: DirEntry[];
   exists?: boolean;
-  can_create?: boolean;
 }
 
 interface Props {
@@ -30,8 +29,6 @@ export function FolderBrowser({ currentPath, onSelect, onClose, t }: Props) {
   const [result, setResult] = useState<BrowseResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [newFolderName, setNewFolderName] = useState("");
-  const [showNewFolder, setShowNewFolder] = useState(false);
 
   const loadDir = useCallback(async (path?: string) => {
     setLoading(true);
@@ -55,8 +52,6 @@ export function FolderBrowser({ currentPath, onSelect, onClose, t }: Props) {
 
   const handleNavigate = (path: string) => {
     loadDir(path);
-    setShowNewFolder(false);
-    setNewFolderName("");
   };
 
   const handleGoUp = () => {
@@ -69,15 +64,6 @@ export function FolderBrowser({ currentPath, onSelect, onClose, t }: Props) {
     if (browsePath) {
       onSelect(browsePath);
     }
-  };
-
-  const handleCreateAndSelect = () => {
-    if (!newFolderName.trim()) return;
-    const separator = browsePath.includes("\\") ? "\\" : "/";
-    const newPath = browsePath
-      ? `${browsePath}${separator}${newFolderName.trim()}`
-      : newFolderName.trim();
-    onSelect(newPath);
   };
 
   const handleManualPathSubmit = () => {
@@ -134,13 +120,7 @@ export function FolderBrowser({ currentPath, onSelect, onClose, t }: Props) {
             <div className="folder-browser-loading">{t("folderLoading")}</div>
           )}
 
-          {!loading && result && result.exists === false && (
-            <div className="folder-browser-not-exists">
-              {t("folderNotExists")}
-            </div>
-          )}
-
-          {!loading && result && result.dirs.length === 0 && result.exists !== false && (
+          {!loading && result && result.dirs.length === 0 && (
             <div className="folder-browser-empty">{t("folderEmpty")}</div>
           )}
 
@@ -159,51 +139,6 @@ export function FolderBrowser({ currentPath, onSelect, onClose, t }: Props) {
                 <span className="folder-browser-name">{dir.name}</span>
               </button>
             ))}
-        </div>
-
-        {/* New folder input */}
-        <div className="folder-browser-newfolder">
-          {showNewFolder ? (
-            <div className="folder-browser-newfolder-row">
-              <input
-                className="folder-browser-newfolder-input"
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleCreateAndSelect();
-                  if (e.key === "Escape") {
-                    setShowNewFolder(false);
-                    setNewFolderName("");
-                  }
-                }}
-                placeholder={t("newFolderName")}
-                autoFocus
-              />
-              <button
-                className="folder-browser-newfolder-ok"
-                onClick={handleCreateAndSelect}
-                disabled={!newFolderName.trim()}
-              >
-                {t("folderCreateSelect")}
-              </button>
-              <button
-                className="folder-browser-newfolder-cancel"
-                onClick={() => {
-                  setShowNewFolder(false);
-                  setNewFolderName("");
-                }}
-              >
-                {"\u2716"}
-              </button>
-            </div>
-          ) : (
-            <button
-              className="folder-browser-newfolder-btn"
-              onClick={() => setShowNewFolder(true)}
-            >
-              + {t("newFolder")}
-            </button>
-          )}
         </div>
 
         {/* Footer actions */}
