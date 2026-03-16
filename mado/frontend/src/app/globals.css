@@ -188,6 +188,51 @@ body {
 .tree-status-running { color: var(--running); }
 .tree-status-completed { color: var(--success); }
 .tree-status-error { color: var(--error); }
+
+/* Animated status dots */
+.tree-status-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+}
+.tree-dot-circle {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: block;
+}
+.tree-status-dot-running .tree-dot-circle {
+  background: var(--running);
+  box-shadow: 0 0 6px var(--running);
+  animation: dot-pulse 1.5s ease-in-out infinite;
+}
+.tree-status-dot-completed .tree-dot-circle {
+  background: var(--success);
+  box-shadow: 0 0 4px rgba(34, 197, 94, 0.4);
+}
+.tree-status-dot-error .tree-dot-circle {
+  background: var(--error);
+  box-shadow: 0 0 4px rgba(239, 68, 68, 0.4);
+  animation: dot-error-pulse 1s ease-in-out infinite;
+}
+.tree-status-dot-paused .tree-dot-circle {
+  background: var(--warning);
+  box-shadow: 0 0 4px rgba(234, 179, 8, 0.4);
+}
+.tree-status-dot-stopped .tree-dot-circle {
+  background: var(--text-secondary);
+}
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+@keyframes dot-error-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
 /* Folder settings */
 .tree-folder-btn {
   display: flex;
@@ -508,6 +553,37 @@ body {
   color: var(--text-secondary);
 }
 
+/* ---- Run Progress Bar ---- */
+.run-progress-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.run-progress-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.run-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--running));
+  border-radius: 3px;
+  transition: width 0.5s ease;
+  animation: progress-pulse 2s ease-in-out infinite;
+}
+@keyframes progress-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+.run-progress-label {
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 /* =========================================================================
    Agent Grid - Web Conference (Zoom/Teams) Style
    ========================================================================= */
@@ -760,6 +836,10 @@ body {
 }
 .right-tab {
   flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
   padding: 0.5rem 0.25rem;
   background: none;
   border: none;
@@ -769,6 +849,10 @@ body {
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s, background 0.15s;
   white-space: nowrap;
+}
+.right-tab-icon {
+  font-size: 0.875rem;
+  line-height: 1;
 }
 .right-tab:hover { color: var(--text-primary); background: rgba(255, 255, 255, 0.03); }
 .right-tab-active {
@@ -2356,6 +2440,46 @@ input, select {
 }
 .terminal-command-send:hover { background: var(--accent-hover); }
 .terminal-command-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ---- Terminal pane maximize button ---- */
+.terminal-maximize-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0 0.25rem;
+  margin-left: 0.125rem;
+  opacity: 0.5;
+  transition: opacity 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+.terminal-maximize-btn:hover { opacity: 1; color: var(--text-primary); }
+.terminal-titlebar:hover .terminal-maximize-btn { opacity: 0.8; }
+
+/* ---- Terminal shortcut hint bar ---- */
+.terminal-shortcut-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  background: rgba(59, 130, 246, 0.08);
+  border-top: 1px solid var(--border);
+  font-size: 0.625rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+.terminal-shortcut-hint kbd {
+  display: inline-block;
+  padding: 0.0625rem 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg-secondary);
+  font-family: "Fira Code", monospace;
+  font-size: 0.5625rem;
+  line-height: 1;
+}
 
 /* =========================================================================
    Task Flow Panel (right panel - Tasks tab)

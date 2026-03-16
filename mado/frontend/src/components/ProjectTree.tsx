@@ -623,8 +623,8 @@ export function ProjectTree({
           )}
 
           {status && !isRenaming && status !== "archived" && (
-            <span className={`tree-status tree-status-${status}`}>
-              {status}
+            <span className={`tree-status-dot tree-status-dot-${status}`} title={status}>
+              <span className="tree-dot-circle" />
             </span>
           )}
         </div>

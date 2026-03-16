@@ -116,6 +116,21 @@ export function RunControl({
           </span>
         )}
       </div>
+      {isRunning && runStatus && runStatus.max_iterations > 0 && (
+        <div className="run-progress-bar-container">
+          <div className="run-progress-bar">
+            <div
+              className="run-progress-fill"
+              style={{ width: `${Math.min(100, (runStatus.iteration / runStatus.max_iterations) * 100)}%` }}
+            />
+          </div>
+          <span className="run-progress-label">
+            {locale === "ja"
+              ? `イテレーション ${runStatus.iteration} / ${runStatus.max_iterations}`
+              : `Iteration ${runStatus.iteration} / ${runStatus.max_iterations}`}
+          </span>
+        </div>
+      )}
       {isExhausted && (
         <div className="run-exhausted-banner">
           <span className="run-exhausted-text">{t("iterExhausted")}</span>

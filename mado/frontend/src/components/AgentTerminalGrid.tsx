@@ -303,7 +303,7 @@ function BlinkingDots() {
 }
 
 /* ─── Terminal Pane ────────────────────────────────────── */
-function TerminalPane({ role, logs, meta, agentState, loc, modelName, modelConnected }: {
+function TerminalPane({ role, logs, meta, agentState, loc, modelName, modelConnected, isMaximized, onToggleMaximize }: {
   role: string;
   logs: LogLine[];
   meta: typeof ROLE_META[string];
@@ -311,6 +311,8 @@ function TerminalPane({ role, logs, meta, agentState, loc, modelName, modelConne
   loc: Locale;
   modelName?: string;
   modelConnected?: boolean;
+  isMaximized?: boolean;
+  onToggleMaximize?: () => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef(true);
@@ -333,9 +335,12 @@ function TerminalPane({ role, logs, meta, agentState, loc, modelName, modelConne
   const isRunning = agentState === "running";
 
   return (
-    <div className="terminal-pane" style={{ "--pane-border": meta.border } as React.CSSProperties}>
+    <div
+      className={`terminal-pane ${isMaximized ? "terminal-pane-maximized" : ""}`}
+      style={{ "--pane-border": meta.border } as React.CSSProperties}
+    >
       {/* Title bar */}
-      <div className="terminal-titlebar">
+      <div className="terminal-titlebar" onDoubleClick={onToggleMaximize} title={loc === "ja" ? "ダブルクリックで拡大/縮小" : "Double-click to maximize/restore"}>
         <span className="terminal-titlebar-icon">{meta.icon}</span>
         <span className="terminal-titlebar-name" style={{ color: meta.color }}>{displayName}</span>
         {modelName && (
@@ -351,6 +356,15 @@ function TerminalPane({ role, logs, meta, agentState, loc, modelName, modelConne
         <span className="terminal-titlebar-state" style={{ color: stateInfo.color }}>
           {stateInfo.label[loc]}
         </span>
+        {onToggleMaximize && (
+          <button
+            className="terminal-maximize-btn"
+            onClick={(e) => { e.stopPropagation(); onToggleMaximize(); }}
+            title={isMaximized ? (loc === "ja" ? "元に戻す" : "Restore") : (loc === "ja" ? "最大化" : "Maximize")}
+          >
+            {isMaximized ? "\u25A3" : "\u25A1"}
+          </button>
+        )}
       </div>
       {/* Terminal body */}
       <div className="terminal-body" ref={scrollRef} onScroll={handleScroll}>
@@ -435,6 +449,34 @@ export function AgentTerminalGrid({ events, agentProfiles = {}, activeProject, o
   const agentLogs = useMemo(() => buildAgentLogs(events, loc), [events, loc]);
   const agentStates = useMemo(() => deriveAgentStates(events), [events]);
 
+  // ペイン最大化状態
+  const [maximizedPane, setMaximizedPane] = useState<string | null>(null);
+
+  // キーボードショートカット: 1-8でペイン最大化, Escで復元
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // テキスト入力中はスキップ
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+      if (e.key === "Escape") {
+        setMaximizedPane(null);
+        return;
+      }
+
+      const num = parseInt(e.key, 10);
+      if (num >= 1 && num <= 9) {
+        const ORDER = ["cto", "manager", "researcher", "engineer", "reviewer", "tester", "optimizer", "documenter", "marketer"];
+        const role = ORDER[num - 1];
+        if (role) {
+          setMaximizedPane((prev) => prev === role ? null : role);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   // モデル割当と接続状態
   const [modelAssignments, setModelAssignments] = useState<Record<string, string>>({});
   const [modelConnected, setModelConnected] = useState<Record<string, boolean>>({});
@@ -515,11 +557,19 @@ export function AgentTerminalGrid({ events, agentProfiles = {}, activeProject, o
   else if (paneCount <= 12) gridClass = "terminal-grid-3x4";
   else gridClass = "terminal-grid-4x4";
 
+  // 最大化時は1ペインのみ表示
+  const displayRoles = maximizedPane && activeRoles.includes(maximizedPane)
+    ? [maximizedPane]
+    : activeRoles;
+  const displayGridClass = maximizedPane && activeRoles.includes(maximizedPane)
+    ? "terminal-grid-1x1"
+    : gridClass;
+
   return (
     <div className="terminal-grid-container">
       {/* Terminal panes */}
-      <div className={`terminal-grid ${gridClass}`}>
-        {activeRoles.map((role) => {
+      <div className={`terminal-grid ${displayGridClass}`}>
+        {displayRoles.map((role) => {
           const meta = ROLE_META[role];
           const logs = agentLogs[role] || [];
           const state = agentStates[role] || "idle";
@@ -533,10 +583,21 @@ export function AgentTerminalGrid({ events, agentProfiles = {}, activeProject, o
               loc={loc}
               modelName={modelAssignments[role]}
               modelConnected={modelAssignments[role] ? modelConnected[role] : undefined}
+              isMaximized={maximizedPane === role}
+              onToggleMaximize={() => setMaximizedPane(maximizedPane === role ? null : role)}
             />
           );
         })}
       </div>
+
+      {/* Keyboard shortcut hint */}
+      {maximizedPane && (
+        <div className="terminal-shortcut-hint">
+          <kbd>Esc</kbd> {loc === "ja" ? "元に戻す" : "restore"}
+          {" | "}
+          <kbd>1</kbd>-<kbd>8</kbd> {loc === "ja" ? "ペイン切替" : "switch pane"}
+        </div>
+      )}
 
       {/* Command input bar */}
       <CommandBar loc={loc} onSend={onSendOrder} activeProject={activeProject} />

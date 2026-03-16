@@ -241,6 +241,24 @@ export default function Dashboard() {
     };
   }, [activeProject]);
 
+  // Global keyboard shortcuts: Ctrl+Enter to start run
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === "Enter") {
+        const tag = (e.target as HTMLElement).tagName;
+        if (tag === "TEXTAREA") return; // テキストエリア内のCtrl+Enterは無視
+        e.preventDefault();
+        if (activeProjectRef.current && activeGoal?.trim() && runStatus?.status !== "running") {
+          api.startRun(activeProjectRef.current, activeGoal.trim(), maxIterRef.current)
+            .then(() => loadRunStatus())
+            .catch(() => {});
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeGoal, runStatus, loadRunStatus]);
+
   // Show loading while checking setup status
   if (!setupChecked) {
     return (
@@ -370,19 +388,25 @@ export default function Dashboard() {
           <button
             className={`right-tab ${rightTab === "timeline" ? "right-tab-active" : ""}`}
             onClick={() => setRightTab("timeline")}
+            title={t("timeline")}
           >
+            <span className="right-tab-icon">{"\u23F1"}</span>
             {t("timeline")}
           </button>
           <button
             className={`right-tab ${rightTab === "agents" ? "right-tab-active" : ""}`}
             onClick={() => setRightTab("agents")}
+            title={t("agentsTab")}
           >
+            <span className="right-tab-icon">{"\uD83E\uDDE0"}</span>
             {t("agentsTab")}
           </button>
           <button
             className={`right-tab ${rightTab === "tasks" ? "right-tab-active" : ""}`}
             onClick={() => setRightTab("tasks")}
+            title={t("tasks")}
           >
+            <span className="right-tab-icon">{"\u2611"}</span>
             {t("tasks")}
           </button>
           <LangSwitcher />
