@@ -161,6 +161,9 @@ const dict = {
   detailSettings: { en: "Detail Settings", ja: "詳細設定" },
   editGoal: { en: "Click to edit", ja: "クリックして編集" },
 
+  // Connection status
+  apiDisconnected: { en: "Cannot connect to backend. Please check if the server is running.", ja: "バックエンドに接続できません。サーバーが起動しているか確認してください。" },
+
   // Child Project Management
   childProjectManagement: { en: "Sub-project Control", ja: "子プロジェクト管理" },
   dispatchChild: { en: "Start", ja: "開始" },

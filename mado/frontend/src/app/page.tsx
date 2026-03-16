@@ -73,6 +73,9 @@ export default function Dashboard() {
   const [allRunStatuses, setAllRunStatuses] = useState<Record<string, string>>({});
   const [planUsage, setPlanUsage] = useState<{ projects: number; max_projects: number; plan: string } | null>(null);
 
+  // --- API connection state ---
+  const [apiConnected, setApiConnected] = useState(true);
+
   // --- Setup wizard state ---
   const [setupChecked, setSetupChecked] = useState(false);
   const [needsSetup, setNeedsSetup] = useState(false);
@@ -123,6 +126,7 @@ export default function Dashboard() {
       const data = await api.listProjects();
       setProjects(data.projects);
       setProjectTree(data.tree || []);
+      setApiConnected(true);
       if (data.usage) {
         setPlanUsage({
           projects: data.usage.projects,
@@ -130,7 +134,9 @@ export default function Dashboard() {
           plan: data.plan?.display_name || data.plan?.plan || "Free",
         });
       }
-    } catch { /* API not available */ }
+    } catch {
+      setApiConnected(false);
+    }
   }, []);
 
   const loadRunStatus = useCallback(async () => {
@@ -221,20 +227,42 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [activeProject, loadRunStatus, loadAgents]);
 
-  // WebSocket for real-time events
+  // WebSocket for real-time events (with auto-reconnect)
   useEffect(() => {
     if (!activeProject) return;
-    let ws: WebSocket | null = null;
     let closed = false;
-    try {
-      ws = api.connectWebSocket(activeProject, (data) => {
-        if (!closed) {
-          setEvents((prev) => [...prev.slice(-200), data as OrchestratorEvent]);
+    let ws: WebSocket | null = null;
+    let retryCount = 0;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const connect = () => {
+      if (closed) return;
+      try {
+        ws = api.connectWebSocket(activeProject, (data) => {
+          if (!closed) {
+            retryCount = 0; // reset on successful message
+            setEvents((prev) => [...prev.slice(-200), data as OrchestratorEvent]);
+          }
+        });
+        if (ws) {
+          ws.addEventListener("close", () => {
+            if (!closed && retryCount < 10) {
+              const delay = Math.min(2000 * Math.pow(1.5, retryCount), 30000);
+              retryCount++;
+              retryTimer = setTimeout(connect, delay);
+            }
+          });
+          ws.addEventListener("error", () => {
+            // error fires before close, handled by close handler
+          });
         }
-      });
-    } catch { /* WebSocket not available */ }
+      } catch { /* WebSocket not available */ }
+    };
+
+    connect();
     return () => {
       closed = true;
+      if (retryTimer) clearTimeout(retryTimer);
       if (ws) {
         try { ws.close(); } catch { /* already closed */ }
       }
@@ -262,8 +290,10 @@ export default function Dashboard() {
   // Show loading while checking setup status
   if (!setupChecked) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", color: "var(--text-secondary)" }}>
-        <span>Loading...</span>
+      <div className="app-loading">
+        <div className="app-loading-spinner" />
+        <span className="app-loading-text">MADO</span>
+        <span className="app-loading-sub">Loading...</span>
       </div>
     );
   }
@@ -273,6 +303,13 @@ export default function Dashboard() {
 
   return (
     <div className={`app-layout ${sidebarOpen ? "" : "sidebar-is-collapsed"}`}>
+      {/* ---- API disconnected banner ---- */}
+      {!apiConnected && (
+        <div className="api-disconnected-banner" role="alert">
+          <span className="api-disconnected-icon">{"\u26A0"}</span>
+          <span>{t("apiDisconnected") || "バックエンドに接続できません。サーバーが起動しているか確認してください。"}</span>
+        </div>
+      )}
       {/* ---- Left sidebar: Project Tree ---- */}
       <aside className={`sidebar ${sidebarOpen ? "" : "sidebar-collapsed"}`}>
         <div className="sidebar-header">
