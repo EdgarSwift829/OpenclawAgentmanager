@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import * as api from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { useInlineStatus, StatusIndicator } from "@/components/Toast";
@@ -25,21 +26,25 @@ export function RunControl({
   onMaxIterChange,
   onExtendIterations,
 }: Props) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { status, showStatus } = useInlineStatus();
+  const [starting, setStarting] = useState(false);
 
   const handleStart = async () => {
     if (!activeProject || !goal.trim()) {
-      showStatus("目標を入力してください", "warning");
+      showStatus(locale === "ja" ? "目標を入力してください" : "Please enter a goal", "warning");
       return;
     }
-    showStatus("実行準備中…", "info");
+    setStarting(true);
+    showStatus(locale === "ja" ? "実行準備中…" : "Preparing...", "info");
     try {
       await api.startRun(activeProject, goal.trim(), maxIter);
       onRefresh();
-      showStatus("実行開始", "success");
+      showStatus(locale === "ja" ? "実行開始" : "Started", "success");
     } catch (e: any) {
-      showStatus(`実行エラー: ${e.message}`, "error");
+      showStatus(`${locale === "ja" ? "実行エラー" : "Error"}: ${e.message}`, "error");
+    } finally {
+      setStarting(false);
     }
   };
 
@@ -91,8 +96,8 @@ export function RunControl({
           />
         </label>
         {!isRunning ? (
-          <button className="btn btn-primary" onClick={handleStart}>
-            {t("start")}
+          <button className="btn btn-primary" onClick={handleStart} disabled={starting}>
+            {starting ? (locale === "ja" ? "準備中..." : "Starting...") : t("start")}
           </button>
         ) : (
           <button className="btn btn-danger" onClick={handleStop}>
