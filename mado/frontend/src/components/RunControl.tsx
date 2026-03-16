@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import * as api from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { useInlineStatus, StatusIndicator } from "@/components/Toast";
@@ -29,6 +29,7 @@ export function RunControl({
   const { t, locale } = useI18n();
   const { status, showStatus } = useInlineStatus();
   const [starting, setStarting] = useState(false);
+  const [confirmStop, setConfirmStop] = useState(false);
 
   const handleStart = async () => {
     if (!activeProject || !goal.trim()) {
@@ -48,16 +49,17 @@ export function RunControl({
     }
   };
 
-  const handleStop = async () => {
+  const handleStop = useCallback(async () => {
     if (!activeProject) return;
+    setConfirmStop(false);
     try {
       await api.stopRun(activeProject);
       onRefresh();
-      showStatus("停止完了", "success");
+      showStatus(locale === "ja" ? "停止完了" : "Stopped", "success");
     } catch (e: any) {
-      showStatus(`停止エラー: ${e.message}`, "error");
+      showStatus(`${locale === "ja" ? "停止エラー" : "Stop error"}: ${e.message}`, "error");
     }
-  };
+  }, [activeProject, onRefresh, showStatus, locale]);
 
   const handleExtend = () => {
     if (onExtendIterations) {
@@ -99,8 +101,17 @@ export function RunControl({
           <button className="btn btn-primary" onClick={handleStart} disabled={starting}>
             {starting ? (locale === "ja" ? "準備中..." : "Starting...") : t("start")}
           </button>
+        ) : confirmStop ? (
+          <span className="run-stop-confirm">
+            <button className="btn btn-danger btn-sm" onClick={handleStop}>
+              {locale === "ja" ? "停止する" : "Confirm"}
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setConfirmStop(false)}>
+              {t("cancel")}
+            </button>
+          </span>
         ) : (
-          <button className="btn btn-danger" onClick={handleStop}>
+          <button className="btn btn-danger" onClick={() => setConfirmStop(true)}>
             {t("stop")}
           </button>
         )}
@@ -132,8 +143,8 @@ export function RunControl({
         </div>
       )}
       {isExhausted && (
-        <div className="run-exhausted-banner">
-          <span className="run-exhausted-text">{t("iterExhausted")}</span>
+        <div className="run-exhausted-banner" role="alert">
+          <span className="run-exhausted-text">{"\u26A0"} {t("iterExhausted")}</span>
           <button className="btn btn-primary run-extend-btn" onClick={handleExtend}>
             {t("extendIterations")} (+{maxIter})
           </button>

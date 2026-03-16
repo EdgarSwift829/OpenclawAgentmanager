@@ -1,15 +1,36 @@
 const API_BASE = "/api";
+const FETCH_TIMEOUT_MS = 30_000;
+
+function humanizeError(status: number, detail: string): string {
+  if (status === 0) return "サーバーに接続できません";
+  if (status === 408 || status === 504) return "リクエストがタイムアウトしました";
+  if (status === 500) return "サーバーエラーが発生しました";
+  if (status === 502 || status === 503) return "サーバーが一時的に利用できません";
+  return detail || "エラーが発生しました";
+}
 
 async function fetchJSON(path: string, options?: RequestInit) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(error.detail || res.statusText);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+      ...options,
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(humanizeError(res.status, error.detail || res.statusText));
+    }
+    return res.json();
+  } catch (e: any) {
+    if (e.name === "AbortError") {
+      throw new Error("リクエストがタイムアウトしました");
+    }
+    throw e;
+  } finally {
+    clearTimeout(timeout);
   }
-  return res.json();
 }
 
 // Setup

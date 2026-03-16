@@ -115,9 +115,9 @@ function PipelineFlow({ loc, events }: { loc: Locale; events: OrchestratorEvent[
   const currentIdx = phaseOrder.indexOf(currentPhase);
 
   return (
-    <div className="pipeline-flow">
+    <div className="pipeline-flow" role="group" aria-label={loc === "ja" ? "エージェント連携フロー" : "Agent pipeline flow"}>
       <div className="pipeline-flow-label">{loc === "ja" ? "連携フロー" : "Agent Flow"}</div>
-      <div className="pipeline-steps">
+      <div className="pipeline-steps" role="list">
         {steps.map((step, i) => {
           const stepIdx = phaseOrder.indexOf(step.id);
           let stepState = "pending";
@@ -131,14 +131,18 @@ function PipelineFlow({ loc, events }: { loc: Locale; events: OrchestratorEvent[
             stepState = "running";
           }
           return (
-            <div key={step.id} className="pipeline-step-wrap">
-              <div className={`pipeline-step pipeline-step-${stepState}`}>
-                <span className="pipeline-step-icon">{step.icon}</span>
+            <div key={step.id} className="pipeline-step-wrap" role="listitem">
+              <div
+                className={`pipeline-step pipeline-step-${stepState}`}
+                aria-current={stepState === "running" ? "step" : undefined}
+                aria-label={`${step.label}: ${stepState}`}
+              >
+                <span className="pipeline-step-icon" aria-hidden="true">{step.icon}</span>
                 <span className="pipeline-step-label">{step.label}</span>
               </div>
               {i < steps.length - 1 && (
-                <div className={`pipeline-arrow ${stepIdx < currentIdx ? "pipeline-arrow-active" : ""}`}>
-                  {currentPhase === "rejected" && step.id === "review" ? "\u21A9" : "\u2192"}
+                <div className={`pipeline-arrow ${stepIdx < currentIdx ? "pipeline-arrow-active" : ""}`} aria-hidden="true">
+                  {currentPhase === "rejected" && step.id === "review" ? "\u21A9" : "\u27F6"}
                 </div>
               )}
             </div>

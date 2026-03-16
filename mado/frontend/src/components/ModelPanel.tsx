@@ -121,7 +121,9 @@ export function ModelPanel({ activeProject, agentProfiles = {}, onProfilesChange
       setRoles(Object.keys(asgn));
     } catch (e: any) {
       console.error("AgentPanel load error:", e);
-      showStatus(`読み込みエラー: ${e?.message || "API未接続"}`, "error");
+      showStatus(loc === "ja"
+        ? `読み込みエラー: ${e?.message || "API未接続"}`
+        : `Load error: ${e?.message || "API not connected"}`, "error");
     }
   }, []);
 
@@ -164,7 +166,12 @@ export function ModelPanel({ activeProject, agentProfiles = {}, onProfilesChange
     newRoles.splice(dropIdx, 0, moved);
     setRoles(newRoles);
     setDragIdx(null);
-    try { await api.reorderRoles(newRoles); } catch { /* best effort */ }
+    try {
+      await api.reorderRoles(newRoles);
+    } catch {
+      showStatus(loc === "ja" ? "順序変更に失敗しました" : "Reorder failed", "error");
+      await load(); // revert to server state
+    }
   };
 
   // Model switch
@@ -205,7 +212,7 @@ export function ModelPanel({ activeProject, agentProfiles = {}, onProfilesChange
       setNewModel("");
       await load();
     } catch (e: any) {
-      showStatus(`Error: ${e.message}`, "error");
+      showStatus(loc === "ja" ? `追加エラー: ${e.message}` : `Add error: ${e.message}`, "error");
     }
   };
 
@@ -216,7 +223,7 @@ export function ModelPanel({ activeProject, agentProfiles = {}, onProfilesChange
       setExpandedRole(null);
       await load();
     } catch (e: any) {
-      showStatus(`Error: ${e.message}`, "error");
+      showStatus(loc === "ja" ? `削除エラー: ${e.message}` : `Remove error: ${e.message}`, "error");
     }
   };
 
