@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useEffect } from "react";
 import { useI18n } from "@/lib/i18n";
 import type { OrchestratorEvent } from "@/lib/types";
 
@@ -67,19 +68,54 @@ function getEventDisplay(event: OrchestratorEvent): { text: string; icon: string
 }
 
 export function Timeline({ events }: Props) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const autoScrollRef = useRef(true);
 
   // Filter out internal system events
   const visibleEvents = events.filter((e) => !HIDDEN_EVENTS.has(e.type));
 
+  // Auto-scroll to latest event
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el && autoScrollRef.current) {
+      el.scrollTop = 0; // newest at top
+    }
+  }, [visibleEvents.length]);
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    autoScrollRef.current = el.scrollTop < 40;
+  };
+
+  const formatTime = (ts: string) => {
+    try {
+      return new Date(ts).toLocaleTimeString(locale === "ja" ? "ja-JP" : "en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+    } catch {
+      return "--:--:--";
+    }
+  };
+
   return (
     <div className="card">
-      <h2>{t("iterationTimeline")}</h2>
-      <div className="timeline">
+      <h2 id="timeline-heading">{t("iterationTimeline")}</h2>
+      <div
+        className="timeline"
+        ref={scrollRef}
+        onScroll={handleScroll}
+        role="log"
+        aria-live="polite"
+        aria-labelledby="timeline-heading"
+      >
         {visibleEvents.length === 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem", padding: "1.5rem 0", color: "var(--text-secondary)" }}>
-            <span style={{ fontSize: "1.5rem", opacity: 0.3 }}>{"\u23F1"}</span>
-            <span style={{ fontSize: "0.8125rem" }}>
+          <div className="timeline-empty">
+            <span className="timeline-empty-icon">{"\u23F1"}</span>
+            <span className="timeline-empty-text">
               {t("noEventsYet")}
             </span>
           </div>
@@ -90,15 +126,14 @@ export function Timeline({ events }: Props) {
             .map((event, i) => {
               const display = getEventDisplay(event);
               return (
-                <div key={i} className="timeline-entry">
+                <div key={i} className="timeline-entry" aria-label={`${event.role || ""}: ${display.text}`}>
                   <span className="timeline-time">
-                    {event.timestamp
-                      ? new Date(event.timestamp).toLocaleTimeString()
-                      : "--:--"}
+                    {event.timestamp ? formatTime(event.timestamp) : "--:--:--"}
                   </span>
                   <span
                     className="timeline-icon"
                     style={{ color: display.color, minWidth: "1.5em", textAlign: "center" }}
+                    aria-hidden="true"
                   >
                     {display.icon}
                   </span>

@@ -32,34 +32,28 @@ export class ErrorBoundary extends React.Component<Props, State> {
         return this.props.fallback;
       }
       return (
-        <div style={{
-          padding: "1rem",
-          margin: "0.5rem",
-          background: "rgba(239, 68, 68, 0.1)",
-          border: "1px solid rgba(239, 68, 68, 0.3)",
-          borderRadius: "8px",
-          color: "#ef4444",
-          fontSize: "0.85rem",
-        }}>
-          <strong>表示エラーが発生しました</strong>
-          <p style={{ margin: "0.5rem 0 0", opacity: 0.8 }}>
-            {this.state.error?.message || "Unknown error"}
+        <div className="error-boundary" role="alert" aria-live="assertive">
+          <div className="error-boundary-icon">{"\u26A0"}</div>
+          <strong className="error-boundary-title">
+            表示エラーが発生しました
+          </strong>
+          <p className="error-boundary-message">
+            {this.state.error?.message || "予期しないエラーが発生しました"}
           </p>
-          <button
-            onClick={() => this.setState({ hasError: false, error: null })}
-            style={{
-              marginTop: "0.5rem",
-              padding: "0.25rem 0.75rem",
-              background: "transparent",
-              border: "1px solid #ef4444",
-              borderRadius: "4px",
-              color: "#ef4444",
-              cursor: "pointer",
-              fontSize: "0.8rem",
-            }}
-          >
-            再試行
-          </button>
+          <div className="error-boundary-actions">
+            <button
+              className="btn btn-danger error-boundary-retry"
+              onClick={() => this.setState({ hasError: false, error: null })}
+            >
+              再試行
+            </button>
+            <button
+              className="btn error-boundary-reload"
+              onClick={() => window.location.reload()}
+            >
+              ページを再読み込み
+            </button>
+          </div>
         </div>
       );
     }

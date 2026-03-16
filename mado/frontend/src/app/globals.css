@@ -1085,7 +1085,17 @@ input, select {
 .timeline-time { color: var(--text-secondary); white-space: nowrap; min-width: 4.5rem; flex-shrink: 0; }
 .timeline-icon { flex-shrink: 0; font-size: 0.8125rem; }
 .timeline-role { font-weight: 600; min-width: 3.5rem; flex-shrink: 0; text-transform: capitalize; }
-.timeline-message { color: var(--text-primary); word-break: break-word; flex: 1; }
+.timeline-message { color: var(--text-primary); word-break: break-word; flex: 1; overflow-wrap: break-word; }
+.timeline-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2rem 0;
+  color: var(--text-secondary);
+}
+.timeline-empty-icon { font-size: 2rem; opacity: 0.25; }
+.timeline-empty-text { font-size: 0.8125rem; }
 
 /* Agent grid (legacy small cards) */
 .agent-grid {
@@ -1743,6 +1753,38 @@ input, select {
   border-color: var(--accent);
 }
 
+/* ---- Unsaved changes confirmation dialog ---- */
+.detail-confirm-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: ctx-in 0.15s ease-out;
+}
+.detail-confirm-dialog {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  max-width: 340px;
+  text-align: center;
+}
+.detail-confirm-text {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+.detail-confirm-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
 /* =========================================================================
    Run Control - Iteration exhaustion banner
    ========================================================================= */
@@ -1995,6 +2037,51 @@ input, select {
 .detail-rules-forbidden .detail-textarea { border-left: 3px solid #ef4444; }
 
 /* =========================================================================
+   Error Boundary
+   ========================================================================= */
+.error-boundary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem 1rem;
+  margin: 0.5rem;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 8px;
+  text-align: center;
+  animation: error-fade-in 0.3s ease-out;
+}
+@keyframes error-fade-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+.error-boundary-icon {
+  font-size: 2rem;
+  opacity: 0.6;
+}
+.error-boundary-title {
+  font-size: 0.875rem;
+  color: var(--error);
+}
+.error-boundary-message {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  max-width: 400px;
+}
+.error-boundary-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+.error-boundary-retry,
+.error-boundary-reload {
+  font-size: 0.75rem;
+  padding: 0.375rem 0.75rem;
+}
+
+/* =========================================================================
    Inline status indicators (near buttons)
    ========================================================================= */
 .inline-status {
@@ -2015,8 +2102,12 @@ input, select {
 .inline-status-icon { font-size: 0.75rem; flex-shrink: 0; }
 .inline-status-text { line-height: 1.3; }
 @keyframes status-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.inline-status-fading {
+  opacity: 0;
+  transition: opacity 0.5s ease-out;
 }
 .tree-inline-status {
   padding: 0.25rem 0.75rem;
@@ -2510,6 +2601,10 @@ input, select {
   color: var(--accent);
   white-space: nowrap;
   font-weight: 600;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
 }
 .terminal-command-input {
   flex: 1;
@@ -3007,16 +3102,27 @@ input, select {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+  animation: setup-backdrop-in 0.4s ease-out;
+}
+@keyframes setup-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 .setup-wizard {
-  width: 480px;
-  max-width: 90vw;
+  width: 520px;
+  max-width: 92vw;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  animation: setup-card-in 0.4s ease-out;
+}
+@keyframes setup-card-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 .setup-wizard-header {
   text-align: center;
@@ -3029,7 +3135,7 @@ input, select {
   letter-spacing: 0.1em;
 }
 .setup-wizard-welcome {
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   font-weight: 600;
   color: var(--text-primary);
   margin-top: 0.5rem;

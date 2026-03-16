@@ -25,18 +25,26 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh, allRunSta
   // Expandable sections
   const [goalEditing, setGoalEditing] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
 
   // Close overlay with unsaved changes confirmation
   const tryClose = useCallback(() => {
     if (dirty) {
-      const msg = locale === "ja"
-        ? "未保存の変更があります。閉じてもよろしいですか？"
-        : "You have unsaved changes. Close anyway?";
-      if (!window.confirm(msg)) return;
-      setDirty(false);
+      setShowCloseConfirm(true);
+      return;
     }
     setDetailsOpen(false);
-  }, [dirty, locale]);
+  }, [dirty]);
+
+  const confirmClose = useCallback(() => {
+    setShowCloseConfirm(false);
+    setDirty(false);
+    setDetailsOpen(false);
+  }, []);
+
+  const cancelClose = useCallback(() => {
+    setShowCloseConfirm(false);
+  }, []);
 
   // Close overlay on ESC key
   useEffect(() => {
@@ -411,6 +419,27 @@ export function ProjectDetail({ activeProject, projectTree, onRefresh, allRunSta
             </div>
           )}
         </div>
+
+        {/* Unsaved changes confirmation dialog */}
+        {showCloseConfirm && (
+          <div className="detail-confirm-overlay" role="alertdialog" aria-modal="true" aria-labelledby="close-confirm-text">
+            <div className="detail-confirm-dialog">
+              <p id="close-confirm-text" className="detail-confirm-text">
+                {locale === "ja"
+                  ? "未保存の変更があります。閉じてもよろしいですか？"
+                  : "You have unsaved changes. Close anyway?"}
+              </p>
+              <div className="detail-confirm-actions">
+                <button className="btn btn-sm btn-ghost" onClick={cancelClose} autoFocus>
+                  {t("cancel")}
+                </button>
+                <button className="btn btn-sm btn-danger" onClick={confirmClose}>
+                  {locale === "ja" ? "破棄して閉じる" : "Discard & Close"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )}
     </>

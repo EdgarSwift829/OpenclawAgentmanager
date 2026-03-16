@@ -47,11 +47,11 @@ export function SetupWizard({ onComplete }: Props) {
 
   return (
     <div className="setup-wizard-overlay">
-      <div className="setup-wizard">
+      <div className="setup-wizard" role="dialog" aria-modal="true" aria-labelledby="setup-wizard-title">
         {/* Header */}
         <div className="setup-wizard-header">
           <div className="setup-wizard-logo">MADO</div>
-          <div className="setup-wizard-welcome">{t("setupWelcome")}</div>
+          <div className="setup-wizard-welcome" id="setup-wizard-title">{t("setupWelcome")}</div>
           <div className="setup-wizard-welcome-sub">{t("setupWelcomeSub")}</div>
         </div>
 

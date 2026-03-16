@@ -367,7 +367,7 @@ function TerminalPane({ role, logs, meta, agentState, loc, modelName, modelConne
         )}
       </div>
       {/* Terminal body */}
-      <div className="terminal-body" ref={scrollRef} onScroll={handleScroll}>
+      <div className="terminal-body" ref={scrollRef} onScroll={handleScroll} role="log" aria-live="polite" aria-label={`${displayName} terminal`}>
         {logs.length === 0 ? (
           <div className="terminal-empty" data-icon={meta.icon}>
             <span className="terminal-empty-text">{loc === "ja" ? "待機中" : "Standby"}</span>
@@ -381,7 +381,7 @@ function TerminalPane({ role, logs, meta, agentState, loc, modelName, modelConne
             return (
               <div key={i} className={`terminal-line terminal-line-${line.type}`}>
                 {line.timestamp && (
-                  <span className="terminal-ts">{new Date(line.timestamp).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
+                  <span className="terminal-ts">{new Date(line.timestamp).toLocaleTimeString(loc === "ja" ? "ja-JP" : "en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
                 )}
                 <span className="terminal-text">
                   {line.text}
