@@ -77,9 +77,12 @@ export function Timeline({ events }: Props) {
       <h2>{t("iterationTimeline")}</h2>
       <div className="timeline">
         {visibleEvents.length === 0 ? (
-          <span style={{ color: "var(--text-secondary)", fontSize: "0.8125rem" }}>
-            {t("noEventsYet")}
-          </span>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem", padding: "1.5rem 0", color: "var(--text-secondary)" }}>
+            <span style={{ fontSize: "1.5rem", opacity: 0.3 }}>{"\u23F1"}</span>
+            <span style={{ fontSize: "0.8125rem" }}>
+              {t("noEventsYet")}
+            </span>
+          </div>
         ) : (
           visibleEvents
             .slice()
