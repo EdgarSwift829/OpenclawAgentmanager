@@ -242,8 +242,10 @@ def _call_vllm(
 def _call_oobabooga(
     model_name: str, prompt: str, system_prompt: Optional[str], timeout: int,
 ) -> str:
-    """Call oobabooga (text-generation-webui) OpenAI-compatible Chat API (localhost:5000)."""
-    url = "http://localhost:5000/v1/chat/completions"
+    """Call oobabooga (text-generation-webui) OpenAI-compatible Chat API.
+
+    Tries localhost:5000 first, falls back to localhost:5001 on failure.
+    """
     messages = []
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
@@ -255,7 +257,16 @@ def _call_oobabooga(
         "stream": False,
     }
     data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        result = json.loads(resp.read().decode("utf-8"))
-        return result.get("choices", [{}])[0].get("message", {}).get("content", "")
+
+    for port in (5000, 5001):
+        url = f"http://localhost:{port}/v1/chat/completions"
+        try:
+            req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                result = json.loads(resp.read().decode("utf-8"))
+                return result.get("choices", [{}])[0].get("message", {}).get("content", "")
+        except Exception as e:
+            if port == 5000:
+                logger.warning(f"oobabooga port 5000 failed, trying 5001: {e}")
+            else:
+                raise
