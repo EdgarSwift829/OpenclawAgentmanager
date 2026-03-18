@@ -4,6 +4,7 @@ Supported providers:
 - lmstudio  (primary) - OpenAI-compatible API on localhost:1234
 - ollama    (alternative) - Ollama API on localhost:11434
 - vllm      - OpenAI-compatible API on localhost:8000
+- oobabooga - OpenAI-compatible API on localhost:5000 (text-generation-webui)
 
 Enhanced with:
 - Retry with exponential backoff
@@ -162,6 +163,8 @@ def _call_with_retry(
                 return _call_ollama(model_name, prompt, system_prompt, timeout), attempt
             elif provider == "vllm":
                 return _call_vllm(model_name, prompt, system_prompt, timeout), attempt
+            elif provider == "oobabooga":
+                return _call_oobabooga(model_name, prompt, system_prompt, timeout), attempt
             else:
                 return f"[LLM Error] Unknown provider: {provider}", 0
         except Exception as e:
@@ -234,3 +237,25 @@ def _call_vllm(
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         result = json.loads(resp.read().decode("utf-8"))
         return result.get("choices", [{}])[0].get("text", "")
+
+
+def _call_oobabooga(
+    model_name: str, prompt: str, system_prompt: Optional[str], timeout: int,
+) -> str:
+    """Call oobabooga (text-generation-webui) OpenAI-compatible Chat API (localhost:5000)."""
+    url = "http://localhost:5000/v1/chat/completions"
+    messages = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": prompt})
+
+    payload = {
+        "model": model_name,
+        "messages": messages,
+        "stream": False,
+    }
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        result = json.loads(resp.read().decode("utf-8"))
+        return result.get("choices", [{}])[0].get("message", {}).get("content", "")
