@@ -105,16 +105,17 @@ export function SetupWizard({ onComplete }: Props) {
 
             <label className="setup-label">{t("setupProvider")}</label>
             <div className="setup-provider-options">
-              {["lmstudio", "ollama", "vllm"].map((p) => (
+              {["lmstudio", "ollama", "vllm", "oobabooga"].map((p) => (
                 <button
                   key={p}
                   className={`setup-provider-btn ${provider === p ? "selected" : ""}`}
                   onClick={() => setProvider(p)}
                 >
-                  {p === "lmstudio" ? "LM Studio" : p === "ollama" ? "Ollama" : "vLLM"}
+                  {p === "lmstudio" ? "LM Studio" : p === "ollama" ? "Ollama" : p === "vllm" ? "vLLM" : "oobabooga"}
                   {p === "lmstudio" && <span className="setup-provider-port">:1234</span>}
                   {p === "ollama" && <span className="setup-provider-port">:11434</span>}
                   {p === "vllm" && <span className="setup-provider-port">:8000</span>}
+                  {p === "oobabooga" && <span className="setup-provider-port">:5000</span>}
                 </button>
               ))}
             </div>

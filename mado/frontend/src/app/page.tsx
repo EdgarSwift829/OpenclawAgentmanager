@@ -16,6 +16,7 @@ import { AgentPanel } from "@/components/AgentPanel";
 import { LangSwitcher } from "@/components/LangSwitcher";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SetupWizard } from "@/components/SetupWizard";
+import { LlmSettings } from "@/components/LlmSettings";
 
 // ---------------------------------------------------------------------------
 // localStorage persistence for per-project state
@@ -69,7 +70,7 @@ export default function Dashboard() {
   const [events, setEvents] = useState<OrchestratorEvent[]>([]);
   const [maxIter, setMaxIter] = useState(200);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [rightTab, setRightTab] = useState<"timeline" | "agents" | "models" | "tasks">("timeline");
+  const [rightTab, setRightTab] = useState<"timeline" | "agents" | "models" | "tasks" | "llm">("timeline");
   const [allRunStatuses, setAllRunStatuses] = useState<Record<string, string>>({});
   const [planUsage, setPlanUsage] = useState<{ projects: number; max_projects: number; plan: string } | null>(null);
 
@@ -446,6 +447,14 @@ export default function Dashboard() {
             <span className="right-tab-icon">{"\u2611"}</span>
             {t("tasks")}
           </button>
+          <button
+            className={`right-tab ${rightTab === "llm" ? "right-tab-active" : ""}`}
+            onClick={() => setRightTab("llm")}
+            title={t("llmSettings")}
+          >
+            <span className="right-tab-icon">{"\u2699"}</span>
+            {t("llmSettings")}
+          </button>
           <LangSwitcher />
         </div>
         <div className="right-content">
@@ -472,6 +481,7 @@ export default function Dashboard() {
             </ErrorBoundary>
           )}
           {rightTab === "tasks" && <ErrorBoundary><TaskGraph runStatus={runStatus} events={events} /></ErrorBoundary>}
+          {rightTab === "llm" && <ErrorBoundary><LlmSettings /></ErrorBoundary>}
         </div>
       </aside>
     </div>

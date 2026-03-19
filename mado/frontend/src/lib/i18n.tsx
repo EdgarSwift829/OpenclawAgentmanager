@@ -161,6 +161,17 @@ const dict = {
   detailSettings: { en: "Detail Settings", ja: "詳細設定" },
   editGoal: { en: "Click to edit", ja: "クリックして編集" },
 
+  // LLM Connection Settings
+  llmSettings: { en: "LLM Connection", ja: "LLM接続設定" },
+  llmSettingsDesc: { en: "Configure LLM provider URLs", ja: "LLMプロバイダの接続先URLを設定" },
+  providerUrl: { en: "URL", ja: "URL" },
+  testConnection: { en: "Test", ja: "接続テスト" },
+  connectionOk: { en: "Connected", ja: "接続OK" },
+  connectionFail: { en: "Connection failed", ja: "接続失敗" },
+  testing: { en: "Testing...", ja: "テスト中..." },
+  urlSaved: { en: "URL saved", ja: "URLを保存しました" },
+  urlSaveFailed: { en: "Failed to save URL", ja: "URL保存に失敗しました" },
+
   // Connection status
   apiDisconnected: { en: "Cannot connect to backend. Please check if the server is running.", ja: "バックエンドに接続できません。サーバーが起動しているか確認してください。" },
 

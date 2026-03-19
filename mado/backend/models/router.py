@@ -84,6 +84,16 @@ class LLMMetrics:
 metrics = LLMMetrics()
 
 
+def _get_provider_url(provider: str) -> str:
+    """Get the configured URL for a provider from ModelManager."""
+    try:
+        from mado.backend.api.routes.models import model_manager
+        return model_manager.get_provider_url(provider)
+    except Exception:
+        from mado.backend.models.model_manager import DEFAULT_PROVIDER_URLS
+        return DEFAULT_PROVIDER_URLS.get(provider, "")
+
+
 def route_inference(
     model: dict,
     prompt: str,
@@ -183,8 +193,9 @@ def _call_with_retry(
 def _call_lmstudio(
     model_name: str, prompt: str, system_prompt: Optional[str], timeout: int,
 ) -> str:
-    """Call LM Studio OpenAI-compatible Chat API (localhost:1234)."""
-    url = "http://localhost:1234/v1/chat/completions"
+    """Call LM Studio OpenAI-compatible Chat API."""
+    base_url = _get_provider_url("lmstudio") or "http://localhost:1234"
+    url = f"{base_url.rstrip('/')}/v1/chat/completions"
     messages = []
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
@@ -206,7 +217,8 @@ def _call_ollama(
     model_name: str, prompt: str, system_prompt: Optional[str], timeout: int,
 ) -> str:
     """Call Ollama API."""
-    url = "http://localhost:11434/api/generate"
+    base_url = _get_provider_url("ollama") or "http://localhost:11434"
+    url = f"{base_url.rstrip('/')}/api/generate"
     payload = {
         "model": model_name,
         "prompt": prompt,
@@ -226,7 +238,8 @@ def _call_vllm(
     model_name: str, prompt: str, system_prompt: Optional[str], timeout: int,
 ) -> str:
     """Call vLLM OpenAI-compatible API."""
-    url = "http://localhost:8000/v1/completions"
+    base_url = _get_provider_url("vllm") or "http://localhost:8000"
+    url = f"{base_url.rstrip('/')}/v1/completions"
     payload = {
         "model": model_name,
         "prompt": f"{system_prompt}\n\n{prompt}" if system_prompt else prompt,
@@ -242,10 +255,10 @@ def _call_vllm(
 def _call_oobabooga(
     model_name: str, prompt: str, system_prompt: Optional[str], timeout: int,
 ) -> str:
-    """Call oobabooga (text-generation-webui) OpenAI-compatible Chat API.
+    """Call oobabooga (text-generation-webui) OpenAI-compatible Chat API."""
+    base_url = _get_provider_url("oobabooga") or "http://localhost:5000"
+    url = f"{base_url.rstrip('/')}/v1/chat/completions"
 
-    Tries localhost:5000 first, falls back to localhost:5001 on failure.
-    """
     messages = []
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
@@ -258,15 +271,7 @@ def _call_oobabooga(
     }
     data = json.dumps(payload).encode("utf-8")
 
-    for port in (5000, 5001):
-        url = f"http://localhost:{port}/v1/chat/completions"
-        try:
-            req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
-                result = json.loads(resp.read().decode("utf-8"))
-                return result.get("choices", [{}])[0].get("message", {}).get("content", "")
-        except Exception as e:
-            if port == 5000:
-                logger.warning(f"oobabooga port 5000 failed, trying 5001: {e}")
-            else:
-                raise
+    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        result = json.loads(resp.read().decode("utf-8"))
+        return result.get("choices", [{}])[0].get("message", {}).get("content", "")

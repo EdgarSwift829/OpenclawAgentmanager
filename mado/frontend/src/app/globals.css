@@ -3578,3 +3578,107 @@ input, select {
 .folder-browser-select-btn:hover:not(:disabled) {
   opacity: 0.9;
 }
+
+/* ---- LLM Settings ---- */
+.llm-settings {
+  padding: 0.75rem;
+}
+.llm-settings-header {
+  margin-bottom: 0.75rem;
+}
+.llm-settings-header h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.15rem;
+}
+.llm-settings-desc {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+.llm-provider-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.llm-provider-item {
+  padding: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-card);
+}
+.llm-provider-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+  flex-wrap: wrap;
+}
+.llm-provider-label {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+.llm-provider-desc {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+.llm-status-badge {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 10px;
+  font-weight: 500;
+  margin-left: auto;
+}
+.llm-status-ok {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--success);
+}
+.llm-status-fail {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--error);
+}
+.llm-provider-url-row {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+.llm-url-input {
+  flex: 1;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-family: monospace;
+}
+.llm-url-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+.llm-btn {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.llm-btn:hover:not(:disabled) {
+  background: var(--bg-secondary);
+}
+.llm-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.llm-btn-save {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.llm-btn-test {
+  color: var(--success);
+  border-color: var(--success);
+}

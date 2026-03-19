@@ -6,6 +6,14 @@ import yaml
 
 CONFIG_DIR = Path(__file__).resolve().parents[3] / "config"
 
+# Default provider URLs (used when no config exists)
+DEFAULT_PROVIDER_URLS = {
+    "lmstudio": "http://localhost:1234",
+    "ollama": "http://localhost:11434",
+    "vllm": "http://localhost:8000",
+    "oobabooga": "http://localhost:5000",
+}
+
 
 class ModelManager:
     """Central model management: register, update, switch, route inference, validate availability."""
@@ -14,10 +22,11 @@ class ModelManager:
         self.config_dir = Path(config_dir) if config_dir else CONFIG_DIR
         self.models: dict = {}
         self.agent_assignments: dict = {}
+        self.providers: dict = {}
         self.reload_models()
 
     def reload_models(self) -> None:
-        """Load models and agent assignments from YAML configs."""
+        """Load models, provider configs, and agent assignments from YAML configs."""
         models_path = self.config_dir / "models.yaml"
         agents_path = self.config_dir / "agents.yaml"
 
@@ -25,6 +34,7 @@ class ModelManager:
             with open(models_path, encoding="utf-8") as f:
                 data = yaml.safe_load(f) or {}
                 self.models = data.get("models", {})
+                self.providers = data.get("providers", {})
 
         if agents_path.exists():
             with open(agents_path, encoding="utf-8") as f:
@@ -83,6 +93,52 @@ class ModelManager:
         for role in AGENT_CLASSES:
             self.agent_assignments[role] = high_tier if role in planning_roles else standard_tier
         self._save_assignments()
+
+    # ── Provider URL management ──
+
+    def get_provider_url(self, provider: str) -> str:
+        """Get the URL for a provider, falling back to defaults."""
+        cfg = self.providers.get(provider, {})
+        return cfg.get("url", DEFAULT_PROVIDER_URLS.get(provider, ""))
+
+    def get_all_providers(self) -> dict:
+        """Get all provider configs with defaults merged."""
+        result = {}
+        for name, default_url in DEFAULT_PROVIDER_URLS.items():
+            cfg = self.providers.get(name, {})
+            result[name] = {"url": cfg.get("url", default_url)}
+        # Include any extra providers from config
+        for name, cfg in self.providers.items():
+            if name not in result:
+                result[name] = {"url": cfg.get("url", "")}
+        return result
+
+    def update_provider(self, provider: str, url: str) -> None:
+        """Update the URL for a provider and persist to models.yaml."""
+        if provider not in self.providers:
+            self.providers[provider] = {}
+        self.providers[provider]["url"] = url
+        self._save_providers()
+
+    def _save_providers(self) -> None:
+        """Persist provider configs to models.yaml (merging with existing data)."""
+        import logging
+        logger = logging.getLogger(__name__)
+        try:
+            models_path = self.config_dir / "models.yaml"
+            models_path.parent.mkdir(parents=True, exist_ok=True)
+            data = {}
+            if models_path.exists():
+                with open(models_path, encoding="utf-8") as f:
+                    data = yaml.safe_load(f) or {}
+            data["providers"] = dict(self.providers)
+            models_path.write_text(
+                yaml.dump(data, allow_unicode=True, default_flow_style=False),
+                encoding="utf-8",
+            )
+            logger.info("Saved provider configs to %s", models_path)
+        except Exception as e:
+            logger.error("Failed to save provider configs: %s", e)
 
     def _save_assignments(self) -> None:
         """Persist agent_assignments to agents.yaml."""

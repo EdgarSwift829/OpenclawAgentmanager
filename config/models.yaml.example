@@ -1,8 +1,20 @@
 # Provider priority: lmstudio (primary) > ollama (alternative) > vllm
 #
-# LM Studio: http://localhost:1234  (OpenAI-compatible Chat API)
-# Ollama:    http://localhost:11434 (Ollama native API)
-# vLLM:      http://localhost:8000  (OpenAI-compatible Completions API)
+# LM Studio:  http://localhost:1234  (OpenAI-compatible Chat API)
+# Ollama:     http://localhost:11434 (Ollama native API)
+# vLLM:       http://localhost:8000  (OpenAI-compatible Completions API)
+# oobabooga:  http://localhost:5000  (text-generation-webui, OpenAI-compatible)
+
+# Provider connection settings (URL can be changed at runtime via UI)
+providers:
+  lmstudio:
+    url: "http://localhost:1234"
+  ollama:
+    url: "http://localhost:11434"
+  vllm:
+    url: "http://localhost:8000"
+  oobabooga:
+    url: "http://localhost:5000"
 
 models:
   qwen3.5-9b:

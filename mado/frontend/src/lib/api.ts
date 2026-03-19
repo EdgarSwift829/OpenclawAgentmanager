@@ -93,6 +93,12 @@ export const removeRole = (role: string) =>
   fetchJSON(`/models/assignments/${role}`, { method: "DELETE" });
 export const reloadModels = () => fetchJSON("/models/reload", { method: "POST" });
 
+// Providers (LLM connection settings)
+export const getProviders = () => fetchJSON("/models/providers");
+export const updateProvider = (provider: string, url: string) =>
+  fetchJSON("/models/providers", { method: "PUT", body: JSON.stringify({ provider, url }) });
+export const testProvider = (provider: string) => fetchJSON(`/models/providers/${provider}/test`);
+
 // Orchestrator
 export const startRun = (project_id: string, goal: string, max_iterations?: number) =>
   fetchJSON("/orchestrator/run", {

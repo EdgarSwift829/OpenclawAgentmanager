@@ -30,6 +30,11 @@ class RoleOrder(BaseModel):
     roles: list[str]
 
 
+class ProviderUpdate(BaseModel):
+    provider: str
+    url: str
+
+
 @router.get("/")
 async def list_models():
     """List all registered models."""
@@ -107,6 +112,47 @@ async def reload_models():
     """Reload models from config files."""
     model_manager.reload_models()
     return {"status": "reloaded"}
+
+
+@router.get("/providers")
+async def get_providers():
+    """Get all provider connection settings."""
+    return {"providers": model_manager.get_all_providers()}
+
+
+@router.put("/providers")
+async def update_provider(data: ProviderUpdate):
+    """Update a provider's connection URL."""
+    model_manager.update_provider(data.provider, data.url)
+    return {"status": "updated", "provider": data.provider, "url": data.url}
+
+
+@router.get("/providers/{provider}/test")
+async def test_provider(provider: str):
+    """Test connectivity to a provider."""
+    import urllib.request
+    import json
+
+    url = model_manager.get_provider_url(provider)
+    if not url:
+        raise HTTPException(status_code=400, detail=f"Unknown provider: {provider}")
+
+    # Build the test endpoint based on provider type
+    test_url = url.rstrip("/")
+    if provider == "ollama":
+        test_url += "/api/tags"
+    elif provider in ("lmstudio", "vllm", "oobabooga"):
+        test_url += "/v1/models"
+    else:
+        test_url += "/v1/models"
+
+    try:
+        req = urllib.request.Request(test_url, headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+            return {"status": "connected", "provider": provider, "url": url, "response": result}
+    except Exception as e:
+        return {"status": "error", "provider": provider, "url": url, "error": str(e)}
 
 
 @router.get("/metrics")
