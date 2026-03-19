@@ -75,6 +75,11 @@ export default function Dashboard() {
   const [allRunStatuses, setAllRunStatuses] = useState<Record<string, string>>({});
   const [planUsage, setPlanUsage] = useState<{ projects: number; max_projects: number; plan: string } | null>(null);
 
+  // --- App mode proposal state ---
+  const [appProposal, setAppProposal] = useState<{ parentId: string; parentName: string } | null>(null);
+  const [appProposalName, setAppProposalName] = useState("");
+  const [appProposalCreating, setAppProposalCreating] = useState(false);
+
   // --- API connection state ---
   const [apiConnected, setApiConnected] = useState(true);
 
@@ -272,6 +277,52 @@ export default function Dashboard() {
     };
   }, [activeProject]);
 
+  // --- Detect orchestration completion → propose app-mode child ---
+  const prevRunStatusRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!runStatus || !activeProject) return;
+    const prev = prevRunStatusRef.current;
+    prevRunStatusRef.current = runStatus.status;
+
+    // Only trigger on transition from "running" to "completed"
+    if (prev === "running" && runStatus.status === "completed") {
+      const node = projectTree.find((n) => n.project_id === activeProject);
+      if (!node || node.mode === "app") return; // skip if already app mode
+
+      // Check if this project already has an app-mode child
+      const hasAppChild = node.children.some((cid) => {
+        const child = projectTree.find((n) => n.project_id === cid);
+        return child?.mode === "app";
+      });
+      if (!hasAppChild) {
+        setAppProposal({
+          parentId: activeProject,
+          parentName: node.display_name || activeProject,
+        });
+        setAppProposalName(`${node.display_name || activeProject}-app`);
+      }
+    }
+  }, [runStatus, activeProject, projectTree]);
+
+  const handleAppProposalCreate = async () => {
+    if (!appProposal || !appProposalName.trim()) return;
+    setAppProposalCreating(true);
+    try {
+      const result = await api.createProject(
+        appProposalName.trim(),
+        "",
+        appProposal.parentId,
+        "app",
+      );
+      const newId = result.project_id || appProposalName.trim();
+      setAppProposal(null);
+      setAppProposalName("");
+      loadProjects();
+      switchProject(newId);
+    } catch { /* ignore */ }
+    setAppProposalCreating(false);
+  };
+
   // Global keyboard shortcuts: Ctrl+Enter to start run
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -380,6 +431,41 @@ export default function Dashboard() {
 
       {/* ---- Main area ---- */}
       <main className="main-area">
+        {/* App-mode proposal banner */}
+        {appProposal && (
+          <div className="app-proposal-banner">
+            <div className="app-proposal-content">
+              <span className="app-proposal-icon">{"\u26A1"}</span>
+              <div className="app-proposal-text">
+                <strong>{t("appProposalTitle")}</strong>
+                <span>{t("appProposalDesc")}</span>
+              </div>
+            </div>
+            <div className="app-proposal-actions">
+              <input
+                className="app-proposal-input"
+                value={appProposalName}
+                onChange={(e) => setAppProposalName(e.target.value)}
+                placeholder={t("appProposalNamePlaceholder")}
+                onKeyDown={(e) => e.key === "Enter" && handleAppProposalCreate()}
+              />
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={handleAppProposalCreate}
+                disabled={appProposalCreating || !appProposalName.trim()}
+              >
+                {t("appProposalCreate")}
+              </button>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => setAppProposal(null)}
+              >
+                {t("appProposalDismiss")}
+              </button>
+            </div>
+          </div>
+        )}
+
         {isAppMode && activeProject ? (
           /* App Mode: task automation view */
           <ErrorBoundary>

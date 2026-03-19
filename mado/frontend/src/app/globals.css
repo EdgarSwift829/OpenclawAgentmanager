@@ -4069,3 +4069,58 @@ input, select {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
+
+/* ================================================================
+   App Mode Proposal Banner
+   ================================================================ */
+.app-proposal-banner {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin: 0.5rem 1rem;
+  animation: slideDown 0.3s ease-out;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.app-proposal-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.app-proposal-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.app-proposal-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.app-proposal-text strong {
+  font-size: 0.8rem;
+  color: var(--text-primary);
+}
+.app-proposal-text span {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+.app-proposal-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+.app-proposal-input {
+  flex: 1;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.75rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+}

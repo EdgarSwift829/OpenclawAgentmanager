@@ -244,6 +244,13 @@ const dict = {
   appNewTaskPlaceholder: { en: "New task title...", ja: "新しいタスク名..." },
   appSaveTask: { en: "Save", ja: "保存" },
 
+  // App Mode proposal (after orchestration completion)
+  appProposalTitle: { en: "Create App Mode project?", ja: "アプリモードのプロジェクトを作成しますか？" },
+  appProposalDesc: { en: "Orchestration completed. Create an App Mode child project to run automated tasks with inherited settings?", ja: "オーケストレーションが完了しました。設定を継承したアプリモード子プロジェクトを作成して自動タスクを実行しますか？" },
+  appProposalCreate: { en: "Create", ja: "作成する" },
+  appProposalDismiss: { en: "Dismiss", ja: "閉じる" },
+  appProposalNamePlaceholder: { en: "Child project name...", ja: "子プロジェクト名..." },
+
   planFree: { en: "Free Plan", ja: "無料プラン" },
   planPro: { en: "Pro Plan", ja: "Proプラン" },
   planTeam: { en: "Team Plan", ja: "Teamプラン" },
