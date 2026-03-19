@@ -43,8 +43,8 @@ export const setProjectsRoot = (projects_root: string) =>
   fetchJSON("/projects/settings/root", { method: "PUT", body: JSON.stringify({ projects_root }) });
 export const browseDirs = (path?: string) =>
   fetchJSON("/projects/browse-dirs", { method: "POST", body: JSON.stringify({ path: path || null }) });
-export const createProject = (project_id: string, goal: string, parent_id?: string) =>
-  fetchJSON("/projects/", { method: "POST", body: JSON.stringify({ project_id, goal, parent_id }) });
+export const createProject = (project_id: string, goal: string, parent_id?: string, mode?: string) =>
+  fetchJSON("/projects/", { method: "POST", body: JSON.stringify({ project_id, goal, parent_id, mode }) });
 export const getProject = (id: string) => fetchJSON(`/projects/${id}`);
 export const renameProject = (id: string, new_id: string) =>
   fetchJSON(`/projects/${id}/rename`, { method: "PUT", body: JSON.stringify({ new_id }) });
@@ -123,6 +123,25 @@ export const dispatchAllChildren = (parent_id: string) =>
 // Orchestrator - pause
 export const pauseRun = (projectId: string) =>
   fetchJSON(`/orchestrator/run/${projectId}/pause`, { method: "POST" });
+
+// App-mode tasks
+export const listAppTasks = (projectId: string) => fetchJSON(`/app/${projectId}/tasks`);
+export const createAppTask = (projectId: string, task: {
+  title: string; prompt: string; schedule_type?: string;
+  interval_minutes?: number; cron_expr?: string; deadline?: string | null; enabled?: boolean;
+}) => fetchJSON(`/app/${projectId}/tasks`, { method: "POST", body: JSON.stringify(task) });
+export const updateAppTask = (projectId: string, taskId: string, updates: Record<string, unknown>) =>
+  fetchJSON(`/app/${projectId}/tasks/${taskId}`, { method: "PUT", body: JSON.stringify(updates) });
+export const deleteAppTask = (projectId: string, taskId: string) =>
+  fetchJSON(`/app/${projectId}/tasks/${taskId}`, { method: "DELETE" });
+export const runAppTask = (projectId: string, taskId: string) =>
+  fetchJSON(`/app/${projectId}/tasks/${taskId}/run`, { method: "POST" });
+export const getAppHistory = (projectId: string, limit?: number) =>
+  fetchJSON(`/app/${projectId}/history${limit ? `?limit=${limit}` : ""}`);
+export const startAppScheduler = (projectId: string) =>
+  fetchJSON(`/app/${projectId}/scheduler/start`, { method: "POST" });
+export const stopAppScheduler = (projectId: string) =>
+  fetchJSON(`/app/${projectId}/scheduler/stop`, { method: "POST" });
 
 // OpenClaw
 export const checkOpenClaw = () => fetchJSON("/openclaw/status");

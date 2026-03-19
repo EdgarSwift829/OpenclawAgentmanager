@@ -72,6 +72,8 @@ export function ProjectTree({
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [addingChildTo, setAddingChildTo] = useState<string | null>(null);
   const [childNewId, setChildNewId] = useState("");
+  const [newProjectMode, setNewProjectMode] = useState<"orchestration" | "app">("orchestration");
+  const [childProjectMode, setChildProjectMode] = useState<"orchestration" | "app">("orchestration");
   const [showArchived, setShowArchived] = useState(false);
   const [openclawStatus, setOpenclawStatus] = useState<"unknown" | "checking" | "installed" | "not_installed" | "installing" | "error">("unknown");
   const [openclawVersion, setOpenclawVersion] = useState<string | null>(null);
@@ -243,21 +245,26 @@ export function ProjectTree({
       return;
     }
 
+    const mode = parentId ? childProjectMode : newProjectMode;
+
     setCreating(true);
     showStatus("プロジェクト作成中...", "info");
     try {
-      const result = await api.createProject(id, "", parentId || undefined);
+      const result = await api.createProject(id, "", parentId || undefined, mode);
       const actualId = result.project_id || id;
       if (parentId) {
         setChildNewId("");
         setAddingChildTo(null);
+        setChildProjectMode("orchestration");
         setExpandedNodes((prev) => new Set(prev).add(parentId));
       } else {
         setNewId("");
+        setNewProjectMode("orchestration");
       }
       onRefresh();
       onSelect(actualId);
-      showStatus(`プロジェクト「${id}」を作成しました`, "success");
+      const modeLabel = mode === "app" ? "アプリ" : "オーケストレーション";
+      showStatus(`プロジェクト「${id}」を作成しました（${modeLabel}モード）`, "success");
     } catch (e: any) {
       showStatus(`作成エラー: ${e?.message || "不明なエラー"}`, "error");
     } finally {
@@ -475,9 +482,12 @@ export function ProjectTree({
     const isDragOver = dropTarget?.id === p;
     const dropPos = dropTarget?.position;
 
+    const isAppMode = node.mode === "app";
+
     // Choose icon based on role
     const nodeIcon = (() => {
       if (status && STATUS_ICONS[status]) return STATUS_ICONS[status];
+      if (isAppMode) return "\u26A1"; // lightning bolt for app mode
       if (hasChildren) return isExpanded ? "\uD83D\uDCC2" : "\uD83D\uDCC1"; // open/closed folder
       if (isChild) return "\uD83D\uDCC4"; // document
       return "\uD83D\uDCC1"; // folder
@@ -632,25 +642,41 @@ export function ProjectTree({
         {/* Inline child creation */}
         {addingChildTo === p && (
           <div className="tree-create tree-create-child" style={{ paddingLeft: `${1.25 + depth * 0.75}rem` }}>
-            <input
-              placeholder={t("newSubProject")}
-              value={childNewId}
-              onChange={(e) => setChildNewId(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleCreate(p);
-                if (e.key === "Escape") setAddingChildTo(null);
-              }}
-              className="tree-input"
-              autoFocus
-            />
-            <button
-              className="tree-add-btn"
-              onClick={() => handleCreate(p)}
-              disabled={creating}
-              title={t("createProject")}
-            >
-              +
-            </button>
+            <div className="tree-create-row">
+              <input
+                placeholder={t("newSubProject")}
+                value={childNewId}
+                onChange={(e) => setChildNewId(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleCreate(p);
+                  if (e.key === "Escape") setAddingChildTo(null);
+                }}
+                className="tree-input"
+                autoFocus
+              />
+              <button
+                className="tree-add-btn"
+                onClick={() => handleCreate(p)}
+                disabled={creating}
+                title={t("createProject")}
+              >
+                +
+              </button>
+            </div>
+            <div className="tree-mode-select">
+              <button
+                className={`tree-mode-btn ${childProjectMode === "orchestration" ? "tree-mode-active" : ""}`}
+                onClick={() => setChildProjectMode("orchestration")}
+              >
+                {t("modeOrchestration")}
+              </button>
+              <button
+                className={`tree-mode-btn ${childProjectMode === "app" ? "tree-mode-active" : ""}`}
+                onClick={() => setChildProjectMode("app")}
+              >
+                {t("modeApp")}
+              </button>
+            </div>
           </div>
         )}
 
@@ -720,21 +746,39 @@ export function ProjectTree({
           )}
 
           <div className="tree-create">
-            <input
-              placeholder={t("newProject")}
-              value={newId}
-              onChange={(e) => setNewId(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-              className="tree-input"
-            />
-            <button
-              className="tree-add-btn"
-              onClick={() => handleCreate()}
-              disabled={creating}
-              title={t("createProject")}
-            >
-              +
-            </button>
+            <div className="tree-create-row">
+              <input
+                placeholder={t("newProject")}
+                value={newId}
+                onChange={(e) => setNewId(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+                className="tree-input"
+              />
+              <button
+                className="tree-add-btn"
+                onClick={() => handleCreate()}
+                disabled={creating}
+                title={t("createProject")}
+              >
+                +
+              </button>
+            </div>
+            <div className="tree-mode-select">
+              <button
+                className={`tree-mode-btn ${newProjectMode === "orchestration" ? "tree-mode-active" : ""}`}
+                onClick={() => setNewProjectMode("orchestration")}
+                title={t("orchestrationModeLabel")}
+              >
+                {t("modeOrchestration")}
+              </button>
+              <button
+                className={`tree-mode-btn ${newProjectMode === "app" ? "tree-mode-active" : ""}`}
+                onClick={() => setNewProjectMode("app")}
+                title={t("appModeLabel")}
+              >
+                {t("modeApp")}
+              </button>
+            </div>
           </div>
 
           <div className="tree-list" role="tree" aria-label={t("projects")}>

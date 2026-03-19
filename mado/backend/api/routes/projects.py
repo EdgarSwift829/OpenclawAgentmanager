@@ -107,6 +107,7 @@ class ProjectCreate(BaseModel):
     project_id: str
     goal: Optional[str] = ""
     parent_id: Optional[str] = None
+    mode: Optional[str] = "orchestration"  # "orchestration" | "app"
 
 
 class ProjectResponse(BaseModel):
@@ -260,9 +261,12 @@ async def create_project(data: ProjectCreate):
             # Top-level: reject duplicate
             raise HTTPException(status_code=409, detail=f"Project already exists: {display_name}")
 
+    # Validate mode
+    mode = data.mode if data.mode in ("orchestration", "app") else "orchestration"
+
     try:
         workspace_path = workspace_manager.create_workspace(
-            pid, parent_id=data.parent_id, display_name=display_name,
+            pid, parent_id=data.parent_id, display_name=display_name, mode=mode,
         )
     except PermissionError:
         raise HTTPException(status_code=500, detail=f"Permission denied creating project workspace")

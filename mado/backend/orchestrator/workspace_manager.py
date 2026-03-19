@@ -166,8 +166,12 @@ class WorkspaceManager:
         return False
 
     def create_workspace(self, project_id: str, parent_id: str = None,
-                         display_name: str = None) -> str:
-        """Create isolated workspace for a project."""
+                         display_name: str = None, mode: str = "orchestration") -> str:
+        """Create isolated workspace for a project.
+
+        Args:
+            mode: "orchestration" (multi-agent dev) or "app" (task automation).
+        """
         project_dir = self.projects_root / project_id
         workspace_dir = project_dir / "workspace"
         workspace_dir.mkdir(parents=True, exist_ok=True)
@@ -178,6 +182,7 @@ class WorkspaceManager:
             config = {
                 "project_id": project_id,
                 "display_name": display_name or project_id,
+                "mode": mode,
                 "created": True,
                 "agents": [],
                 "agent_profiles": {},
@@ -185,6 +190,9 @@ class WorkspaceManager:
                 "parent_id": parent_id,
                 "children": [],
             }
+            # App-mode: initialize empty app_tasks list
+            if mode == "app":
+                config["app_tasks"] = []
             config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8")
 
         # Register as child in parent's config
@@ -300,6 +308,7 @@ class WorkspaceManager:
                 tree.append({
                     "project_id": pid,
                     "display_name": config.get("display_name", pid),
+                    "mode": config.get("mode", "orchestration"),
                     "parent_id": config.get("parent_id"),
                     "children": config.get("children", []),
                     "status": config.get("status", "initialized"),
@@ -313,12 +322,14 @@ class WorkspaceManager:
                     "rules_must": config.get("rules_must", ""),
                     "rules_forbidden": config.get("rules_forbidden", ""),
                     "agent_profiles": config.get("agent_profiles", {}),
+                    "app_tasks": config.get("app_tasks", []),
                 })
             except Exception as e:
                 logger.error("Failed to load config for project '%s': %s", pid, e)
                 tree.append({
                     "project_id": pid,
                     "display_name": pid,
+                    "mode": "orchestration",
                     "parent_id": None,
                     "children": [],
                     "status": "initialized",
@@ -329,6 +340,7 @@ class WorkspaceManager:
                     "description": "",
                     "deadline": None,
                     "tasks": [],
+                    "app_tasks": [],
                 })
         return tree
 

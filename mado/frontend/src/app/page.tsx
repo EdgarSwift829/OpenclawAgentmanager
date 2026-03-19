@@ -17,6 +17,7 @@ import { LangSwitcher } from "@/components/LangSwitcher";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SetupWizard } from "@/components/SetupWizard";
 import { LlmSettings } from "@/components/LlmSettings";
+import { AppModeView } from "@/components/AppModeView";
 
 // ---------------------------------------------------------------------------
 // localStorage persistence for per-project state
@@ -120,6 +121,7 @@ export default function Dashboard() {
   const activeNode = projectTree.find((n) => n.project_id === activeProject);
   const activeGoal = activeNode?.goal || "";
   const activeAgentProfiles: Record<string, AgentProfileAssignment> = activeNode?.agent_profiles || {};
+  const isAppMode = activeNode?.mode === "app";
 
   // --- data fetching ---
   const loadProjects = useCallback(async () => {
@@ -376,48 +378,58 @@ export default function Dashboard() {
         )}
       </aside>
 
-      {/* ---- Main area: Agent Grid (web conference style) ---- */}
+      {/* ---- Main area ---- */}
       <main className="main-area">
-        <div className="main-topbar">
-          <RunControl
-            activeProject={activeProject}
-            runStatus={runStatus}
-            onRefresh={loadRunStatus}
-            goal={activeGoal}
-            maxIter={maxIter}
-            onMaxIterChange={setMaxIter}
-            onExtendIterations={(extra) => {
-              if (!activeProject) return;
-              api.startRun(activeProject, activeGoal.trim(), extra).then(loadRunStatus).catch(() => {});
-            }}
-          />
-        </div>
-        <ProjectDetail
-          activeProject={activeProject}
-          projectTree={projectTree}
-          onRefresh={loadProjects}
-          allRunStatuses={allRunStatuses}
-          onDispatchChild={async (parentId, childId, instruction) => {
-            await api.dispatchChild(parentId, childId, instruction);
-            loadAllRunStatuses();
-          }}
-          onStopChild={async (childId) => {
-            await api.stopRun(childId);
-            loadAllRunStatuses();
-          }}
-          onDispatchAll={async (parentId) => {
-            await api.dispatchAllChildren(parentId);
-            loadAllRunStatuses();
-          }}
-        />
-        <ErrorBoundary>
-          <AgentTerminalGrid
-            events={events}
-            agentProfiles={activeAgentProfiles}
-            activeProject={activeProject}
-            onSendOrder={handleSendOrder}
-          />
-        </ErrorBoundary>
+        {isAppMode && activeProject ? (
+          /* App Mode: task automation view */
+          <ErrorBoundary>
+            <AppModeView projectId={activeProject} />
+          </ErrorBoundary>
+        ) : (
+          /* Orchestration Mode: Agent Grid (web conference style) */
+          <>
+            <div className="main-topbar">
+              <RunControl
+                activeProject={activeProject}
+                runStatus={runStatus}
+                onRefresh={loadRunStatus}
+                goal={activeGoal}
+                maxIter={maxIter}
+                onMaxIterChange={setMaxIter}
+                onExtendIterations={(extra) => {
+                  if (!activeProject) return;
+                  api.startRun(activeProject, activeGoal.trim(), extra).then(loadRunStatus).catch(() => {});
+                }}
+              />
+            </div>
+            <ProjectDetail
+              activeProject={activeProject}
+              projectTree={projectTree}
+              onRefresh={loadProjects}
+              allRunStatuses={allRunStatuses}
+              onDispatchChild={async (parentId, childId, instruction) => {
+                await api.dispatchChild(parentId, childId, instruction);
+                loadAllRunStatuses();
+              }}
+              onStopChild={async (childId) => {
+                await api.stopRun(childId);
+                loadAllRunStatuses();
+              }}
+              onDispatchAll={async (parentId) => {
+                await api.dispatchAllChildren(parentId);
+                loadAllRunStatuses();
+              }}
+            />
+            <ErrorBoundary>
+              <AgentTerminalGrid
+                events={events}
+                agentProfiles={activeAgentProfiles}
+                activeProject={activeProject}
+                onSendOrder={handleSendOrder}
+              />
+            </ErrorBoundary>
+          </>
+        )}
       </main>
 
       {/* ---- Right panel: Tabs (Timeline / Models / Tasks) ---- */}

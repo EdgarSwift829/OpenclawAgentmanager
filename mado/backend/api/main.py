@@ -5,7 +5,7 @@ import os
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from mado.backend.api.routes import agents, logs, models, openclaw, orchestrator, profiles, projects, websocket
+from mado.backend.api.routes import agents, app_tasks, logs, models, openclaw, orchestrator, profiles, projects, websocket
 from mado.backend.logging_config import setup_logging
 from mado.backend.safety.auth import is_auth_enabled, require_auth
 
@@ -41,6 +41,7 @@ app.include_router(websocket.router, prefix="/api/ws", tags=["websocket"])  # WS
 app.include_router(logs.router, prefix="/api/logs", tags=["logs"], dependencies=_auth_deps)
 app.include_router(openclaw.router, prefix="/api/openclaw", tags=["openclaw"], dependencies=_auth_deps)
 app.include_router(profiles.router, prefix="/api/profiles", tags=["profiles"], dependencies=_auth_deps)
+app.include_router(app_tasks.router, prefix="/api/app", tags=["app-tasks"], dependencies=_auth_deps)
 
 
 @app.get("/api/health")

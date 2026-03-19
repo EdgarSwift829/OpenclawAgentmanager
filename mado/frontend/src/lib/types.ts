@@ -14,6 +14,7 @@ export interface TaskItem {
 export interface ProjectNode {
   project_id: string;
   display_name?: string;
+  mode?: "orchestration" | "app";
   parent_id: string | null;
   children: string[];
   status: string;
@@ -27,6 +28,33 @@ export interface ProjectNode {
   rules_must?: string;
   rules_forbidden?: string;
   agent_profiles?: Record<string, AgentProfileAssignment>;
+  app_tasks?: AppTaskDef[];
+}
+
+/** App-mode task definition. */
+export interface AppTaskDef {
+  task_id: string;
+  title: string;
+  prompt: string;
+  schedule_type: "manual" | "interval" | "cron";
+  interval_minutes: number;
+  cron_expr: string;
+  deadline: string | null;
+  enabled: boolean;
+  last_run: string | null;
+  next_run: string | null;
+}
+
+/** App-mode task execution record. */
+export interface AppTaskExecution {
+  execution_id: string;
+  task_id: string;
+  project_id: string;
+  started_at: string;
+  finished_at: string | null;
+  status: "running" | "completed" | "error";
+  result: string | null;
+  error: string | null;
 }
 
 /** Agent profile assignment stored in project config (per-role). */
