@@ -168,7 +168,7 @@ const dict = {
   testConnection: { en: "Test", ja: "接続テスト" },
   connectionOk: { en: "Connected", ja: "接続OK" },
   connectionFail: { en: "Connection failed", ja: "接続失敗" },
-  testing: { en: "Testing...", ja: "テスト中..." },
+  testingConnection: { en: "Testing...", ja: "テスト中..." },
   urlSaved: { en: "URL saved", ja: "URLを保存しました" },
   urlSaveFailed: { en: "Failed to save URL", ja: "URL保存に失敗しました" },
 

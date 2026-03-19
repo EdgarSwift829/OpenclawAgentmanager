@@ -134,7 +134,7 @@ export function LlmSettings() {
                   disabled={testResult === "testing"}
                   title={t("testConnection")}
                 >
-                  {testResult === "testing" ? t("testing") : t("testConnection")}
+                  {testResult === "testing" ? t("testingConnection") : t("testConnection")}
                 </button>
               </div>
             </div>
